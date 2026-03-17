@@ -1,0 +1,24 @@
+{
+  "name": "projects-health-dashboard",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "db:generate": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
+    "db:migrate": "dotenv -e .env -- pnpm --filter @repo/db db:migrate",
+    "db:studio": "dotenv -e .env -- pnpm --filter @repo/db db:studio"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^8.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# Prisma generated client
+**/generated/
+packages/db/dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Private keys (e.g. GitHub App .pem downloads)
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# TypeScript build info
+*.tsbuildinfo
+dist/
+
+# Test coverage
+coverage/

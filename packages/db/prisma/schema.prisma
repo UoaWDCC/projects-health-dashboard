@@ -1,0 +1,432 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth & Roles ─────────────────────────────────────────────────────────────
+// Profile mirrors Supabase auth.users — id is the Supabase user UUID.
+// Created/synced on first sign-in via a server-side handler.
+// Authorization is always by id, not email — email is "latest known" only.
+// Roles are multi-valued: a user may hold more than one role simultaneously.
+
+// App-level user record mirroring Supabase auth.users. One row per signed-in user.
+model Profile {
+  id           String     @id // Supabase auth.users.id (UUID)
+  email        String     @unique
+  displayName  String?
+  isActive     Boolean    @default(true)
+  lastSignInAt DateTime?
+  createdAt    DateTime   @default(now())
+  roles        UserRole[]
+}
+
+enum Role {
+  ADMIN  // Can manage whitelists, project config, weights
+  EXEC   // Read-only access to all executive views
+  MEMBER // Reserved for future member-facing features
+}
+
+// Junction table assigning roles to profiles. A profile can hold multiple roles.
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  profile   Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
+
+// ─── People & Identities ──────────────────────────────────────────────────────
+
+// A real human contributor, independent of any specific project or platform.
+// Acts as the single identity anchor across GitHub and Discord accounts.
+model Person {
+  id            String                     @id @default(cuid())
+  displayName   String
+  createdAt     DateTime                   @default(now())
+  identities    PersonIdentity[]
+  memberships   ProjectMember[]
+  contributions MemberWeeklyContribution[]
+}
+
+enum IdentityProvider {
+  GITHUB
+  DISCORD
+}
+
+// Links a Person to one of their external accounts (GitHub or Discord).
+// A person can have at most one identity per provider.
+model PersonIdentity {
+  id         String           @id @default(cuid())
+  personId   String
+  provider   IdentityProvider
+  externalId String           // GitHub user id or Discord user snowflake
+  username   String?          // Human-readable handle for display
+  person     Person           @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  commitFacts              CommitFact[]
+  prFacts                  PRFact[]     @relation("PRAuthor")
+  prsMergedBy              PRFact[]     @relation("PRMergedBy")
+  discordWeeklyCounts      DiscordIdentityWeeklyCount[]
+
+  @@unique([provider, externalId])
+  @@unique([personId, provider])
+}
+
+// Provider identities seen in ingested data that have not been mapped to a
+// Person yet. Surfaces in the admin UI so contributors can be attributed.
+// Cleared once an admin maps the identity to a Person.
+model UnmatchedIdentity {
+  id           String           @id @default(cuid())
+  provider     IdentityProvider
+  externalId   String
+  username     String?
+  firstSeenAt  DateTime         @default(now())
+  lastSeenAt   DateTime         @updatedAt
+  sampleRepoName String?         // "owner/repo" hint to help an admin identify who this is; not a FK
+
+  @@unique([provider, externalId])
+}
+
+// ─── Configuration ────────────────────────────────────────────────────────────
+
+// A monitored project. Groups repositories, Discord channels,
+// members, and all derived metrics under a single entity.
+model Project {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  description     String?
+  isActive        Boolean          @default(true)
+  startedAt       DateTime?        // Baseline for cumulative metrics
+  createdAt       DateTime         @default(now())
+  repositories             GitHubRepository[]
+  channels                 DiscordChannel[]
+  members                  ProjectMember[]
+  weeklyStats              WeeklyStats[]
+  weeklySummaries          WeeklySummary[]
+  discordWeeklyAggregates  DiscordWeeklyAggregate[]
+  discordIdentityCounts    DiscordIdentityWeeklyCount[]
+  configs                  Config[]
+  syncJobs                 SyncJob[]
+}
+
+// A GitHub repository that belongs to a project and is monitored by the
+// weekly GitHub collection job. One project can have multiple repos.
+model GitHubRepository {
+  id             String       @id @default(cuid())
+  projectId      String
+  owner          String       // GitHub org or user
+  name           String       // GitHub repo name
+  installationId String       // GitHub App installation id; required for API access
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commits        CommitFact[]
+  prs            PRFact[]
+
+  @@unique([owner, name])
+}
+
+// A Discord text channel belonging to a project, inside the single shared guild.
+// All projects share one Discord server — the guild ID is stored once in Config
+model DiscordChannel {
+  id         String  @id @default(cuid())
+  projectId  String
+  externalId String  @unique // Discord channel snowflake
+  name       String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// Links a Person to a Project, representing their membership.
+// displayName overrides the person's global displayName within this project.
+model ProjectMember {
+  id            String                     @id @default(cuid())
+  projectId     String
+  personId      String
+  displayName   String?
+  isActive      Boolean                    @default(true)
+  joinedAt      DateTime                   @default(now())
+  project       Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  person        Person                     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  contributions   MemberWeeklyContribution[]
+  mvpWeeks        WeeklyStats[]
+
+  @@unique([projectId, personId])
+  @@index([projectId])
+}
+
+// Stores all weight and threshold settings as JSON values.
+// scope = "GLOBAL" for app-wide defaults; scope = Project.id for project overrides.
+// A non-null scope column avoids the Postgres NULL-uniqueness pitfall where
+// multiple (NULL, key) rows would all pass a @@unique([projectId, key]) constraint.
+// Application logic: always set scope = projectId ?? "GLOBAL" when writing.
+model Config {
+  id        String   @id @default(cuid())
+  scope     String   // "GLOBAL" or the Project.id string
+  projectId String?  // Nullable FK; null for global configs
+  key       String
+  value     Json     // Float, Int, Boolean, or structured object
+  updatedAt DateTime @updatedAt
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, key])
+}
+
+// ─── Discord Aggregates ───────────────────────────────────────────────────────
+// Discord messages are never stored individually. The worker fetches messages
+// ephemerally, aggregates counts in memory, writes these tables, then discards.
+
+// Project-level weekly Discord totals written by the weekly Discord collection job.
+model DiscordWeeklyAggregate {
+  id                   String   @id @default(cuid())
+  projectId            String
+  weekStart            DateTime // Monday 00:00 UTC
+  messageCount         Int      @default(0)
+  uniqueAuthors        Int      @default(0)
+  unmappedMessageCount Int      @default(0) // Messages from unrecognised Discord users
+
+  computedAt           DateTime @default(now())
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekStart])
+  @@index([weekStart])
+}
+
+// Per-identity breakdown of Discord message counts for a given project-week.
+// Only covers known (mapped) authors
+model DiscordIdentityWeeklyCount {
+  id               String         @id @default(cuid())
+  projectId        String
+  weekStart        DateTime
+  authorIdentityId String         // Always non-null; unmapped counts go to DiscordWeeklyAggregate
+  messageCount     Int            @default(0)
+  computedAt       DateTime       @default(now())
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorIdentity   PersonIdentity @relation(fields: [authorIdentityId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekStart, authorIdentityId])
+  @@index([authorIdentityId, weekStart])
+  @@index([weekStart])
+}
+
+// ─── Raw Ingested Facts ───────────────────────────────────────────────────────
+
+// One row per Git commit ingested by the weekly GitHub collection job.
+// Retained indefinitely as the source of truth for commit-based metrics.
+model CommitFact {
+  id               String          @id @default(cuid())
+  repoId           String
+  sha              String
+  authorIdentityId String?
+  message          String          // Raw commit message
+  branch           String?
+  linesAdded       Int             @default(0)
+  linesRemoved     Int             @default(0)
+  committedAt      DateTime
+  ingestedAt       DateTime        @default(now())
+  repo             GitHubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  authorIdentity   PersonIdentity?  @relation(fields: [authorIdentityId], references: [id], onDelete: SetNull)
+
+  // Scoped to repo: forks/mirrors can legitimately share a SHA across repos
+  @@unique([repoId, sha])
+  @@index([repoId, committedAt])
+}
+
+// One row per pull request ingested by the weekly GitHub collection job.
+// Captures both open and merged PRs; mergedAt/closedAt are null until the PR is closed.
+model PRFact {
+  id                 String          @id @default(cuid())
+  repoId             String
+  number             Int
+  authorIdentityId   String?
+  mergedByIdentityId String?
+  title              String
+  body               String?
+  url                String?
+  labels             Json?           // String[] of label names
+  createdAt          DateTime
+  mergedAt           DateTime?
+  closedAt           DateTime?
+  linesAdded         Int             @default(0)
+  linesRemoved       Int             @default(0)
+  ingestedAt         DateTime        @default(now())
+  repo               GitHubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  authorIdentity     PersonIdentity? @relation("PRAuthor", fields: [authorIdentityId], references: [id], onDelete: SetNull)
+  mergedByIdentity   PersonIdentity? @relation("PRMergedBy", fields: [mergedByIdentityId], references: [id], onDelete: SetNull)
+
+  @@unique([repoId, number])
+  @@index([repoId, mergedAt])
+  @@index([repoId, createdAt])
+}
+
+// ─── Derived / Aggregated ─────────────────────────────────────────────────────
+
+// Project-level weekly metrics and computed health scores.
+model WeeklyStats {
+  id        String   @id @default(cuid())
+  projectId String
+  weekStart DateTime // Monday 00:00 UTC
+
+  // Raw counts for this week
+  commits         Int @default(0)
+  prsMerged       Int @default(0)
+  discordMessages Int @default(0)
+  linesAdded      Int @default(0)
+  linesRemoved    Int @default(0)
+
+  // 4-week rolling averages — baseline for velocity scores and % diff display
+  commitsAvg4w         Float?
+  prsMergedAvg4w       Float?
+  discordMessagesAvg4w Float?
+  linesAddedAvg4w      Float?
+  linesRemovedAvg4w    Float?
+
+  // Cumulative totals from project start — written alongside *Avg4w each week; divide by weeksElapsed for lifetime average
+  commitsCumulative         Int?
+  prsMergedCumulative       Int?
+  discordMessagesCumulative Int?
+  linesAddedCumulative      Int?
+  linesRemovedCumulative    Int?
+
+  // Calculated scores (normalised range defined by algorithm version)
+  healthScore    Float?
+  velocityScore  Float?
+  sentimentScore Float?  // Denormalized from WeeklySummary; written by LLM job for co-located graphing
+
+  // Member with the most lines changed this week — written by the GitHub collection job
+  mvpMemberId String?
+  mvpMember   ProjectMember? @relation(fields: [mvpMemberId], references: [id], onDelete: SetNull)
+
+  // Tracks when and how scores were computed — use algorithmVersion to detect
+  // stale rows when weights change and the collection job needs to be rerun
+  computedAt       DateTime @default(now())
+  algorithmVersion String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekStart])
+  @@index([weekStart]) // Cross-project weekly comparisons and leaderboards
+}
+
+// Per-member, per-project, per-week contribution counts.
+// personId is denormalized from ProjectMember to simplify cross-project queries
+model MemberWeeklyContribution {
+  id              String        @id @default(cuid())
+  projectMemberId String
+  personId        String        // Denormalized for cross-project aggregate queries
+  weekStart       DateTime      // Monday 00:00 UTC
+  commits         Int           @default(0)
+  prsMerged       Int           @default(0)
+  discordMessages Int           @default(0)
+  linesAdded      Int           @default(0)
+  linesRemoved    Int           @default(0)
+  projectMember   ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  person          Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([projectMemberId, weekStart])
+  @@index([personId, weekStart]) // Cross-project contribution queries
+  @@index([weekStart])           // Global leaderboard / all-member average queries
+}
+
+// Cross-project LLM summary for a week. One row per week across all active projects.
+// Produced by the weekly LLM job after all per-project WeeklySummary rows are written.
+// Shown in the executive overview.
+//
+// flaggedWeekProjects / flaggedAvg4wProjects are JSON snapshots of the form:
+//   [{ projectId: string, projectName: string, healthScore: number }, ...]
+// Thresholds are read from Config at generation time (keys: "healthScoreWeekThreshold"
+// and "healthScoreAvg4wThreshold", scope "GLOBAL"). Snapshotting scores here avoids
+// re-querying WeeklyStats when rendering the flagged-projects panel.
+model GlobalWeeklySummary {
+  id             String   @id @default(cuid())
+  weekStart      DateTime @unique // Monday 00:00 UTC; one row per week
+  summaryText    String   // Qualitative narrative of activity across all active projects
+  notableChanges String   // LLM-derived callout of notable stat changes this week
+  // Projects whose health score fell below the configured threshold this week.
+  flaggedWeekProjects  Json?  // Projects below the single-week health score threshold
+  flaggedAvg4wProjects Json?  // Projects below the 4-week average health score threshold
+  llmModel         String?
+  llmPromptVersion String?
+  llmInputHash     String?  // Hash of normalised LLM input; detects prompt-vs-data changes
+  generatedAt      DateTime @default(now())
+}
+
+// LLM-generated narrative summary and sentiment for a project-week. Shown in the executive view.
+// Produced by the weekly LLM job, which draws from both GitHub (CommitFact, PRFact)
+// and Discord (DiscordWeeklyAggregate) data for the week.
+model WeeklySummary {
+  id               String   @id @default(cuid())
+  projectId        String
+  weekStart        DateTime // Monday 00:00 UTC
+  summaryText      String
+  sentimentScore     Float?   // Normalised score from combined GitHub + Discord signals, e.g. -1.0 to 1.0
+  sentimentParagraph String?  // Human-readable sentiment summary for exec view
+  llmModel         String?
+  llmPromptVersion String?
+  llmInputHash     String?  // Hash of normalised LLM input; detects prompt-vs-data changes
+  generatedAt      DateTime @default(now())
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, weekStart])
+}
+
+// ─── Live Activity ────────────────────────────────────────────────────────────
+
+// Ring-buffer of the 10 most recent commits across all repos, fed by GitHub webhook.
+// Maintained in FIFO order — when a new commit is inserted and the count exceeds 10,
+// the oldest row (by receivedAt) is deleted.
+model LiveCommit {
+  id           String   @id @default(cuid())
+  sha          String
+  shortSha     String   // first 7 chars, stored for display without re-computing
+  repoOwner    String
+  repoName     String
+  projectId    String?  // Denormalized — resolved at webhook time; no FK so Project has no backrelation
+  branch       String
+  message      String   // full commit message
+  commitUrl    String?  // html_url from the GitHub push payload
+  authorName   String   // display name from GitHub payload (no identity resolution needed)
+  authorAvatar String?  // GitHub avatar URL for carousel display
+  committedAt  DateTime // timestamp from the git commit object
+  receivedAt   DateTime @default(now()) // when the webhook was processed; used for FIFO ordering
+
+  @@unique([repoOwner, repoName, sha]) // Deduplicate if GitHub delivers the same push event twice
+  @@index([receivedAt]) // ORDER BY receivedAt DESC for carousel queries
+}
+
+// ─── Operations ───────────────────────────────────────────────────────────────
+
+enum SyncJobType {
+  GITHUB
+  DISCORD
+  LLM
+}
+
+enum SyncJobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+// Audit log of each weekly job run (GitHub, Discord, and LLM).
+// One row is created per project per job type when the scheduler fires.
+model SyncJob {
+  id             String        @id @default(cuid())
+  type           SyncJobType
+  projectId      String?       // null = global job (e.g. cross-project aggregation)
+  status         SyncJobStatus @default(PENDING)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  errorMessage   String?
+  itemsProcessed Int?          // Commits/PRs ingested (GITHUB), messages processed (DISCORD), or projects analysed (LLM)
+  createdAt      DateTime      @default(now())
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, type, status])
+}
