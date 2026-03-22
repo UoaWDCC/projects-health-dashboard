@@ -10,6 +10,7 @@
     "db:studio": "dotenv -e .env -- pnpm --filter @repo/db db:studio"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "dotenv-cli": "^8.0.0"
   },
   "pnpm": {
