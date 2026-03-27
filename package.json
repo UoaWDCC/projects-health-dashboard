@@ -5,13 +5,16 @@
   "scripts": {
     "dev": "pnpm --parallel -r dev",
     "build": "pnpm -r build",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "db:generate": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
     "db:migrate": "dotenv -e .env -- pnpm --filter @repo/db db:migrate",
     "db:studio": "dotenv -e .env -- pnpm --filter @repo/db db:studio"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "dotenv-cli": "^8.0.0"
+    "dotenv-cli": "^8.0.0",
+    "prettier": "^3.5.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
