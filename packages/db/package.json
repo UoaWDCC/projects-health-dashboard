@@ -9,7 +9,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "typecheck": "tsc --composite false --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0"
