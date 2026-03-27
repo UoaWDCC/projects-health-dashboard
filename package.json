@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
     "db:generate": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
     "db:migrate": "dotenv -e .env -- pnpm --filter @repo/db db:migrate",
     "db:studio": "dotenv -e .env -- pnpm --filter @repo/db db:studio"
