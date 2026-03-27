@@ -34,10 +34,10 @@ OPENAI_API_KEY=
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start web + worker in parallel |
-| `pnpm build` | Build all apps |
-| `pnpm db:migrate` | Run database migrations |
+| Script             | Description                                   |
+| ------------------ | --------------------------------------------- |
+| `pnpm dev`         | Start web + worker in parallel                |
+| `pnpm build`       | Build all apps                                |
+| `pnpm db:migrate`  | Run database migrations                       |
 | `pnpm db:generate` | Regenerate Prisma client after schema changes |
-| `pnpm db:studio` | Open Prisma Studio at localhost:5555 |
+| `pnpm db:studio`   | Open Prisma Studio at localhost:5555          |

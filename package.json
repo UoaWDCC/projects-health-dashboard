@@ -22,13 +22,7 @@
     "prettier": "^3.5.3"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yaml,yml}": [
-      "prettier --write"
-    ]
+    "*.{ts,tsx,js,jsx,json,md,yaml,yml}": "prettier --write"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
