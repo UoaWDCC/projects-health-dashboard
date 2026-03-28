@@ -9,6 +9,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
     "db:generate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:generate",
     "db:generate:prod": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
     "db:migrate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:migrate",
@@ -19,6 +20,8 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@types/node": "^25.5.0",
     "dotenv-cli": "^8.0.0",
     "husky": "^9.0.0",
