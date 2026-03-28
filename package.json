@@ -9,9 +9,13 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "db:generate": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
-    "db:migrate": "dotenv -e .env -- pnpm --filter @repo/db db:migrate",
-    "db:studio": "dotenv -e .env -- pnpm --filter @repo/db db:studio",
+    "db:generate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:generate",
+    "db:generate:prod": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
+    "db:migrate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:migrate",
+    "db:deploy:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:deploy",
+    "db:deploy:prod": "bash scripts/migrate-prod.sh",
+    "db:studio:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:studio",
+    "db:studio:prod": "dotenv -e .env -- pnpm --filter @repo/db db:studio",
     "prepare": "husky"
   },
   "devDependencies": {
