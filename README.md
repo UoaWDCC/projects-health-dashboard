@@ -10,26 +10,34 @@ Monorepo — Next.js web app + Node.js background worker, backed by Prisma/Supab
 
 ## Setup
 
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+2. Get `.env` and `.env.dev` from the shared Google Drive and place them at the repo root.
+3. Generate the Prisma client:
+   ```bash
+   pnpm db:generate:dev
+   ```
+4. Start the app:
+   ```bash
+   pnpm dev
+   ```
+
+## Troubleshooting
+
+**`pnpm install` fails with a Corepack keyid signature error**
+
+Corepack bundles registry signing keys at build time. When npm rotates those keys, older Corepack versions fail signature verification. This can happen even after running `npm install -g corepack@latest` because Node.js ships its own bundled Corepack that takes precedence over the globally installed one.
+
+**Option 1 — Update Node.js.** The bundled Corepack version tracks Node.js releases, so upgrading to the latest LTS brings a newer Corepack with updated keys. Download from [nodejs.org](https://nodejs.org).
+
+**Option 2 — Bypass Corepack entirely.** Install pnpm directly so no signature verification occurs:
+
 ```bash
+corepack disable
+npm install -g pnpm@latest
 pnpm install
-cp .env.example .env   # fill in all values
-pnpm db:migrate        # run migrations
-pnpm db:generate       # generate Prisma client
-pnpm dev               # start web + worker in parallel
-```
-
-## Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-DATABASE_URL=          # pooler URL (port 6543)
-DIRECT_URL=            # direct URL (port 5432)
-GITHUB_APP_ID=
-GITHUB_APP_PRIVATE_KEY=
-DISCORD_BOT_TOKEN=
-OPENAI_API_KEY=
 ```
 
 ## Scripts
