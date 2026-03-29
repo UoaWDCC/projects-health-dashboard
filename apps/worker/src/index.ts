@@ -10,20 +10,21 @@ import { logger } from './lib/logger'
 //
 //   1. GitHub + Discord run in parallel:
 //      GitHub:   fetch commits and PRs for the past week; write CommitFact and PRFact
-//      Discord:  fetch messages for the past week; write DiscordWeeklyAggregate
-//                and DiscordIdentityWeeklyCount
+//      Discord:  fetch messages for the past week; write DiscordWeeklyAggregate and
+//                DiscordIdentityWeeklyCount; return raw messages in-memory (not persisted)
 //
 //   2. LLM analysis runs after both collection jobs complete:
-//      Reads CommitFact/PRFact (GitHub) and DiscordWeeklyAggregate (Discord),
-//      calls the LLM, writes sentimentScore, sentimentParagraph, and summaryText
-//      to WeeklySummary. Dependency enforced in code, not by wall-clock timing.
+//      Reads CommitFact/PRFact from the database (GitHub) and receives Discord
+//      messages as an in-memory argument. Calls the LLM, writes sentimentScore,
+//      sentimentParagraph, and summaryText to WeeklySummary. Dependency enforced
+//      in code, not by wall-clock timing.
 
 cron.schedule('0 0 * * 0', async () => {
   logger.info('Starting weekly ingestion jobs (GitHub + Discord in parallel)')
   // TODO: Implement — run both collection jobs concurrently, then LLM
-  // await Promise.all([runGitHubIngestion(), runDiscordIngestion()])
+  // const [, discordMessages] = await Promise.all([runGitHubIngestion(), runDiscordIngestion()])
   // logger.info('Data collection complete — starting LLM analysis')
-  // await runLlmAnalysis()
+  // await runLlmAnalysis(discordMessages) // TODO: add discordMessages param once runLlmAnalysis is implemented
 })
 
 logger.info('Worker started — 1 weekly cron job registered')
