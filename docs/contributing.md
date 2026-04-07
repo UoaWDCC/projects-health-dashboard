@@ -54,10 +54,12 @@ Husky runs automatically on every `git commit`. Hooks are installed when you run
 
 ```mermaid
 flowchart LR
-    COMMIT["git commit"] --> LINT_STAGED["lint-staged<br/>auto-format staged files<br/>with Prettier"]
+    COMMIT["git commit"] --> BRANCH_CHECK["pre-commit<br/>validate branch name<br/>"]
+    BRANCH_CHECK -->|passes| LINT_STAGED["lint-staged<br/>auto-format staged files<br/>with Prettier"]
+    BRANCH_CHECK -->|fails| REJECT_BRANCH["commit rejected<br/>rename branch and retry"]
     LINT_STAGED --> COMMITLINT["commitlint<br/>validate commit message<br/>against Conventional Commits"]
     COMMITLINT -->|passes| SUCCESS["commit written"]
-    COMMITLINT -->|fails| REJECT["commit rejected<br/>fix the message and retry"]
+    COMMITLINT -->|fails| REJECT_MSG["commit rejected<br/>fix the message and retry"]
 ```
 
 ## Merging and rebasing
