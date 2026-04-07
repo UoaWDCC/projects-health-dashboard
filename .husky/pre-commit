@@ -1,1 +1,19 @@
+#!/bin/sh
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+valid_types="feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert"
+if [ -n "$branch" ] && ! echo "$branch" | grep -qE "^($valid_types)/[a-z0-9]+(-[a-z0-9]+)*$"; then
+  echo ""
+  echo "  ERROR: Branch name '$branch' does not follow the naming convention."
+  echo ""
+  echo "  Format:  <type>/<short-description>"
+  echo "  Example: feat/live-commit-webhook"
+  echo ""
+  echo "  Allowed types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert"
+  echo "  Description:   lowercase letters, numbers and hyphens only"
+  echo ""
+  exit 1
+fi
+
 pnpm lint-staged
