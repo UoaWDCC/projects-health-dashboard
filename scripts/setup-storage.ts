@@ -17,11 +17,16 @@ const buckets = [
 
 async function main() {
   for (const bucket of buckets) {
-    const { data: existing } = await supabase.storage.getBucket(bucket.name)
+    const { data: existing, error: getError } = await supabase.storage.getBucket(bucket.name)
 
     if (existing) {
       console.log(`Bucket "${bucket.name}" already exists, skipping.`)
       continue
+    }
+
+    if (getError && !getError.message.toLowerCase().includes('not found')) {
+      console.error(`Failed to check bucket "${bucket.name}":`, getError.message)
+      process.exit(1)
     }
 
     const { error } = await supabase.storage.createBucket(bucket.name, {
