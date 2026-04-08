@@ -103,6 +103,7 @@ model Project {
   name            String
   slug            String           @unique
   description     String?
+  imageUrl        String?
   isActive        Boolean          @default(true)
   startedAt       DateTime?        // Baseline for cumulative metrics
   createdAt       DateTime         @default(now())
