@@ -23,8 +23,10 @@ export default function CreateProjectPage() {
     })
 
     if (!response.ok) {
-      alert('Failed to create project')
-      console.error('Failed to create project:', await response.text())
+      const text = await response.text()
+      const data = JSON.parse(text)
+      const errorMessage = data?.error ?? data?.message ?? text
+      alert('Failed to create project: ' + errorMessage)
       return
     }
 
@@ -46,8 +48,23 @@ export default function CreateProjectPage() {
         </label>
         <br />
         <label>
-          Discord Channel Link:
-          <input type="url" style={{ border: '1px solid #ccc' }} name="discordLink" required />
+          Discord Snowflake ID:
+          <input
+            type="text"
+            style={{ border: '1px solid #ccc' }}
+            name="discordSnowflakeId"
+            required
+          />
+        </label>
+        <br />
+        <label>
+          Project Description:
+          <input type="text" style={{ border: '1px solid #ccc' }} name="projectDescription" />
+        </label>
+        <br />
+        <label>
+          Project Start Date:
+          <input type="month" style={{ border: '1px solid #ccc' }} name="projectStartDate" />
         </label>
         <br />
         <button type="submit">Create Project (Button)</button>

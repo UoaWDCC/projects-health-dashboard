@@ -15,6 +15,9 @@ import { useRouter } from 'next/navigation'
 type Project = {
   id: string
   name: string
+  slug: string
+  description: string | null
+  startedAt: string | null
   createdAt: string
   repositories: {
     id: string
@@ -64,6 +67,9 @@ export default function AdminDashboardPage() {
         {projects.map((project) => (
           <li key={project.id}>
             <strong>{project.name}</strong>
+            <p>{project.description}</p>
+            <p>Slug: {project.slug}</p>
+            <p>Started at: {project.startedAt}</p>
             <p>Created at: {project.createdAt}</p>
             <div style={{ marginTop: 8 }}>
               <h4>Repositories:</h4>
@@ -76,7 +82,6 @@ export default function AdminDashboardPage() {
                       </strong>
                     </div>
                     <div>Installation ID: {repo.installationId}</div>
-                    <div>Repo ID: {repo.id}</div>
                   </li>
                 ))}
               </ul>
