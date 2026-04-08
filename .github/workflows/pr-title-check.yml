@@ -1,0 +1,27 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  check-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [[ ! "$PR_TITLE" =~ ^\[#[0-9]+\]\ .+ ]]; then
+            echo "❌ PR title does not follow the required format."
+            echo ""
+            echo "Required format: [#<issue>] short description"
+            echo "Example:         [#42] add Discord ingestion job"
+            echo ""
+            echo "Your title: \"$PR_TITLE\""
+            echo ""
+            echo "Please update your PR title to include the linked issue number."
+            exit 1
+          fi
+          echo "✅ PR title format is valid."
