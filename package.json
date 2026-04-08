@@ -17,6 +17,8 @@
     "db:deploy:prod": "bash scripts/migrate-prod.sh",
     "db:studio:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:studio",
     "db:studio:prod": "dotenv -e .env -- pnpm --filter @repo/db db:studio",
+    "storage:setup:dev": "dotenv -e .env.dev -- tsx scripts/setup-storage.ts",
+    "storage:setup:prod": "dotenv -e .env -- tsx scripts/setup-storage.ts",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -26,7 +28,8 @@
     "dotenv-cli": "^8.0.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "tsx": "^4.21.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
