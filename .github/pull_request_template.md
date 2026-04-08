@@ -8,4 +8,4 @@
 
 ## Notes
 
-<!-- Add any notes you think is needed -->
+<!-- Add any notes you think are needed -->
