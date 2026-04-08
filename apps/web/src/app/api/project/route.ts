@@ -38,56 +38,61 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
     }
 
+    const [existingProject, existingRepo, existingChannel] = await Promise.all([
+      db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
+      db.gitHubRepository.findFirst({
+        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
+      }),
+      db.discordChannel.findUnique({ where: { externalId: discordSnowflakeId } }),
+    ])
+
+    if (existingProject) {
+      return Response.json({ error: 'Project with this name already exists' }, { status: 409 })
+    } else if (existingRepo) {
+      return Response.json(
+        {
+          error:
+            'GitHub Repository with this owner and name has already been linked to another project',
+        },
+        { status: 409 }
+      )
+    } else if (existingChannel) {
+      return Response.json(
+        {
+          error:
+            'Discord Channel with this Snowflake ID has already been linked to another project',
+        },
+        { status: 409 }
+      )
+    }
+
     const newProject = await db.$transaction(async (tx) => {
-      const createdProject = await tx.project.create({
+      return await tx.project.create({
         data: {
           name: projectName,
           slug: projectName.toLowerCase().replace(/\s+/g, '-'),
           description: projectDescription || null,
           startedAt: parseDate(projectStartDate),
+          repositories: {
+            create: {
+              owner: githubLink.split('/')[3],
+              name: githubLink.split('/')[4],
+              // placeholder value
+              installationId: '0',
+            },
+          },
+          channels: {
+            create: {
+              externalId: discordSnowflakeId,
+              // placeholder value
+              name: projectName + ' Discord Channel',
+            },
+          },
         },
-      })
-
-      const existingRepo = await tx.gitHubRepository.findFirst({
-        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
-      })
-      if (!existingRepo) {
-        await tx.gitHubRepository.create({
-          data: {
-            projectId: createdProject.id,
-            owner: githubLink.split('/')[3],
-            name: githubLink.split('/')[4],
-            // placeholder value
-            installationId: '0',
-          },
-        })
-      } else {
-        throw new Error(
-          'GitHub Repository with this owner and name has already been linked to another project'
-        )
-      }
-
-      const existingChannel = await tx.discordChannel.findFirst({
-        where: { externalId: discordSnowflakeId },
-      })
-      if (!existingChannel) {
-        await tx.discordChannel.create({
-          data: {
-            projectId: createdProject.id,
-            externalId: discordSnowflakeId,
-            // placeholder value
-            name: projectName + ' Discord Channel',
-          },
-        })
-      } else {
-        throw new Error(
-          'Discord Channel with this Snowflake ID has already been linked to another project'
-        )
-      }
-
-      return tx.project.findUnique({
-        where: { id: createdProject.id },
-        include: { repositories: true, channels: true },
+        include: {
+          repositories: true,
+          channels: true,
+        },
       })
     })
 
