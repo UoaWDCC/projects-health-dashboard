@@ -1,6 +1,14 @@
-let appPromise: Promise<{
+type GitHubAppClient = {
+  octokit: {
+    request: (
+      route: string,
+      parameters?: Record<string, string>
+    ) => Promise<{ data: { id?: number; account?: { login?: string } } }>
+  }
   getInstallationOctokit: (installationId: number) => Promise<unknown>
-}> | null = null
+}
+
+let appPromise: Promise<GitHubAppClient> | null = null
 
 async function getApp() {
   if (!appPromise) {
@@ -31,6 +39,32 @@ async function getApp() {
 }
 
 export async function getInstallationOctokit(installationId: string | number) {
+  const normalizedInstallationId = Number(installationId)
+
+  if (!Number.isInteger(normalizedInstallationId) || normalizedInstallationId <= 0) {
+    throw new Error(`Invalid GitHub installation ID: ${installationId}`)
+  }
+
   const app = await getApp()
-  return app.getInstallationOctokit(Number(installationId))
+  return app.getInstallationOctokit(normalizedInstallationId)
+}
+
+export async function getAppOctokit() {
+  const app = await getApp()
+  return app.octokit
+}
+
+export async function getRepositoryInstallationId(owner: string, repo: string): Promise<number> {
+  const octokit = await getAppOctokit()
+
+  const response = await octokit.request('GET /repos/{owner}/{repo}/installation', {
+    owner,
+    repo,
+  })
+
+  if (!response.data.id) {
+    throw new Error(`No installation ID returned for ${owner}/${repo}`)
+  }
+
+  return response.data.id
 }
