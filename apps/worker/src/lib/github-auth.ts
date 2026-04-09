@@ -1,3 +1,4 @@
+// Kept intentionally minimal to avoid CJS/ESM type import issues with octokit.
 type GitHubAppClient = {
   octokit: {
     request: (
@@ -47,24 +48,4 @@ export async function getInstallationOctokit(installationId: string | number) {
 
   const app = await getApp()
   return app.getInstallationOctokit(normalizedInstallationId)
-}
-
-export async function getAppOctokit() {
-  const app = await getApp()
-  return app.octokit
-}
-
-export async function getRepositoryInstallationId(owner: string, repo: string): Promise<number> {
-  const octokit = await getAppOctokit()
-
-  const response = await octokit.request('GET /repos/{owner}/{repo}/installation', {
-    owner,
-    repo,
-  })
-
-  if (!response.data.id) {
-    throw new Error(`No installation ID returned for ${owner}/${repo}`)
-  }
-
-  return response.data.id
 }
