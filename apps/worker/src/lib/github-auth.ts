@@ -1,12 +1,18 @@
+type InstallationOctokit = Awaited<
+  ReturnType<
+    import('octokit', { with: { 'resolution-mode': 'import' } }).App['getInstallationOctokit']
+  >
+>
+
 // Kept intentionally minimal to avoid CJS/ESM type import issues with octokit.
 type GitHubAppClient = {
   octokit: {
     request: (
       route: string,
-      parameters?: Record<string, string>
+      parameters?: Record<string, unknown>
     ) => Promise<{ data: { id?: number; account?: { login?: string } } }>
   }
-  getInstallationOctokit: (installationId: number) => Promise<unknown>
+  getInstallationOctokit: (installationId: number) => Promise<InstallationOctokit>
 }
 
 let appPromise: Promise<GitHubAppClient> | null = null
