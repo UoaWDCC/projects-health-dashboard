@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
-    if (!email || (!addAdmin && !addExec)) {
+    if (!addAdmin && !addExec) {
       return Response.json(
         { error: 'Missing required fields, add at least one role' },
         { status: 400 }
@@ -78,15 +78,15 @@ export async function DELETE(request: Request) {
     const removeAdmin = Boolean(body.adminRole)
     const removeExec = Boolean(body.execRole)
 
-    if (!email || (!removeAdmin && !removeExec)) {
+    if (!isValidEmail(email)) {
+      return Response.json({ error: 'Invalid email address' }, { status: 400 })
+    }
+
+    if (!removeAdmin && !removeExec) {
       return Response.json(
         { error: 'Missing required fields, remove at least one role' },
         { status: 400 }
       )
-    }
-
-    if (!isValidEmail(email)) {
-      return Response.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
     const supabase = await createClient()
