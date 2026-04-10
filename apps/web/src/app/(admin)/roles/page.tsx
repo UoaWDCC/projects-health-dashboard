@@ -2,24 +2,28 @@
 
 export default function ManageRolesPage() {
   const handleSubmit = async (formData: FormData, method: 'POST' | 'DELETE') => {
-    const response = await fetch('/api/roles', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: formData.get('email'),
-        adminRole: formData.get('adminRole') === 'on',
-        execRole: formData.get('execRole') === 'on',
-      }),
-    })
+    try {
+      const response = await fetch('/api/roles', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.get('email'),
+          adminRole: formData.get('adminRole') === 'on',
+          execRole: formData.get('execRole') === 'on',
+        }),
+      })
 
-    const data = await response.json()
+      const data = await response.json()
 
-    if (!response.ok) {
-      alert('Failed: ' + (data?.error ?? 'Unknown error'))
-      return
+      if (!response.ok) {
+        alert('Failed: ' + (data?.error ?? 'Unknown error'))
+        return
+      }
+
+      alert('Success, current user roles:' + (data.roles?.join(', ') || ' none'))
+    } catch {
+      alert('Failed, server error or response failed to parse')
     }
-
-    alert('Success, current user roles:' + (data.roles?.join(', ') || ' none'))
   }
 
   return (
