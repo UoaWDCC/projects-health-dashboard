@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "octokit": "^5.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
