@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "dev": "dotenv -e .env.dev -- pnpm --parallel -r dev",
     "build": "pnpm -r build",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
