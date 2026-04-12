@@ -123,6 +123,12 @@ async function requestMessages(path: string): Promise<APIMessage[]> {
   throw new Error(`Max retries exceeded for ${path}`)
 }
 
+/**
+ * Fetches all messages posted in a given Discord channel within the past week.
+ * Handles pagination, rate limits, and filters out bot messages.
+ * @param {string} channelId The ID of the Discord channel to fetch messages from.
+ * @returns An array of message contents posted in the past week.
+ */
 async function fetchWeeklyMessages(channelId: string): Promise<string[]> {
   const weekStart = startOfWeek(new Date())
   const weekEnd = new Date()
@@ -164,7 +170,10 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
     throw new Error('Discord bot token not configured in environment variables')
   }
 
-  const projects = await db.project.findMany({ select: { id: true, name: true, channels: true } })
+  const projects = await db.project.findMany({
+    select: { id: true, name: true, channels: true },
+    where: { isActive: true },
+  })
 
   if (projects.length === 0) {
     logger.warn('No project channels found in database, skipping ingestion')
