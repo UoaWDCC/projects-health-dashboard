@@ -1,8 +1,4 @@
-type InstallationOctokit = Awaited<
-  ReturnType<
-    import('octokit', { with: { 'resolution-mode': 'import' } }).App['getInstallationOctokit']
-  >
->
+type InstallationOctokit = import('octokit', { with: { 'resolution-mode': 'import' } }).Octokit
 
 // Kept intentionally minimal to avoid CJS/ESM type import issues with octokit.
 type GitHubAppClient = {
