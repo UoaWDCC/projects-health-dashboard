@@ -40,7 +40,7 @@ interface APIMessage {
  * to be returned by the ingestion job.
  */
 interface ProjectData {
-  id: string
+  projectId: string
   messages: string[]
 }
 
@@ -208,7 +208,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
       }
 
       data.push({
-        id: project.id,
+        projectId: project.id,
         messages,
       })
 
