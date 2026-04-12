@@ -2,6 +2,29 @@ import { db } from '@repo/db'
 import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
 
+async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status
+      const headers = (err as { response?: { headers?: Record<string, string> } })?.response
+        ?.headers
+      const isRateLimit = status === 429 || status === 403
+      if (isRateLimit && attempt < retries) {
+        const retryAfter = parseInt(headers?.['retry-after'] ?? '60', 10)
+        logger.warn(
+          `Rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
+        )
+        await new Promise((r) => setTimeout(r, retryAfter * 1000))
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error('Unreachable')
+}
+
 export async function runGitHubIngestion(): Promise<void> {
   const syncJob = await db.syncJob.create({
     data: { type: 'GITHUB', status: 'RUNNING', startedAt: new Date() },
@@ -44,14 +67,16 @@ async function ingestRepoMergedPRs(
   const octokit = await getInstallationOctokit(repo.installationId)
 
   // Fetch closed PRs and filter to those merged this week
-  const pulls = await octokit.paginate('GET /repos/{owner}/{repo}/pulls', {
-    owner: repo.owner,
-    repo: repo.name,
-    state: 'closed',
-    sort: 'updated',
-    direction: 'desc',
-    per_page: 100,
-  })
+  const pulls = await withRateLimit(() =>
+    octokit.paginate('GET /repos/{owner}/{repo}/pulls', {
+      owner: repo.owner,
+      repo: repo.name,
+      state: 'closed',
+      sort: 'updated',
+      direction: 'desc',
+      per_page: 100,
+    })
+  )
 
   const mergedThisWeek = pulls.filter(
     (pr) => pr.merged_at !== null && new Date(pr.merged_at) >= weekStart
@@ -65,13 +90,12 @@ async function ingestRepoMergedPRs(
   let count = 0
   for (const pr of mergedThisWeek) {
     // Fetch full PR details to get additions/deletions
-    const { data: fullPr } = await octokit.request(
-      'GET /repos/{owner}/{repo}/pulls/{pull_number}',
-      {
+    const { data: fullPr } = await withRateLimit(() =>
+      octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
         owner: repo.owner,
         repo: repo.name,
         pull_number: pr.number,
-      }
+      })
     )
 
     const authorIdentityId = await resolveIdentity(
