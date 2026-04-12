@@ -33,7 +33,7 @@ enum Role {
 
 // Junction table assigning roles to profiles. A profile can hold multiple roles.
 model UserRole {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   userId    String
   role      Role
   createdAt DateTime @default(now())
@@ -47,7 +47,7 @@ model UserRole {
 // A real human contributor, independent of any specific project or platform.
 // Acts as the single identity anchor across GitHub and Discord accounts.
 model Person {
-  id            String                     @id @default(cuid())
+  id            String                     @id @default(uuid())
   displayName   String
   imageUrl      String?
   createdAt     DateTime                   @default(now())
@@ -64,7 +64,7 @@ enum IdentityProvider {
 // Links a Person to one of their external accounts (GitHub or Discord).
 // A person can have at most one identity per provider.
 model PersonIdentity {
-  id         String           @id @default(cuid())
+  id         String           @id @default(uuid())
   personId   String
   provider   IdentityProvider
   externalId String           // GitHub user id or Discord user snowflake
@@ -84,7 +84,7 @@ model PersonIdentity {
 // Person yet. Surfaces in the admin UI so contributors can be attributed.
 // Cleared once an admin maps the identity to a Person.
 model UnmatchedIdentity {
-  id           String           @id @default(cuid())
+  id           String           @id @default(uuid())
   provider     IdentityProvider
   externalId   String
   username     String?
@@ -100,7 +100,7 @@ model UnmatchedIdentity {
 // A monitored project. Groups repositories, Discord channels,
 // members, and all derived metrics under a single entity.
 model Project {
-  id              String           @id @default(cuid())
+  id              String           @id @default(uuid())
   name            String
   slug            String           @unique
   description     String?
@@ -122,7 +122,7 @@ model Project {
 // A GitHub repository that belongs to a project and is monitored by the
 // weekly GitHub collection job. One project can have multiple repos.
 model GitHubRepository {
-  id             String       @id @default(cuid())
+  id             String       @id @default(uuid())
   projectId      String
   owner          String       // GitHub org or user
   name           String       // GitHub repo name
@@ -137,7 +137,7 @@ model GitHubRepository {
 // A Discord text channel belonging to a project, inside the single shared guild.
 // All projects share one Discord server — the guild ID is stored once in Config
 model DiscordChannel {
-  id         String  @id @default(cuid())
+  id         String  @id @default(uuid())
   projectId  String
   externalId String  @unique // Discord channel snowflake
   name       String
@@ -147,7 +147,7 @@ model DiscordChannel {
 // Links a Person to a Project, representing their membership.
 // displayName overrides the person's global displayName within this project.
 model ProjectMember {
-  id            String                     @id @default(cuid())
+  id            String                     @id @default(uuid())
   projectId     String
   personId      String
   displayName   String?
@@ -168,7 +168,7 @@ model ProjectMember {
 // multiple (NULL, key) rows would all pass a @@unique([projectId, key]) constraint.
 // Application logic: always set scope = projectId ?? "GLOBAL" when writing.
 model Config {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   scope     String   // "GLOBAL" or the Project.id string
   projectId String?  // Nullable FK; null for global configs
   key       String
@@ -185,7 +185,7 @@ model Config {
 
 // Project-level weekly Discord totals written by the weekly Discord collection job.
 model DiscordWeeklyAggregate {
-  id                   String   @id @default(cuid())
+  id                   String   @id @default(uuid())
   projectId            String
   weekStart            DateTime // Monday 00:00 UTC
   messageCount         Int      @default(0)
@@ -202,7 +202,7 @@ model DiscordWeeklyAggregate {
 // Per-identity breakdown of Discord message counts for a given project-week.
 // Only covers known (mapped) authors
 model DiscordIdentityWeeklyCount {
-  id               String         @id @default(cuid())
+  id               String         @id @default(uuid())
   projectId        String
   weekStart        DateTime
   authorIdentityId String         // Always non-null; unmapped counts go to DiscordWeeklyAggregate
@@ -221,7 +221,7 @@ model DiscordIdentityWeeklyCount {
 // One row per Git commit ingested by the weekly GitHub collection job.
 // Retained indefinitely as the source of truth for commit-based metrics.
 model CommitFact {
-  id               String          @id @default(cuid())
+  id               String          @id @default(uuid())
   repoId           String
   sha              String
   authorIdentityId String?
@@ -242,7 +242,7 @@ model CommitFact {
 // One row per pull request ingested by the weekly GitHub collection job.
 // Captures both open and merged PRs; mergedAt/closedAt are null until the PR is closed.
 model PRFact {
-  id                 String          @id @default(cuid())
+  id                 String          @id @default(uuid())
   repoId             String
   number             Int
   authorIdentityId   String?
@@ -270,7 +270,7 @@ model PRFact {
 
 // Project-level weekly metrics and computed health scores.
 model WeeklyStats {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   projectId String
   weekStart DateTime // Monday 00:00 UTC
 
@@ -318,7 +318,7 @@ model WeeklyStats {
 // Per-member, per-project, per-week contribution counts.
 // personId is denormalized from ProjectMember to simplify cross-project queries
 model MemberWeeklyContribution {
-  id              String        @id @default(cuid())
+  id              String        @id @default(uuid())
   projectMemberId String
   personId        String        // Denormalized for cross-project aggregate queries
   weekStart       DateTime      // Monday 00:00 UTC
@@ -345,7 +345,7 @@ model MemberWeeklyContribution {
 // and "healthScoreAvg4wThreshold", scope "GLOBAL"). Snapshotting scores here avoids
 // re-querying WeeklyStats when rendering the flagged-projects panel.
 model GlobalWeeklySummary {
-  id             String   @id @default(cuid())
+  id             String   @id @default(uuid())
   weekStart      DateTime @unique // Monday 00:00 UTC; one row per week
   summaryText    String   // Qualitative narrative of activity across all active projects
   notableChanges String   // LLM-derived callout of notable stat changes this week
@@ -362,7 +362,7 @@ model GlobalWeeklySummary {
 // Produced by the weekly LLM job, which draws from both GitHub (CommitFact, PRFact)
 // and Discord (DiscordWeeklyAggregate) data for the week.
 model WeeklySummary {
-  id               String   @id @default(cuid())
+  id               String   @id @default(uuid())
   projectId        String
   weekStart        DateTime // Monday 00:00 UTC
   summaryText      String
@@ -383,7 +383,7 @@ model WeeklySummary {
 // Maintained in FIFO order — when a new commit is inserted and the count exceeds 10,
 // the oldest row (by receivedAt) is deleted.
 model LiveCommit {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   sha          String
   shortSha     String   // first 7 chars, stored for display without re-computing
   repoOwner    String
@@ -419,7 +419,7 @@ enum SyncJobStatus {
 // Audit log of each weekly job run (GitHub, Discord, and LLM).
 // One row is created per project per job type when the scheduler fires.
 model SyncJob {
-  id             String        @id @default(cuid())
+  id             String        @id @default(uuid())
   type           SyncJobType
   projectId      String?       // null = global job (e.g. cross-project aggregation)
   status         SyncJobStatus @default(PENDING)
