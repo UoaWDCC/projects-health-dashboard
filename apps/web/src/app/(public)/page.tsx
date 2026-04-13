@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
+import WeeklyMvp from '@/components/ui/weekly-mvp'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -30,6 +31,9 @@ export default async function PublicDashboardPage() {
           </Link>
         )}
       </nav>
+      <div style={{ width: '1284px', height: '288px', marginLeft: '50px' }}>
+        <WeeklyMvp name="Devin Shen" avatarUrl="https://github.com/bakedalaskatm.png" linesCommitted={100} />
+      </div>
     </main>
   )
 }
