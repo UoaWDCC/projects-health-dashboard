@@ -1,9 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PROTECTED_PATHS = ['/dashboard', '/projects', '/roles', '/exec-dashboard']
+
 /**
  * Refreshes the Supabase session on every request.
- * No protected routes — only the public view is active.
+ * redirects unauthenticated users away from protected routes.
  */
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -28,7 +30,18 @@ export async function middleware(request: NextRequest) {
   )
 
   // Refresh session — required by @supabase/ssr to keep cookies in sync.
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+  const isProtected = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
+
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }
