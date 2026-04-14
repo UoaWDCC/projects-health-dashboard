@@ -47,6 +47,7 @@ export async function POST(
         targetDisplayName = String(formData.get('displayName') ?? '').trim()
         const discordId = String(formData.get('discordId') ?? '').trim()
         const githubId = String(formData.get('githubId') ?? '').trim()
+        const imageUrl = String(formData.get('imageUrl') ?? '').trim()
 
         if (!targetDisplayName) {
           throw new Error('Display name is required for a new person')
@@ -71,6 +72,7 @@ export async function POST(
             identities: {
               create: identitiesToCreate,
             },
+            imageUrl: imageUrl,
           },
         })
         targetPersonId = newPerson.id

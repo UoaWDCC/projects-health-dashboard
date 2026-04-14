@@ -139,10 +139,10 @@ export default function CreateMemberPage({ params }: { params: Promise<{ id: str
             <label>
               Profile Photo:
               <input
-                type="file"
+                type="text"
                 style={{ border: '1px solid #ccc' }}
-                name="photo"
-                accept="image/*"
+                name="imageUrl"
+                placeholder="https://..."
               />
             </label>
             <br />
