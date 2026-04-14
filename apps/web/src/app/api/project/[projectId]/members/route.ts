@@ -97,7 +97,21 @@ export async function POST(
       })
 
       if (existingMember) {
-        throw new Error('This person is already a member of this project!')
+        if (existingMember.isActive) {
+          throw new Error('This person is already an active member of this project!')
+        } else {
+          // Reactivate soft-deleted member!
+          return await tx.projectMember.update({
+            where: { id: existingMember.id },
+            data: {
+              isActive: true,
+              displayName: targetDisplayName,
+            },
+            include: {
+              person: true,
+            },
+          })
+        }
       }
 
       // Scenario 1 & 2: Link the person to the project

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type IdentityProvider = 'GITHUB' | 'DISCORD'
 
@@ -67,7 +68,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <ul>
         {members.map((member) => (
           <li key={member.id}>
-            <strong>{member.person.displayName}</strong>
+            <strong>
+              <Link href={`/people/${member.personId}`}>{member.person.displayName}</Link>
+            </strong>
             {member.person.identities.map((identity) => (
               <span
                 key={identity.id}
