@@ -10,8 +10,12 @@ async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
       const status = (err as { status?: number })?.status
       const headers = (err as { response?: { headers?: Record<string, string> } })?.response
         ?.headers
-      const isRateLimit = status === 429 || status === 403
-      if (isRateLimit && attempt < retries) {
+
+      // 403 can mean permission denied OR secondary rate limit — check for retry-after header
+      const isSecondaryRateLimit = status === 403 && headers?.['retry-after'] !== undefined
+      const isPrimaryRateLimit = status === 429
+
+      if (isPrimaryRateLimit && attempt < retries) {
         const retryAfter = parseInt(headers?.['retry-after'] ?? '60', 10)
         logger.warn(
           `Rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
@@ -19,6 +23,20 @@ async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
         await new Promise((r) => setTimeout(r, retryAfter * 1000))
         continue
       }
+
+      if (isSecondaryRateLimit && attempt < retries) {
+        const retryAfter = parseInt(headers['retry-after']!, 10)
+        logger.warn(
+          `Secondary rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
+        )
+        await new Promise((r) => setTimeout(r, retryAfter * 1000))
+        continue
+      }
+
+      if (status === 403) {
+        logger.error('Permission denied (403). Check GitHub App permissions or installation scope.')
+      }
+
       throw err
     }
   }
@@ -66,20 +84,12 @@ async function ingestRepoMergedPRs(
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
-  // Fetch closed PRs and filter to those merged this week
-  const pulls = await withRateLimit(() =>
-    octokit.paginate('GET /repos/{owner}/{repo}/pulls', {
-      owner: repo.owner,
-      repo: repo.name,
-      state: 'closed',
-      sort: 'updated',
-      direction: 'desc',
+  const since = weekStart.toISOString().split('T')[0] // YYYY-MM-DD
+  const mergedThisWeek = await withRateLimit(() =>
+    octokit.paginate('GET /search/issues', {
+      q: `repo:${repo.owner}/${repo.name} is:pr is:merged merged:>=${since}`,
       per_page: 100,
     })
-  )
-
-  const mergedThisWeek = pulls.filter(
-    (pr) => pr.merged_at !== null && new Date(pr.merged_at) >= weekStart
   )
 
   if (mergedThisWeek.length === 0) {
