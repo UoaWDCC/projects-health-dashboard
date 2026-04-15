@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 
 /**
@@ -10,23 +11,22 @@ import { getUserRoles } from '@/lib/auth'
  */
 export default async function PublicDashboardPage() {
   const roles = await getUserRoles()
-  const isExec = roles.includes('EXEC')
-  const isAdmin = roles.includes('ADMIN')
+  const isExec = roles.includes(Role.EXEC)
+  const isAdmin = roles.includes(Role.ADMIN)
 
   return (
     <main>
       <h1>WDCC Projects Health Dashboard</h1>
       <p>Public view coming soon.</p>
-      <nav>
+      <nav style={{ display: 'flex', gap: '0.5rem' }}>
         {(isExec || isAdmin) && (
-          <Link href="/exec-dashboard">
-            <button>Exec Dashboard</button>
+          <Link className="underline" href="/exec-dashboard">
+            Exec Dashboard
           </Link>
         )}
-        <br></br>
         {isAdmin && (
-          <Link href="/dashboard">
-            <button>Admin Dashboard</button>
+          <Link className="underline" href="/admin-dashboard">
+            Admin Dashboard
           </Link>
         )}
       </nav>
