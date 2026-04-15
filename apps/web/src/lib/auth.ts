@@ -1,10 +1,10 @@
-import { db } from '@repo/db'
+import { db, Role } from '@repo/db'
 import { createClient } from '@/lib/supabase/server'
 
 // Returns the list of roles for the currently authenticated user.
 // Returns an empty array if the user is not authenticated.
 
-export async function getUserRoles(): Promise<string[]> {
+export async function getUserRoles(): Promise<Role[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -20,7 +20,7 @@ export async function getUserRoles(): Promise<string[]> {
   return userRoles.map((ur) => ur.role)
 }
 
-export async function hasRole(role: string): Promise<boolean> {
+export async function hasRole(role: Role): Promise<boolean> {
   const roles = await getUserRoles()
   return roles.includes(role)
 }
