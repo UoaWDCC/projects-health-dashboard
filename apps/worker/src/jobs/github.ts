@@ -1,8 +1,9 @@
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
+import { ingestRepoCommits } from '../lib/github-commit-tracker'
 
-async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+export async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn()
@@ -55,10 +56,17 @@ export async function runGitHubIngestion(): Promise<void> {
 
     for (const repo of repos) {
       try {
-        const count = await ingestRepoMergedPRs(repo, weekStart)
-        totalProcessed += count
+        const PRcount = await ingestRepoMergedPRs(repo, weekStart)
+        totalProcessed += PRcount
       } catch (err) {
         logger.error(`Failed to ingest PRs for ${repo.owner}/${repo.name}: ${err}`)
+      }
+
+      try {
+        const commitCount = await ingestRepoCommits(repo)
+        totalProcessed += commitCount
+      } catch (err) {
+        logger.error(`Failed to ingest commits for ${repo.owner}/${repo.name}: ${err}`)
       }
     }
 
@@ -66,7 +74,7 @@ export async function runGitHubIngestion(): Promise<void> {
       where: { id: syncJob.id },
       data: { status: 'SUCCESS', finishedAt: new Date(), itemsProcessed: totalProcessed },
     })
-    logger.info(`GitHub ingestion complete. ${totalProcessed} PRs processed.`)
+    logger.info(`GitHub ingestion complete. ${totalProcessed} items processed.`)
   } catch (err) {
     await db.syncJob.update({
       where: { id: syncJob.id },
@@ -148,7 +156,9 @@ async function ingestRepoMergedPRs(
   return count
 }
 
-async function resolveIdentity(user: { id: number; login: string } | null): Promise<string | null> {
+export async function resolveIdentity(
+  user: { id: number; login: string } | null
+): Promise<string | null> {
   if (!user) return null
 
   const existing = await db.personIdentity.findUnique({
@@ -170,7 +180,7 @@ async function resolveIdentity(user: { id: number; login: string } | null): Prom
   return null
 }
 
-function getWeekStart(): Date {
+export function getWeekStart(): Date {
   const now = new Date()
   const day = now.getUTCDay() // 0=Sun, 1=Mon...
   const diff = day === 0 ? 6 : day - 1 // days since Monday
