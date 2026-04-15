@@ -30,7 +30,7 @@ export default function CreateProjectPage() {
       return
     }
 
-    router.replace('/dashboard')
+    router.replace('/admin-dashboard')
   }
 
   return (
