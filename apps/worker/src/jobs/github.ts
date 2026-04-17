@@ -2,6 +2,7 @@ import { db } from '@repo/db'
 import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
 import { ingestRepoCommits } from '../lib/github-commit-tracker'
+import path from 'path'
 
 export async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -12,25 +13,29 @@ export async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promi
       const headers = (err as { response?: { headers?: Record<string, string> } })?.response
         ?.headers
 
-      // 403 can mean permission denied OR secondary rate limit — check for retry-after header
-      const isSecondaryRateLimit = status === 403 && headers?.['retry-after'] !== undefined
-      const isPrimaryRateLimit = status === 429
+      const isPrimaryRateLimit =
+        status === 429 || (status === 403 && headers?.['x-ratelimit-remaining'] === '0')
+      const isSecondaryRateLimit =
+        status === 403 && !isPrimaryRateLimit && headers?.['retry-after'] !== undefined
 
-      if (isPrimaryRateLimit && attempt < retries) {
-        const retryAfter = parseInt(headers?.['retry-after'] ?? '60', 10)
-        logger.warn(
-          `Rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
-        )
-        await new Promise((r) => setTimeout(r, retryAfter * 1000))
-        continue
+      const rateLimitReset = headers?.['x-ratelimit-reset']
+      const retryAfter = headers?.['retry-after']
+
+      let retryAfterSeconds = 60 // default retry after 60 seconds if not specified
+
+      if (isPrimaryRateLimit && rateLimitReset) {
+        const resetTime = parseInt(rateLimitReset, 10) * 1000
+        const currentTime = Date.now()
+        retryAfterSeconds = Math.max(Math.ceil((resetTime - currentTime) / 1000), 10)
+      } else if (isSecondaryRateLimit && retryAfter) {
+        retryAfterSeconds = Math.max(parseInt(retryAfter, 10), 10)
       }
 
-      if (isSecondaryRateLimit && attempt < retries) {
-        const retryAfter = parseInt(headers['retry-after']!, 10)
+      if ((isPrimaryRateLimit || isSecondaryRateLimit) && attempt < retries) {
         logger.warn(
-          `Secondary rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
+          `Rate limit hit. Retrying after ${retryAfterSeconds}s (attempt ${attempt + 1}/${retries})`
         )
-        await new Promise((r) => setTimeout(r, retryAfter * 1000))
+        await new Promise((r) => setTimeout(r, retryAfterSeconds * 1000))
         continue
       }
 
@@ -116,12 +121,12 @@ async function ingestRepoMergedPRs(
       })
     )
 
-    const authorIdentityId = await resolveIdentity(
-      fullPr.user ? { id: fullPr.user.id, login: fullPr.user.login } : null
-    )
-    const mergedByIdentityId = await resolveIdentity(
-      fullPr.merged_by ? { id: fullPr.merged_by.id, login: fullPr.merged_by.login } : null
-    )
+    const [authorIdentityId, mergedByIdentityId] = await Promise.all([
+      fullPr.user ? resolveIdentity({ id: fullPr.user.id, login: fullPr.user.login }, repo) : null,
+      fullPr.merged_by
+        ? resolveIdentity({ id: fullPr.merged_by.id, login: fullPr.merged_by.login }, repo)
+        : null,
+    ])
 
     await db.pRFact.upsert({
       where: { repoId_number: { repoId: repo.id, number: fullPr.number } },
@@ -157,7 +162,8 @@ async function ingestRepoMergedPRs(
 }
 
 export async function resolveIdentity(
-  user: { id: number; login: string } | null
+  user: { id: number; login: string } | null,
+  repo?: { id: string; owner: string; name: string } | null
 ): Promise<string | null> {
   if (!user) return null
 
@@ -174,9 +180,15 @@ export async function resolveIdentity(
       username: user.login,
       firstSeenAt: new Date(),
       lastSeenAt: new Date(),
+      sampleRepoName: repo ? `${repo.owner}/${repo.name}` : undefined,
     },
-    update: { lastSeenAt: new Date(), username: user.login },
+    update: {
+      lastSeenAt: new Date(),
+      username: user.login,
+      sampleRepoName: repo ? `${repo.owner}/${repo.name}` : undefined,
+    },
   })
+
   return null
 }
 
@@ -188,4 +200,21 @@ export function getWeekStart(): Date {
   monday.setUTCDate(now.getUTCDate() - diff)
   monday.setUTCHours(0, 0, 0, 0)
   return monday
+}
+
+// If this file is executed directly (eg. `tsx src/jobs/github.ts`), run the job once.
+const invokedScript = process.argv[1] ? path.resolve(process.argv[1]) : null
+// When run with `tsx src/jobs/github.ts`, process.argv[1] will point to that path.
+// Avoid using `import.meta` to keep compatibility with CommonJS builds.
+const targetPathEnding = path.join('src', 'jobs', 'github.ts')
+if (invokedScript && invokedScript.endsWith(targetPathEnding)) {
+  ;(async () => {
+    try {
+      await runGitHubIngestion()
+      process.exit(0)
+    } catch (err) {
+      console.error('runGitHubIngestion failed:', err)
+      process.exit(1)
+    }
+  })()
 }

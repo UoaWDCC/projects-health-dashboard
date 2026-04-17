@@ -44,16 +44,12 @@ export async function ingestRepoCommits(repo: {
       })
     )
 
-    if (commits.length === 0) {
-      logger.info(`No commits found for ${repo.owner}/${repo.name} this week.`)
-      return 0
-    }
-
     totalCommits += commits.length
 
     for (const commit of commits) {
       const authorIdentityId = await resolveIdentity(
-        commit.author ? { id: commit.author.id, login: commit.author.login } : null
+        commit.author ? { id: commit.author.id, login: commit.author.login } : null,
+        repo
       )
 
       await db.commitFact.upsert({
@@ -81,6 +77,10 @@ export async function ingestRepoCommits(repo: {
         },
       })
     }
+  }
+
+  if (totalCommits === 0) {
+    logger.info(`No commits found for ${repo.owner}/${repo.name} in the past week.`)
   }
 
   return totalCommits
