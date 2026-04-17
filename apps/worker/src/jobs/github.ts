@@ -2,7 +2,6 @@ import { db } from '@repo/db'
 import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
 import { ingestRepoCommits } from '../lib/github-commit-tracker'
-import path from 'path'
 
 export async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -200,21 +199,4 @@ export function getWeekStart(): Date {
   monday.setUTCDate(now.getUTCDate() - diff)
   monday.setUTCHours(0, 0, 0, 0)
   return monday
-}
-
-// If this file is executed directly (eg. `tsx src/jobs/github.ts`), run the job once.
-const invokedScript = process.argv[1] ? path.resolve(process.argv[1]) : null
-// When run with `tsx src/jobs/github.ts`, process.argv[1] will point to that path.
-// Avoid using `import.meta` to keep compatibility with CommonJS builds.
-const targetPathEnding = path.join('src', 'jobs', 'github.ts')
-if (invokedScript && invokedScript.endsWith(targetPathEnding)) {
-  ;(async () => {
-    try {
-      await runGitHubIngestion()
-      process.exit(0)
-    } catch (err) {
-      console.error('runGitHubIngestion failed:', err)
-      process.exit(1)
-    }
-  })()
 }
