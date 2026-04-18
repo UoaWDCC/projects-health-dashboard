@@ -3,16 +3,18 @@
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
-import { resolveIdentity } from '../jobs/github'
-import { withRateLimit } from '../jobs/github'
-import { getWeekStart } from '../jobs/github'
+import { resolveIdentity } from './github-utils'
+import { withRateLimit } from './github-utils'
 
-export async function ingestRepoCommits(repo: {
-  id: string
-  owner: string
-  name: string
-  installationId: string
-}): Promise<number> {
+export async function ingestRepoCommits(
+  repo: {
+    id: string
+    owner: string
+    name: string
+    installationId: string
+  },
+  weekStart: Date
+): Promise<number> {
   logger.info(`Fetching commits for ${repo.owner}/${repo.name}`)
 
   const octokit = await getInstallationOctokit(repo.installationId)
@@ -28,7 +30,7 @@ export async function ingestRepoCommits(repo: {
   let totalCommits = 0
 
   for (const branch of branches) {
-    if (branch.name === 'main') {
+    if (branch.name === 'main' || branch.name === 'master') {
       continue
     }
 
@@ -39,7 +41,7 @@ export async function ingestRepoCommits(repo: {
         owner: repo.owner,
         repo: repo.name,
         sha: branch.name,
-        since: getWeekStart().toISOString(),
+        since: weekStart.toISOString(),
         per_page: 100,
       })
     )
@@ -52,6 +54,14 @@ export async function ingestRepoCommits(repo: {
         repo
       )
 
+      const stats = await withRateLimit(() =>
+        octokit.request('GET /repos/{owner}/{repo}/commits/{sha}', {
+          owner: repo.owner,
+          repo: repo.name,
+          sha: commit.sha,
+        })
+      ).then((res) => res.data.stats)
+
       await db.commitFact.upsert({
         // compound key to avoid duplicate entries for the same commit
         where: { repoId_sha: { repoId: repo.id, sha: commit.sha } },
@@ -61,8 +71,8 @@ export async function ingestRepoCommits(repo: {
           authorIdentityId: authorIdentityId,
           message: commit.commit.message,
           branch: branch.name,
-          linesAdded: commit.stats?.additions || 0,
-          linesRemoved: commit.stats?.deletions || 0,
+          linesAdded: stats.additions || 0,
+          linesRemoved: stats.deletions || 0,
           committedAt: new Date(commit.commit.author?.date || Date.now()),
           ingestedAt: new Date(Date.now()),
         },
@@ -70,8 +80,8 @@ export async function ingestRepoCommits(repo: {
           authorIdentityId: authorIdentityId,
           message: commit.commit.message,
           branch: branch.name,
-          linesAdded: commit.stats?.additions || 0,
-          linesRemoved: commit.stats?.deletions || 0,
+          linesAdded: stats.additions || 0,
+          linesRemoved: stats.deletions || 0,
           committedAt: new Date(commit.commit.author?.date || Date.now()),
           ingestedAt: new Date(Date.now()),
         },
