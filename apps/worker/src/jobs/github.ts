@@ -11,12 +11,16 @@ async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
       const headers = (err as { response?: { headers?: Record<string, string> } })?.response
         ?.headers
 
-      // 403 can mean permission denied OR secondary rate limit — check for retry-after header
-      const isSecondaryRateLimit = status === 403 && headers?.['retry-after'] !== undefined
-      const isPrimaryRateLimit = status === 429
+      const isPrimaryRateLimit =
+        status === 429 || (status === 403 && headers?.['x-ratelimit-remaining'] === '0')
+      const isSecondaryRateLimit =
+        status === 403 && !isPrimaryRateLimit && headers?.['retry-after'] !== undefined
 
       if (isPrimaryRateLimit && attempt < retries) {
-        const retryAfter = parseInt(headers?.['retry-after'] ?? '60', 10)
+        const resetAt = headers?.['x-ratelimit-reset']
+        const retryAfter = resetAt
+          ? Math.ceil(parseInt(resetAt, 10) - Date.now() / 1000)
+          : parseInt(headers?.['retry-after'] ?? '60', 10)
         logger.warn(
           `Rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
         )
@@ -25,7 +29,7 @@ async function withRateLimit<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
       }
 
       if (isSecondaryRateLimit && attempt < retries) {
-        const retryAfter = parseInt(headers['retry-after']!, 10)
+        const retryAfter = parseInt(headers!['retry-after']!, 10)
         logger.warn(
           `Secondary rate limit hit. Retrying after ${retryAfter}s (attempt ${attempt + 1}/${retries})`
         )
@@ -109,10 +113,12 @@ async function ingestRepoMergedPRs(
     )
 
     const authorIdentityId = await resolveIdentity(
-      fullPr.user ? { id: fullPr.user.id, login: fullPr.user.login } : null
+      fullPr.user ? { id: fullPr.user.id, login: fullPr.user.login } : null,
+      repo.name
     )
     const mergedByIdentityId = await resolveIdentity(
-      fullPr.merged_by ? { id: fullPr.merged_by.id, login: fullPr.merged_by.login } : null
+      fullPr.merged_by ? { id: fullPr.merged_by.id, login: fullPr.merged_by.login } : null,
+      repo.name
     )
 
     await db.pRFact.upsert({
@@ -134,6 +140,12 @@ async function ingestRepoMergedPRs(
         ingestedAt: new Date(),
       },
       update: {
+        title: fullPr.title,
+        body: fullPr.body ?? null,
+        url: fullPr.html_url,
+        labels: fullPr.labels.map((l) => l.name),
+        authorIdentityId,
+        mergedByIdentityId,
         mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
         closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
         linesAdded: fullPr.additions,
@@ -148,7 +160,10 @@ async function ingestRepoMergedPRs(
   return count
 }
 
-async function resolveIdentity(user: { id: number; login: string } | null): Promise<string | null> {
+async function resolveIdentity(
+  user: { id: number; login: string } | null,
+  repoName: string
+): Promise<string | null> {
   if (!user) return null
 
   const existing = await db.personIdentity.findUnique({
@@ -164,6 +179,7 @@ async function resolveIdentity(user: { id: number; login: string } | null): Prom
       username: user.login,
       firstSeenAt: new Date(),
       lastSeenAt: new Date(),
+      sampleRepoName: repoName,
     },
     update: { lastSeenAt: new Date(), username: user.login },
   })
