@@ -64,6 +64,12 @@ export async function ingestRepoMergedPRs(
         ingestedAt: new Date(),
       },
       update: {
+        title: fullPr.title,
+        body: fullPr.body ?? null,
+        url: fullPr.html_url,
+        labels: fullPr.labels.map((l) => l.name),
+        authorIdentityId,
+        mergedByIdentityId,
         mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
         closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
         linesAdded: fullPr.additions,
