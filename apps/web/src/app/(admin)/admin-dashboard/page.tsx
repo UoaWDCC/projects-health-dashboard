@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/Link'
+import Link from 'next/link'
 
 type Project = {
   id: string
