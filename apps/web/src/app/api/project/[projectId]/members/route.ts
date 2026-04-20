@@ -1,10 +1,15 @@
 import { db } from '@repo/db'
+import { hasRole } from '@/lib/auth'
 
 // API route for getting all members of a project
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   const { projectId } = await params
   try {
     const members = await db.projectMember.findMany({
@@ -32,27 +37,44 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const { projectId } = await params
     const formData = await request.formData()
 
-    const personId = String(formData.get('personId') ?? '').trim()
+    let targetPersonId = String(formData.get('personId') ?? '').trim()
+    let targetDisplayName = String(formData.get('displayName') ?? '').trim()
+    const discordId = String(formData.get('discordId') ?? '').trim()
+    const githubId = String(formData.get('githubId') ?? '').trim()
+    const imageUrl = String(formData.get('imageUrl') ?? '').trim()
+
+    if (!targetPersonId) {
+      if (!targetDisplayName) {
+        return Response.json(
+          { error: 'Display name is required for a new person' },
+          { status: 400 }
+        )
+      }
+    } else {
+      const existingPerson = await db.person.findUnique({
+        where: { id: targetPersonId },
+      })
+
+      if (!existingPerson) {
+        return Response.json(
+          { error: 'Selected person could not be found in the database' },
+          { status: 404 }
+        )
+      }
+      targetDisplayName = existingPerson.displayName
+    }
 
     const newMember = await db.$transaction(async (tx) => {
-      let targetPersonId = personId
-      let targetDisplayName = ''
-
       // Scenario 2: Create a brand new person (No personId provided)
       if (!targetPersonId) {
-        targetDisplayName = String(formData.get('displayName') ?? '').trim()
-        const discordId = String(formData.get('discordId') ?? '').trim()
-        const githubId = String(formData.get('githubId') ?? '').trim()
-        const imageUrl = String(formData.get('imageUrl') ?? '').trim()
-
-        if (!targetDisplayName) {
-          throw new Error('Display name is required for a new person')
-        }
-
         // Construct identities array
         const identitiesToCreate: {
           provider: 'DISCORD' | 'GITHUB'
@@ -72,22 +94,10 @@ export async function POST(
             identities: {
               create: identitiesToCreate,
             },
-            imageUrl: imageUrl,
+            imageUrl: imageUrl || null,
           },
         })
         targetPersonId = newPerson.id
-      } else {
-        // Scenario 1: Existing person selected
-        // We must fetch their display name to mirror it in ProjectMember
-        const existingPerson = await tx.person.findUnique({
-          where: { id: targetPersonId },
-        })
-
-        if (!existingPerson) {
-          throw new Error('Selected person could not be found in the database')
-        }
-
-        targetDisplayName = existingPerson.displayName
       }
 
       // Prevent adding the exact same person to the project twice
@@ -133,9 +143,11 @@ export async function POST(
     return Response.json(newMember, { status: 201 })
   } catch (error) {
     console.error('Error adding member:', error)
-    return Response.json(
-      { error: error instanceof Error ? error.message : 'Failed to add member' },
-      { status: error instanceof Error && error.message.includes('required') ? 400 : 500 }
-    )
+
+    const errorMessage = error instanceof Error ? error.message : 'Failed to add member'
+    const status =
+      errorMessage === 'This person is already an active member of this project!' ? 409 : 500
+
+    return Response.json({ error: errorMessage }, { status })
   }
 }

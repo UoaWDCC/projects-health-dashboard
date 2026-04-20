@@ -1,9 +1,14 @@
 import { db } from '@repo/db'
+import { hasRole } from '@/lib/auth'
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ personId: string }> }
 ) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const { personId } = await params
     const body = await request.json()
@@ -12,6 +17,10 @@ export async function POST(
 
     if (!provider || !externalId) {
       return Response.json({ error: 'Provider and externalId are required' }, { status: 400 })
+    }
+
+    if (provider !== 'GITHUB' && provider !== 'DISCORD') {
+      return Response.json({ error: 'Invalid provider' }, { status: 400 })
     }
 
     const newIdentity = await db.personIdentity.create({

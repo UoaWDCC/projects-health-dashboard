@@ -1,6 +1,11 @@
 import { db } from '@repo/db'
+import { hasRole } from '@/lib/auth'
 
 export async function GET(request: Request, { params }: { params: Promise<{ personId: string }> }) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const { personId } = await params
     const person = await db.person.findUnique({
@@ -27,21 +32,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ pers
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ personId: string }> }) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const { personId } = await params
     const body = await request.json()
 
     const { displayName, imageUrl, forceCascade } = body
 
+    const oldPerson = await db.person.findUnique({
+      where: { id: personId },
+    })
+
+    if (!oldPerson) {
+      return Response.json({ error: 'Person not found' }, { status: 404 })
+    }
+
     const updatedPerson = await db.$transaction(async (tx) => {
-      const oldPerson = await tx.person.findUnique({
-        where: { id: personId },
-      })
-
-      if (!oldPerson) {
-        throw new Error('Person not found')
-      }
-
       const newDisplayName =
         displayName !== undefined ? String(displayName).trim() : oldPerson.displayName
       const newImageUrl =

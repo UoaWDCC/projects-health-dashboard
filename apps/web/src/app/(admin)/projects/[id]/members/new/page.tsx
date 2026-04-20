@@ -12,9 +12,11 @@ import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { use, useState, useEffect } from 'react'
 
+type IdentityProvider = 'GITHUB' | 'DISCORD'
+
 type PersonIdentity = {
   id: string
-  provider: string
+  provider: IdentityProvider
   externalId: string
   username: string | null
 }
