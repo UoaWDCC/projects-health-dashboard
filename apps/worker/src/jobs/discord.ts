@@ -1,5 +1,5 @@
 import { logger } from '../lib/logger'
-import { db, SyncJobStatus, SyncJobType } from '@repo/db'
+import { db, IdentityProvider, SyncJobStatus, SyncJobType } from '@repo/db'
 
 /**
  * 1st Jan 2015, the epoch used by Discord snowflakes.
@@ -33,6 +33,14 @@ interface APIMessage {
   }
   content: string
   timestamp: string
+}
+
+/**
+ * A simplified message structure containing only the content and author ID.
+ */
+interface FetchedMessage {
+  content: string
+  authorId: string
 }
 
 /**
@@ -129,11 +137,11 @@ async function requestMessages(path: string): Promise<APIMessage[]> {
  * @param {string} channelId The ID of the Discord channel to fetch messages from.
  * @returns An array of message contents posted in the past week.
  */
-async function fetchWeeklyMessages(channelId: string): Promise<string[]> {
+async function fetchWeeklyMessages(channelId: string): Promise<FetchedMessage[]> {
   const weekStart = startOfWeek(new Date())
   const weekEnd = new Date()
   const afterSnowflake = timestampToSnowflake(weekStart.getTime())
-  const all: string[] = []
+  const fetchedMessages: FetchedMessage[] = []
   let after = afterSnowflake
 
   while (true) {
@@ -146,15 +154,15 @@ async function fetchWeeklyMessages(channelId: string): Promise<string[]> {
         (m) =>
           !m.author.bot && new Date(m.timestamp) >= weekStart && new Date(m.timestamp) <= weekEnd
       )
-      .map((m) => m.content)
+      .map((m) => ({ content: m.content, authorId: m.author.id }))
 
-    all.push(...valid)
+    fetchedMessages.push(...valid)
 
     if (batch.length < 100) break
     after = batch[batch.length - 1].id
   }
 
-  return all
+  return fetchedMessages
 }
 
 /**
@@ -181,6 +189,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
   }
 
   const data: ProjectData[] = []
+  const weekStart = startOfWeek(new Date())
 
   for (const project of projects) {
     if (project.channels.length === 0) {
@@ -198,27 +207,87 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
     })
 
     let itemsProcessed = 0
-    const messages: string[] = []
+    const fetchedMessages: FetchedMessage[] = []
 
     try {
       for (const channel of project.channels) {
-        const fetchedMessages = await fetchWeeklyMessages(channel.externalId)
+        const channelMessages = await fetchWeeklyMessages(channel.externalId)
 
-        if (fetchedMessages.length === 0) {
+        if (channelMessages.length === 0) {
           logger.warn(`No messages found for channel ${channel.name} in project "${project.name}"`)
           continue
         }
 
-        itemsProcessed += fetchedMessages.length
-        messages.push(...fetchedMessages)
+        itemsProcessed += channelMessages.length
+        fetchedMessages.push(...channelMessages)
         logger.info(
-          `Fetched ${fetchedMessages.length} messages from channel ${channel.name} in project "${project.name}"`
+          `Fetched ${channelMessages.length} messages from channel ${channel.name} in project "${project.name}"`
         )
       }
 
+      const authorIds = [...new Set(fetchedMessages.map((m) => m.authorId))]
+
+      const knownIdentities = await db.personIdentity.findMany({
+        where: {
+          provider: IdentityProvider.DISCORD,
+          externalId: { in: authorIds },
+        },
+        select: { id: true, externalId: true },
+      })
+
+      const discordIdToIdentityId = new Map(knownIdentities.map((i) => [i.externalId, i.id]))
+
+      const identityCounts = new Map<string, number>()
+      let unmappedMessageCount = 0
+
+      for (const msg of fetchedMessages) {
+        const identityId = discordIdToIdentityId.get(msg.authorId)
+        if (identityId) {
+          identityCounts.set(identityId, (identityCounts.get(identityId) ?? 0) + 1)
+        } else {
+          unmappedMessageCount++
+        }
+      }
+
+      const uniqueAuthors = authorIds.length
+      const messageCount = fetchedMessages.length
+
+      await db.discordWeeklyAggregate.upsert({
+        where: { projectId_weekStart: { projectId: project.id, weekStart } },
+        create: {
+          projectId: project.id,
+          weekStart,
+          messageCount,
+          uniqueAuthors,
+          unmappedMessageCount,
+        },
+        update: {
+          messageCount,
+          uniqueAuthors,
+          unmappedMessageCount,
+          computedAt: new Date(),
+        },
+      })
+
+      await Promise.all(
+        [...identityCounts].map(([authorIdentityId, count]) =>
+          db.discordIdentityWeeklyCount.upsert({
+            where: {
+              projectId_weekStart_authorIdentityId: {
+                projectId: project.id,
+                weekStart,
+                authorIdentityId,
+              },
+            },
+            create: { projectId: project.id, weekStart, authorIdentityId, messageCount: count },
+            update: { messageCount: count, computedAt: new Date() },
+          })
+        )
+      )
+
       data.push({
         projectId: project.id,
-        messages,
+        messages: fetchedMessages.map((m) => m.content),
       })
 
       await db.syncJob.update({
