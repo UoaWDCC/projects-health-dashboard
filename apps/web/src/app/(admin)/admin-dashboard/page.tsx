@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type Project = {
   id: string
@@ -66,7 +67,9 @@ export default function AdminDashboardPage() {
       <ul>
         {projects.map((project) => (
           <li key={project.id}>
-            <strong>{project.name}</strong>
+            <strong style={{ textDecoration: 'underline' }}>
+              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+            </strong>
             <p>{project.description}</p>
             <p>Slug: {project.slug}</p>
             <p>Started at: {project.startedAt}</p>
