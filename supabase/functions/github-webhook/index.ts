@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
 
     for (const commit of commits) {
       const data = {
+        id: crypto.randomUUID(),
         sha: commit.id,
         shortSha: commit.id.slice(0, 7),
         repoOwner,
