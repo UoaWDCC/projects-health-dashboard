@@ -1,6 +1,11 @@
 import { db } from '@repo/db'
+import { hasRole } from '@/lib/auth'
 
 export async function GET() {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const people = await db.person.findMany({
       include: {
