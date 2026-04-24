@@ -24,6 +24,13 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (!commits || commits.length === 0) {
+      return new Response(JSON.stringify({ message: 'No commits in payload' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const branch = ref.replace('refs/heads/', '')
     const repoOwner = repository.owner.login
     const repoName = repository.name
@@ -40,7 +47,11 @@ Deno.serve(async (req) => {
         authorName: commit.author.name,
         committedAt: new Date(commit.timestamp),
       }
-      await supabase.from('LiveCommit').insert(data)
+      const { error } = await supabase.from('LiveCommit').insert(data)
+      // ignore duplicate commits (same sha + repo already exists)
+      if (error && !error.message.includes('duplicate key')) {
+        throw new Error(error.message)
+      }
     }
 
     const { data: allCommits } = await supabase
