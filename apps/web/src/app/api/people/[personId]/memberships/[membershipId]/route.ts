@@ -1,9 +1,14 @@
 import { db } from '@repo/db'
+import { hasRole } from '@/lib/auth'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ personId: string; membershipId: string }> }
 ) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const { personId, membershipId } = await params
     const body = await request.json()
