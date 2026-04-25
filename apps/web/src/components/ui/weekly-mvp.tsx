@@ -25,11 +25,11 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
   return (
     <div
       className={cn(
-        'w-[1284px] h-[288px] flex bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl'
+        'w-full max-w-[1284px] flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]'
       )}
     >
       {/* Wrap the images in a relative container so the crown can be positioned relative to the avatar */}
-      <div className="relative w-[175px] h-[175px] my-auto mx-10">
+      <div className="relative w-32 h-32 mt-5 md:w-[175px] md:h-[175px] mx-auto md:mx-10 mb-6 md:my-auto shrink-0">
         {/* Main Avatar Image */}
         <Image
           src={imgSrc}
@@ -46,12 +46,17 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
           alt="MVP Crown"
           width={175}
           height={175}
-          className="absolute -top-[85px] -left-[65px] w-full h-full drop-shadow-md z-10"
+          className="absolute -top-16 -left-12 md:-top-[85px] md:-left-[65px] w-full h-full drop-shadow-md z-10"
         />
       </div>
-      <div className={cn('flex flex-col justify-center ml-2', plusJakartaSans.className)}>
-        <h1 className={cn('font-extrabold text-4xl mb-3 mt-3')}>{name}</h1>
-        <p className={cn('text-2xl mt-3 font-medium text-[#5A5E7A]')}>
+      <div
+        className={cn(
+          'flex flex-col justify-center text-center md:text-left md:ml-2',
+          plusJakartaSans.className
+        )}
+      >
+        <h1 className={cn('font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3')}>{name}</h1>
+        <p className={cn('text-lg md:text-2xl mt-1 md:mt-3 font-medium text-[#5A5E7A]')}>
           Lines Committed:{' '}
           <span className={cn('font-bold text-[#1F2031]')}>{linesCommitted.toLocaleString()}</span>
         </p>
