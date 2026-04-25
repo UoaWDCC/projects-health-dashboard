@@ -7,6 +7,17 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
+        arial: ['Arial', 'sans-serif'],
+      },
+      colors: {
+        'wdcc-blue': {
+          light: '#CFE0FD',
+          DEFAULT: '#077CF1',
+          dark: '#077CF1',
+        },
+        'wdcc-black': {
+          DEFAULT: '#1F2031',
+        },
       },
     },
   },

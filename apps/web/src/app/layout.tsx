@@ -17,11 +17,15 @@ export const metadata: Metadata = {
   title: 'WDCC Projects Health Dashboard',
   description: 'A dashboard for tracking WDCC project health',
 }
+import { Navbar } from '@/components/navbar/Navbar'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${plusJakartaSans.variable} ${dmMono.variable} font-sans`}>{children}</body>
+      <body className={`${plusJakartaSans.variable} ${dmMono.variable} font-sans`}>
+        <Navbar />
+        <main>{children}</main>
+      </body>
     </html>
   )
 }
