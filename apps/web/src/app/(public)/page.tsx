@@ -31,8 +31,12 @@ export default async function PublicDashboardPage() {
           </Link>
         )}
       </nav>
-      <div style={{ width: '1284px', height: '288px', marginLeft: '50px' }}>
-        <WeeklyMvp name="Devin Shen" avatarUrl="https://github.com/bakedalaskatm.png" linesCommitted={100} />
+      <div className="ml-10">
+        <WeeklyMvp
+          name="John Smith"
+          avatarUrl="https://github.com/johnsmith.png"
+          linesCommitted={2046}
+        />
       </div>
     </main>
   )
