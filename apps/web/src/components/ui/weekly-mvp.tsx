@@ -9,7 +9,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
 
 interface WeeklyMvpProps {
   name: string
-  avatarUrl?: string // Made optional
+  avatarUrl?: string
   linesCommitted: number
 }
 
@@ -23,11 +23,7 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
       : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
 
   return (
-    <div
-      className={cn(
-        'w-full max-w-[1284px] flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]'
-      )}
-    >
+    <div className="w-full max-w-[1284px] flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]">
       {/* Wrap the images in a relative container so the crown can be positioned relative to the avatar */}
       <div className="relative w-32 h-32 mt-5 md:w-[175px] md:h-[175px] mx-auto md:mx-10 mb-6 md:my-auto shrink-0">
         {/* Main Avatar Image */}
@@ -36,7 +32,7 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
           alt={name}
           width={175}
           height={175}
-          className={cn('w-full h-full rounded-full object-cover')}
+          className="w-full h-full rounded-full object-cover"
           onError={() => setImgError(true)}
         />
 
@@ -55,10 +51,10 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
           plusJakartaSans.className
         )}
       >
-        <h1 className={cn('font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3')}>{name}</h1>
-        <p className={cn('text-lg md:text-2xl mt-1 md:mt-3 font-medium text-[#5A5E7A]')}>
+        <p className="font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3">{name}</p>
+        <p className="text-lg md:text-2xl mt-1 md:mt-3 font-medium text-[#5A5E7A]">
           Lines Committed:{' '}
-          <span className={cn('font-bold text-[#1F2031]')}>{linesCommitted.toLocaleString()}</span>
+          <span className="font-bold text-[#1F2031]">{linesCommitted.toLocaleString()}</span>
         </p>
       </div>
     </div>
