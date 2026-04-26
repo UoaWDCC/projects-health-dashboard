@@ -71,7 +71,7 @@ export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project })
         <h3
           className="
             mt-2 sm:mt-3 xl:mt-[clamp(10px,2vw,14px)]
-            text-[16px] sm:text-[18px] xl:text-[clamp(18px,2.2vw,25px)]
+            text-[16px] sm:text-[18px] xl:text-[clamp(18px,2.2vw,25.53px)]
             font-extrabold leading-tight
           "
         >
@@ -81,9 +81,9 @@ export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project })
         <p
           className="
             mt-1 sm:mt-2 xl:mt-[clamp(6px,1.5vw,10px)]
-            text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,18px)]
+            text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)]
             leading-snug text-[#9A9EB8]
-            line-clamp-1
+            line-clamp-2 xl:line-clamp-1
             font-mono
           "
         >
@@ -92,7 +92,7 @@ export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project })
 
         <div className="mt-auto pt-3 sm:pt-4 xl:pt-[clamp(8px,2vw,16px)] flex items-center gap-2">
           <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${statusStyle.dot}`} />
-          <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,18px)] text-[#9A9EB8] font-mono">
+          <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)] text-[#9A9EB8] font-mono">
             {statusStyle.label}
           </span>
         </div>
