@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
-import WeeklyMvp from '@/components/ui/weekly-mvp'
+import LiveCommitRow from '@/components/ui/live-commit-row'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -31,11 +31,36 @@ export default async function PublicDashboardPage() {
           </Link>
         )}
       </nav>
-      <div className="ml-10">
-        <WeeklyMvp
-          name="John Smith"
-          avatarUrl="https://github.com/johnsmith.png"
-          linesCommitted={2046}
+      <div className="">
+        <LiveCommitRow
+          message="feat: add OAuth2 token refresh logic"
+          author="Jamie K"
+          projectName="Project Name Which is long af holy jesus christ"
+          timestamp="2m ago"
+        />
+        <LiveCommitRow
+          message="fix: resolve race condition in queue handler plus another bunch of really long bs for no apparent reason"
+          author="Ovuvuevuevue Enyetuenwuevue Ugbemugbem Osas"
+          projectName="Project Name"
+          timestamp="5m ago"
+        />
+        <LiveCommitRow
+          message="chore: update dependencies to latest stable"
+          author="Alex M"
+          projectName="Project Name"
+          timestamp="11m ago"
+        />
+        <LiveCommitRow
+          message="feat: implement responsive sidebar toggle"
+          author="Riley C"
+          projectName="Project Name"
+          timestamp="18m ago"
+        />
+        <LiveCommitRow
+          message="fix: correct lat/lng bounds on map renderer"
+          author="Jordan L"
+          projectName="Project Name"
+          timestamp="24m ago"
         />
       </div>
     </main>
