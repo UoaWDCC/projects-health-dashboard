@@ -4,7 +4,7 @@ import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
 import { ProjectCard } from '@/components/dashboard/project-card'
 import type { ProjectCardData } from '@/components/dashboard/project-card'
-import { db } from '@repo/db'
+import { getProjects } from '@/lib/project/projects'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -18,7 +18,7 @@ export default async function PublicDashboardPage() {
   const roles = await getUserRoles()
   const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
-  const projects = await db.project.findMany()
+  const projects = await getProjects()
 
   return (
     <main>

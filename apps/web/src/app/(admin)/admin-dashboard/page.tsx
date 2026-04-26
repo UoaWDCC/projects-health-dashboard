@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Project } from '@/lib/projects'
+import { Project } from '@/lib/project/types'
 import Link from 'next/link'
 
 const fetchProjects = async (): Promise<Project[]> => {

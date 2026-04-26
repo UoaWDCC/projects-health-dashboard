@@ -5,26 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          '"Plus Jakarta Sans"',
-          'ui-sans-serif',
-          'system-ui',
-          '-apple-system',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
-        ],
-        mono: [
-          '"DM Mono"',
-          'ui-monospace',
-          'SFMono-Regular',
-          'Menlo',
-          'Monaco',
-          '"Roboto Mono"',
-          '"Courier New"',
-          'monospace',
-        ],
+        sans: ['var(--font-sans)'],
+        mono: ['var(--font-mono)'],
       },
     },
   },
