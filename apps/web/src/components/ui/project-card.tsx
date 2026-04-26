@@ -1,13 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-
-export type ProjectCardData = {
-  id?: string
-  name: string
-  description?: string | null
-  isActive?: boolean | null
-  imageUrl?: string | null
-}
+import type { ProjectCardData } from '@/lib/project/projects'
 
 const statusStyles = {
   active: {
@@ -30,7 +23,7 @@ export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project })
       className="
         relative w-full 
         xl:max-w-[300px] xl:aspect-[300/265]
-        max-w-[340px] aspect-square sm:aspect-auto sm:min-h-[280px]
+        max-w-[300px] sm:min-h-[265px]
         rounded-[clamp(18px,2.5vw,31px)]
         group overflow-visible font-sans
       "

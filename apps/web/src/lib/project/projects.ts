@@ -1,22 +1,21 @@
-import { db } from '@repo/db'
+import { db, Prisma } from '@repo/db'
 
-interface ProjectDetails {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  isActive: boolean
-  imageUrl: string | null
-  startedAt: Date | null
-  createdAt: Date
-}
+const projectSelect = {
+  select: {
+    id: true,
+    name: true,
+    description: true,
+    isActive: true,
+    imageUrl: true,
+  },
+} satisfies Prisma.ProjectFindManyArgs
 
-export async function getProjects(): Promise<ProjectDetails[]> {
+export type ProjectCardData = Prisma.ProjectGetPayload<typeof projectSelect>
+
+export async function getProjectCardData(): Promise<ProjectCardData[]> {
   try {
-    const projects = await db.project.findMany()
-    return projects
-  } catch (error) {
-    console.error('Error fetching projects:', error)
+    return await db.project.findMany(projectSelect)
+  } catch {
     return []
   }
 }

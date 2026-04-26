@@ -3,8 +3,8 @@ import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
 import { ProjectCard } from '@/components/ui/project-card'
-import type { ProjectCardData } from '@/components/ui/project-card'
-import { getProjects } from '@/lib/project/projects'
+import type { ProjectCardData } from '@/lib/project/projects'
+import { getProjectCardData } from '@/lib/project/projects'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -18,7 +18,7 @@ export default async function PublicDashboardPage() {
   const roles = await getUserRoles()
   const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
-  const projects = await getProjects()
+  const projects = await getProjectCardData()
 
   return (
     <main>
@@ -43,7 +43,7 @@ export default async function PublicDashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-4 gap-6 ml-4 mt-6">
+      <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
         {projects.map((project) => {
           const cardData: ProjectCardData = {
             id: project.id,
