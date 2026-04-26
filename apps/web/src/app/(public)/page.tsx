@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
-import { ProjectCard } from '@/components/dashboard/project-card'
-import type { ProjectCardData } from '@/components/dashboard/project-card'
+import { ProjectCard } from '@/components/ui/project-card'
+import type { ProjectCardData } from '@/components/ui/project-card'
 import { getProjects } from '@/lib/project/projects'
 
 /**
