@@ -33,34 +33,16 @@ export default async function PublicDashboardPage() {
       </nav>
       <div className="">
         <LiveCommitRow
-          message="feat: add OAuth2 token refresh logic"
-          author="Jamie K"
-          projectName="Project Name Which is long af holy jesus christ"
-          timestamp="2m ago"
-        />
-        <LiveCommitRow
           message="fix: resolve race condition in queue handler plus another bunch of really long bs for no apparent reason"
           author="Ovuvuevuevue Enyetuenwuevue Ugbemugbem Osas"
           projectName="Project Name"
-          timestamp="5m ago"
+          timestamp={new Date('2026-04-17 05:22:07')}
         />
         <LiveCommitRow
-          message="chore: update dependencies to latest stable"
-          author="Alex M"
-          projectName="Project Name"
-          timestamp="11m ago"
-        />
-        <LiveCommitRow
-          message="feat: implement responsive sidebar toggle"
-          author="Riley C"
-          projectName="Project Name"
-          timestamp="18m ago"
-        />
-        <LiveCommitRow
-          message="fix: correct lat/lng bounds on map renderer"
-          author="Jordan L"
-          projectName="Project Name"
-          timestamp="24m ago"
+          message="feat: add OAuth2 token refresh logic"
+          author="Jamie K"
+          projectName="Project Name Which is long af holy jesus christ"
+          timestamp={new Date('2026-04-14 10:26:19')}
         />
       </div>
     </main>

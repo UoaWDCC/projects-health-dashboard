@@ -8,7 +8,7 @@ interface LiveCommitRowProps {
   message: string
   author: string
   projectName: string
-  timestamp: string
+  timestamp: Date
 }
 
 export default function LiveCommitRow({
@@ -41,8 +41,31 @@ export default function LiveCommitRow({
       <p
         className={`${dmMono400.className} text-[#9A9EB8] text-[clamp(0.5rem,2vw,1rem)] text-right place-self-center whitespace-nowrap shrink-0`}
       >
-        {timestamp}
+        {processDateTime(timestamp)}
       </p>
     </div>
   )
+}
+
+function processDateTime(timestamp: Date) {
+  const now = new Date()
+  const diff = now.getTime() - timestamp.getTime()
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (seconds < 60) {
+    return `${seconds}s ago`
+  }
+
+  if (minutes < 60) {
+    return `${minutes}m ago`
+  }
+
+  if (hours < 24) {
+    return `${hours}h ago`
+  }
+
+  return `${days}d ago`
 }
