@@ -3,7 +3,6 @@ import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
 import { ProjectCard } from '@/components/ui/project-card'
-import type { ProjectCardData } from '@/lib/project/projects'
 import { getProjectCardData } from '@/lib/project/projects'
 
 /**
@@ -44,17 +43,9 @@ export default async function PublicDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
-        {projects.map((project) => {
-          const cardData: ProjectCardData = {
-            id: project.id,
-            name: project.name,
-            description: project.description ?? null,
-            isActive: Boolean(project.isActive),
-            imageUrl: project.imageUrl ?? null,
-          }
-
-          return <ProjectCard key={project.id} project={cardData} />
-        })}
+        {projects.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
       </div>
     </main>
   )

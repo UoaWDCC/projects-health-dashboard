@@ -1,4 +1,3 @@
-import React from 'react'
 import Image from 'next/image'
 import type { ProjectCardData } from '@/lib/project/projects'
 
