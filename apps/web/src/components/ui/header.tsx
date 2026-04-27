@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* Heading + illustration */}
+      {/* Main Headings*/}
       <div className="mt-6 sm:mt-8 lg:mt-11 flex items-end justify-between">
         <div className="flex flex-col justify-between">
           <div>
@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* CTA — mt-auto pushes it to the bottom to align with illustration */}
+          {/* CTA */}
           <div className="mt-auto pt-12 sm:pt-14 lg:pt-16">
             <Link
               href="/leaderboard"
@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Cow illustration */}
+        {/* Illustration */}
         <div className="hidden lg:flex items-end shrink-0">
           <Image
             src="/webster-header.png"
