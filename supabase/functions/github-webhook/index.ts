@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       }
       const { error } = await supabase.from('LiveCommit').insert(data)
       // ignore duplicate commits (same sha + repo already exists)
-      if (error && !error.message.includes('duplicate key')) {
+      if (error && error.code !== '23505') {
         throw new Error(error.message)
       }
     }
