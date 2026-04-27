@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
+import { ProjectCard } from '@/components/ui/project-card'
+import { getProjectCardData } from '@/lib/project/projects'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -10,15 +12,16 @@ import WeeklyMvp from '@/components/ui/weekly-mvp'
  *
  * TODO: Implement public dashboard UI
  */
+
 export default async function PublicDashboardPage() {
   const roles = await getUserRoles()
   const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
+  const projects = await getProjectCardData()
 
   return (
     <main>
       <h1>WDCC Projects Health Dashboard</h1>
-      <p>Public view coming soon.</p>
       <nav style={{ display: 'flex', gap: '0.5rem' }}>
         {(isExec || isAdmin) && (
           <Link className="underline" href="/exec-dashboard">
@@ -37,6 +40,12 @@ export default async function PublicDashboardPage() {
           avatarUrl="https://github.com/johnsmith.png"
           linesCommitted={2046}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
+        {projects.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
       </div>
     </main>
   )
