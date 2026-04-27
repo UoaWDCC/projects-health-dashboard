@@ -42,7 +42,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full px-2 py-1 flex items-center gap-2 bg-white/60 border border-blue/[18%] hover:bg-gray-50"
+        className="rounded-full px-2 py-1 flex items-center gap-2 bg-white/60 border border-wdcc-blue/[18%] hover:bg-gray-50"
       >
         {user &&
           (user.avatarUrl ? (
@@ -54,7 +54,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
               className="rounded-full object-cover border-2 border-gray-200"
             />
           ) : (
-            <span className="flex items-center justify-center w-9 h-9 rounded-full ">
+            <span className="flex items-center justify-center w-9 h-9 rounded-full">
               {initials}
             </span>
           ))}
@@ -84,7 +84,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
             <form action={signInWithGoogle}>
               <button
                 type="submit"
-                className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 "
+                className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
               >
                 <GoogleIcon />
                 Sign in with Google

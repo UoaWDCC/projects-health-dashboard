@@ -13,7 +13,6 @@ const config: Config = {
         'wdcc-blue': {
           light: '#CFE0FD',
           DEFAULT: '#077CF1',
-          dark: '#077CF1',
         },
         'wdcc-black': {
           DEFAULT: '#1F2031',
