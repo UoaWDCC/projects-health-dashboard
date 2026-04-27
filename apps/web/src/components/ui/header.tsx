@@ -12,7 +12,7 @@ export const Header: React.FC<HeaderProps> = ({
     <div className="px-5 sm:px-10 lg:px-20 pt-12 sm:pt-16 lg:pt-24 pb-10 sm:pb-12 lg:pb-16 relative w-full max-w-[90rem] mx-auto">
       {/* Status pill */}
       {activeProjectCount > 0 && (
-        <div className="backdrop-blur-xl rounded-full border border-white font-mono px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60">
+        <div className="backdrop-blur-xl rounded-full border border-white font-mono px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60 hover:brightness-95 cursor-default transition-all duration-500 ease-in-out">
           <svg
             width="12"
             height="12"
@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="mt-auto pt-12 sm:pt-14 lg:pt-16">
             <Link
               href="/leaderboard"
-              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-brand-navy hover:bg-brand-orange text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
+              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-brand-navy hover:bg-brand-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
             >
               See leaderboard
             </Link>
