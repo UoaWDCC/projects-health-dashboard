@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
         {projects.map((project) => (
           <li key={project.id}>
             <strong style={{ textDecoration: 'underline' }}>
-              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+              <Link href={`/projects/${project.slug}`}>{project.name}</Link>
             </strong>
             <p>{project.description}</p>
             <p>Slug: {project.slug}</p>
