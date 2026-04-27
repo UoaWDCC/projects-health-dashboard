@@ -27,3 +27,33 @@ export interface LeaderboardEntry {
   thumbnailUrl: string | undefined
   statValue: number
 }
+
+// A single row ready to be passed directly to <LeaderboardRow entry={} theme={} />.
+export interface LeaderboardRowProps {
+  entry: LeaderboardEntry
+  theme: LeaderboardRowTheme
+}
+
+// Shape returned by getWeeklyLeaderboard — one array per leaderboard category.
+export interface WeeklyLeaderboard {
+  commits: LeaderboardRowProps[]
+  merges: LeaderboardRowProps[]
+  linesOfCode: LeaderboardRowProps[]
+}
+
+// Fetches the weekly leaderboard from the route handler and attaches the
+// correct theme to each category so rows can be rendered without extra mapping.
+export async function getWeeklyLeaderboard(): Promise<WeeklyLeaderboard> {
+  const { GET } = await import('@/app/api/weekly-leaderboard/route')
+  const res = await GET()
+  const data = await res.json()
+
+  const attach = (entries: LeaderboardEntry[], theme: LeaderboardRowTheme): LeaderboardRowProps[] =>
+    entries.map((entry) => ({ entry, theme }))
+
+  return {
+    commits: attach(data.commits ?? [], LEADERBOARD_THEMES.pink),
+    merges: attach(data.merges ?? [], LEADERBOARD_THEMES.blue),
+    linesOfCode: attach(data['lines-of-code'] ?? [], LEADERBOARD_THEMES.orange),
+  }
+}

@@ -2,6 +2,8 @@ import WeeklyMvp from '@/components/ui/weekly-mvp'
 import ProjectCard from '@/components/ui/project-card'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
+import LeaderboardRow from '@/components/ui/leaderboard-row'
+import { getWeeklyLeaderboard } from '@/lib/exec-dashboard/leaderboard-row'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -13,6 +15,8 @@ import HomeHeader from '@/components/headers/HomeHeader'
 
 export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
+  const leaderboard = await getWeeklyLeaderboard()
+
 
   return (
     <>
