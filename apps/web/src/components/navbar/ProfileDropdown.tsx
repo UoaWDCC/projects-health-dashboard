@@ -4,9 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { signInWithGoogle } from '@/lib/auth-utils/oauth'
 import { signOut } from '@/lib/auth-utils/signout'
-import { Plus_Jakarta_Sans } from 'next/font/google'
-
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
 
 interface ProfileUser {
   email: string | undefined
@@ -58,9 +55,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
               {initials}
             </span>
           ))}
-        <span className={`text-sm  ${plusJakartaSans.className}`}>
-          {user?.displayName ?? 'Sign in'}
-        </span>
+        <span className={`text-sm  font-sans`}>{user?.displayName ?? 'Sign in'}</span>
       </button>
 
       {open && (
@@ -68,8 +63,8 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
           {user ? (
             <>
               <div className="px-4 py-3 border-b border-gray-100">
-                <p className={`text-sm ${plusJakartaSans.className}`}>{user.displayName}</p>
-                <p className={`text-xs ${plusJakartaSans.className}`}>{user.email}</p>
+                <p className={`text-sm font-sans`}>{user.displayName}</p>
+                <p className={`text-xs font-sans`}>{user.email}</p>
               </div>
               <form action={signOut}>
                 <button

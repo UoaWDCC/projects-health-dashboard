@@ -4,10 +4,6 @@ import { Role } from '@repo/db'
 import { ProfileDropdown } from './ProfileDropdown'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Courier_Prime, Figtree } from 'next/font/google'
-
-const courierPrime = Courier_Prime({ subsets: ['latin'], weight: '700' })
-const figtree = Figtree({ subsets: ['latin'] })
 
 export async function Navbar() {
   const supabase = await createClient()
@@ -15,7 +11,7 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const roles = await getUserRoles()
+  const roles = user ? await getUserRoles() : []
   const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
 
@@ -35,14 +31,12 @@ export async function Navbar() {
         <Link href="/">
           <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
         </Link>
-        <span
-          className={`text-[16px] xl:text-[24px] text-wdcc-blue leading-none translate-y-[3px] ${courierPrime.className}`}
-        >
+        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none translate-y-[3px] font-courier-prime">
           PROJECT HEALTH DASHBOARD
         </span>
       </div>
       <div className="flex items-center gap-4 xl:gap-10 text-[16px]">
-        <div className={`flex gap-4 xl:gap-8 ${figtree.className}`}>
+        <div className="flex gap-4 xl:gap-8 font-figtree">
           <Link href="/">{'( Projects )'}</Link>
           <Link href="/leaderboard">{'( Leaderboard )'}</Link>
         </div>

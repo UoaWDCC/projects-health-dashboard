@@ -8,6 +8,8 @@ const config: Config = {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
         arial: ['Arial', 'sans-serif'],
+        'courier-prime': ['var(--font-courier-prime)'],
+        figtree: ['var(--font-figtree)'],
       },
       colors: {
         'wdcc-blue': {
