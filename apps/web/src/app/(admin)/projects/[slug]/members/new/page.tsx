@@ -27,10 +27,10 @@ type Person = {
   identities: PersonIdentity[]
 }
 
-export default function CreateMemberPage({ params }: { params: Promise<{ id: string }> }) {
+export default function CreateMemberPage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter()
-  // Extract projectId from the url
-  const { id: projectId } = use(params)
+  // Extract slug from the url
+  const { slug } = use(params)
 
   const [existingPeople, setExistingPeople] = useState<Person[]>([])
   const [selectedPersonId, setSelectedPersonId] = useState<string>('NEW')
@@ -60,7 +60,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ id: str
     }
 
     // Dynamically inject the correct URL
-    const response = await fetch(`/api/project/${projectId}/members`, {
+    const response = await fetch(`/api/project/${slug}/members`, {
       method: 'POST',
       body: formData,
     })
@@ -79,7 +79,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ id: str
     }
 
     // Redirect back to the specific project view
-    router.push(`/projects/${projectId}`)
+    router.push(`/projects/${slug}`)
   }
 
   const isExistingMember = selectedPersonId !== 'NEW'

@@ -32,9 +32,9 @@ type ProjectMember = {
   person: Person
 }
 
-const fetchMembers = async (projectId: string): Promise<ProjectMember[]> => {
+const fetchMembers = async (slug: string): Promise<ProjectMember[]> => {
   try {
-    const response = await fetch(`/api/project/${projectId}/members`)
+    const response = await fetch(`/api/project/${slug}/members`)
     if (!response.ok) {
       throw new Error('Failed to fetch members')
     }
@@ -45,24 +45,24 @@ const fetchMembers = async (projectId: string): Promise<ProjectMember[]> => {
   }
 }
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   // 1. Unwrap the Next.js 15 Async Params using the React `use` hook in a Client Component
-  const { id: projectId } = use(params)
+  const { slug } = use(params)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
-      const data = await fetchMembers(projectId)
+      const data = await fetchMembers(slug)
       setMembers(data)
     }
 
     load()
-  }, [projectId])
+  }, [slug])
 
   return (
     <div>
-      <h1>Project Details for ID: {projectId}</h1>
+      <h1>Project Details for: {slug}</h1>
 
       <h2>Active Members ({members.length})</h2>
       <ul>
@@ -83,7 +83,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         ))}
       </ul>
 
-      <button onClick={() => router.push(`/projects/${projectId}/members/new`)}>
+      <button onClick={() => router.push(`/projects/${slug}/members/new`)}>
         Add New Member (Button)
       </button>
     </div>
