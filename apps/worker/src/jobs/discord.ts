@@ -135,11 +135,15 @@ async function requestMessages(path: string): Promise<APIMessage[]> {
  * Fetches all messages posted in a given Discord channel within the past week.
  * Handles pagination, rate limits, and filters out bot messages.
  * @param {string} channelId The ID of the Discord channel to fetch messages from.
+ * @param {Date} weekStart The start of the week to fetch messages from.
+ * @param {Date} weekEnd The end of the week to fetch messages until.
  * @returns An array of message contents posted in the past week.
  */
-async function fetchWeeklyMessages(channelId: string): Promise<FetchedMessage[]> {
-  const weekStart = startOfWeek(new Date())
-  const weekEnd = new Date()
+async function fetchWeeklyMessages(
+  channelId: string,
+  weekStart: Date,
+  weekEnd: Date
+): Promise<FetchedMessage[]> {
   const afterSnowflake = timestampToSnowflake(weekStart.getTime())
   const fetchedMessages: FetchedMessage[] = []
   let after = afterSnowflake
@@ -190,6 +194,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
 
   const data: ProjectData[] = []
   const weekStart = startOfWeek(new Date())
+  const weekEnd = new Date()
 
   for (const project of projects) {
     if (project.channels.length === 0) {
@@ -211,7 +216,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
 
     try {
       for (const channel of project.channels) {
-        const channelMessages = await fetchWeeklyMessages(channel.externalId)
+        const channelMessages = await fetchWeeklyMessages(channel.externalId, weekStart, weekEnd)
 
         if (channelMessages.length === 0) {
           logger.warn(`No messages found for channel ${channel.name} in project "${project.name}"`)
