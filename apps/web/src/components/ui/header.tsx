@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* CTA */}
-          <div className="mt-auto pt-12 sm:pt-14 lg:pt-16">
+          <div className="pt-12 sm:pt-14 lg:pt-16">
             <Link
               href="/leaderboard"
               className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-brand-navy hover:bg-brand-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
