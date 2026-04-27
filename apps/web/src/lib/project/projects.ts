@@ -1,4 +1,5 @@
 import { db, Prisma } from '@repo/db'
+import { unstable_cacheLife } from 'next/cache'
 
 const projectSelect = {
   select: {
@@ -13,6 +14,9 @@ const projectSelect = {
 export type ProjectCardData = Prisma.ProjectGetPayload<typeof projectSelect>
 
 export async function getProjectCardData(): Promise<ProjectCardData[]> {
+  'use cache'
+  unstable_cacheLife('days')
+
   try {
     return await db.project.findMany(projectSelect)
   } catch {
