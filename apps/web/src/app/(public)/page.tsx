@@ -36,7 +36,7 @@ export default async function PublicDashboardPage() {
         )}
       </nav>
 
-      <Header activeProjectCount={projects.length} />
+      <Header activeProjectCount={projects.filter((project) => project.isActive).length} />
 
       <div className="ml-10">
         <WeeklyMvp

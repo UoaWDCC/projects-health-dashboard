@@ -1,9 +1,5 @@
-import { cn } from '@/lib/utils'
-import { Plus_Jakarta_Sans } from 'next/font/google'
 import Image from 'next/image'
 import Link from 'next/link'
-
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
 
 interface HeaderProps {
   activeProjectCount: number
@@ -37,13 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="mt-6 sm:mt-8 lg:mt-11 flex items-end justify-between">
         <div className="flex flex-col justify-between">
           <div>
-            <h1
-              className={cn(
-                'text-brand-navy uppercase font-extrabold tracking-tight !leading-none m-0',
-                'text-[clamp(2.625rem,8vw,6.3125rem)]',
-                plusJakartaSans.className
-              )}
-            >
+            <h1 className="text-brand-navy uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
               Projects Health Dashboard
             </h1>
 
