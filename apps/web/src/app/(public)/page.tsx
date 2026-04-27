@@ -4,6 +4,7 @@ import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
 import { ProjectCard } from '@/components/ui/project-card'
 import { getProjectCardData } from '@/lib/project/projects'
+import { Header } from '@/components/ui/header'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -34,6 +35,9 @@ export default async function PublicDashboardPage() {
           </Link>
         )}
       </nav>
+
+      <Header activeProjectCount={projects.length} />
+
       <div className="ml-10">
         <WeeklyMvp
           name="John Smith"
