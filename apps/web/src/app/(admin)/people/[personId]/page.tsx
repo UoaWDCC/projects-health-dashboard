@@ -17,6 +17,7 @@ type PersonIdentity = {
 type Project = {
   id: string
   name: string
+  slug: string
 }
 
 type ProjectMember = {
@@ -451,7 +452,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                 <div>
                   <p style={{ margin: '0 0 8px 0' }}>
                     <strong>Project:</strong>{' '}
-                    <Link href={`/projects/${membership.projectId}`}>
+                    <Link href={`/projects/${membership.project.slug}`}>
                       {membership.project?.name || membership.projectId}
                     </Link>
                   </p>

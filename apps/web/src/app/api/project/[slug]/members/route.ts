@@ -9,20 +9,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
 
   const { slug } = await params
 
-  const project = await db.project.findUnique({
-    where: { slug },
-    select: { id: true },
-  })
-
-  if (!project) {
-    return Response.json({ error: 'Project not found' }, { status: 404 })
-  }
-
   try {
     const members = await db.projectMember.findMany({
       where: {
         isActive: true,
-        projectId: project.id,
+        project: {
+          slug,
+        },
       },
       include: {
         person: {
