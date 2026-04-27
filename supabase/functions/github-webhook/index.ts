@@ -70,7 +70,10 @@ Deno.serve(async (req) => {
 
     if (allCommits && allCommits.length > 10) {
       const toDelete = allCommits.slice(10).map((c) => c.id)
-      await supabase.from('LiveCommit').delete().in('id', toDelete)
+      const { error: deleteError } = await supabase.from('LiveCommit').delete().in('id', toDelete)
+      if (deleteError) {
+        console.error('Failed to delete old commits:', deleteError)
+      }
     }
 
     return new Response(JSON.stringify({ message: 'ok' }), {
