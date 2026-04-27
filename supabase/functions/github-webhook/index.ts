@@ -42,6 +42,15 @@ Deno.serve(async (req) => {
     const repoOwner = repository.owner.login
     const repoName = repository.name
 
+    const { data: repoRecord } = await supabase
+      .from('GitHubRepository')
+      .select('projectId')
+      .eq('owner', repoOwner)
+      .eq('name', repoName)
+      .single()
+
+    const projectId = repoRecord?.projectId ?? null
+
     for (const commit of commits) {
       const data = {
         id: crypto.randomUUID(),
@@ -52,6 +61,7 @@ Deno.serve(async (req) => {
         branch,
         message: commit.message,
         commitUrl: commit.url,
+        projectId,
         authorName: commit.author.name,
         authorUsername: commit.author.username ?? null,
         committedAt: new Date(commit.timestamp),
