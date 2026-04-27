@@ -252,25 +252,19 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
       const uniqueAuthors = authorIds.length
       const messageCount = fetchedMessages.length
 
-      await db.discordWeeklyAggregate.upsert({
-        where: { projectId_weekStart: { projectId: project.id, weekStart } },
-        create: {
-          projectId: project.id,
-          weekStart,
-          messageCount,
-          uniqueAuthors,
-          unmappedMessageCount,
-        },
-        update: {
-          messageCount,
-          uniqueAuthors,
-          unmappedMessageCount,
-          computedAt: new Date(),
-        },
-      })
-
-      await Promise.all(
-        [...identityCounts].map(([authorIdentityId, count]) =>
+      await db.$transaction([
+        db.discordWeeklyAggregate.upsert({
+          where: { projectId_weekStart: { projectId: project.id, weekStart } },
+          create: {
+            projectId: project.id,
+            weekStart,
+            messageCount,
+            uniqueAuthors,
+            unmappedMessageCount,
+          },
+          update: { messageCount, uniqueAuthors, unmappedMessageCount, computedAt: new Date() },
+        }),
+        ...[...identityCounts].map(([authorIdentityId, count]) =>
           db.discordIdentityWeeklyCount.upsert({
             where: {
               projectId_weekStart_authorIdentityId: {
@@ -282,8 +276,8 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
             create: { projectId: project.id, weekStart, authorIdentityId, messageCount: count },
             update: { messageCount: count, computedAt: new Date() },
           })
-        )
-      )
+        ),
+      ])
 
       data.push({
         projectId: project.id,
