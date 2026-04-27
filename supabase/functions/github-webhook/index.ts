@@ -17,6 +17,13 @@ Deno.serve(async (req) => {
   try {
     const { ref, commits, repository } = await req.json()
 
+    if (!ref || !repository) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: ref, repository' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     if (ref === 'refs/heads/main') {
       return new Response(JSON.stringify({ message: 'Ignoring main branch' }), {
         status: 200,
