@@ -32,12 +32,12 @@ export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project })
         className="
           pointer-events-none absolute inset-0
           group-hover:-inset-[3px] md:group-hover:-inset-[4px]
-          rounded-[clamp(18px,2.5vw,31px)] transition-all duration-300 ease-out
+          rounded-[clamp(18px,2.5vw,31px)] transition-all duration-700 ease-in-out
           bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
           group-hover:bg-[linear-gradient(to_top_right,_rgba(255,176,95,1)_22%,_rgba(227,51,163,1)_50%,_rgba(7,124,241,1)_100%)]
         "
       />
-      <div className="absolute inset-[3px] md:inset-[4px] transition-all duration-300 ease-out bg-white rounded-[clamp(15px,2.2vw,28px)]" />
+      <div className="absolute inset-[3px] md:inset-[4px] transition-all duration-700 ease-in-out bg-white rounded-[clamp(15px,2.2vw,28px)]" />
 
       <div
         className="
