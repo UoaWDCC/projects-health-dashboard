@@ -393,6 +393,7 @@ model LiveCommit {
   message      String   // full commit message
   commitUrl    String?  // html_url from the GitHub push payload
   authorName   String   // display name from GitHub payload (no identity resolution needed)
+  authorUsername String?  // GitHub username
   authorAvatar String?  // GitHub avatar URL for carousel display
   committedAt  DateTime // timestamp from the git commit object
   receivedAt   DateTime @default(now()) // when the webhook was processed; used for FIFO ordering
