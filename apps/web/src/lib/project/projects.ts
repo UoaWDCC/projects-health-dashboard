@@ -13,7 +13,7 @@ const projectSelect = {
 
 export type ProjectCardData = Prisma.ProjectGetPayload<typeof projectSelect>
 
-export async function getProjectData(): Promise<ProjectCardData[]> {
+export async function getProjectCardData(): Promise<ProjectCardData[]> {
   'use cache'
   unstable_cacheLife('days')
   unstable_cacheTag('projects')
