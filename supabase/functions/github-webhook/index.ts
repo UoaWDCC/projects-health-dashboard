@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
         message: commit.message,
         commitUrl: commit.url,
         authorName: commit.author.name,
+        authorUsername: commit.author.username ?? null,
         committedAt: new Date(commit.timestamp),
       }
       const { error } = await supabase.from('LiveCommit').insert(data)
