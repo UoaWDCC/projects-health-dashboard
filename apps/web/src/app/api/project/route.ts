@@ -1,4 +1,5 @@
 import { db } from '@repo/db'
+import { revalidateTag } from 'next/cache'
 
 /**
  * TODO: Add authentication and authorization to ensure only admins can access these routes
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
         },
       })
     })
+
+    revalidateTag('projects')
 
     return Response.json(newProject, { status: 201 })
   } catch (error) {

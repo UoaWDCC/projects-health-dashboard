@@ -3,7 +3,7 @@ import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
 import WeeklyMvp from '@/components/ui/weekly-mvp'
 import { ProjectCard } from '@/components/ui/project-card'
-import { getProjectCardData } from '@/lib/project/projects'
+import { getProjectData } from '@/lib/project/projects'
 import { Header } from '@/components/ui/header'
 
 /**
@@ -18,7 +18,7 @@ export default async function PublicDashboardPage() {
   const roles = await getUserRoles()
   const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
-  const projects = await getProjectCardData()
+  const projects = await getProjectData()
 
   return (
     <main>
