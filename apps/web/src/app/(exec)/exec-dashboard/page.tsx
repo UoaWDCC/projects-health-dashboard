@@ -21,21 +21,21 @@ export default async function ExecDashboardPage() {
         <section className="flex flex-col gap-3 w-[415px]">
           <h2 className="text-lg font-semibold">Commits This Week</h2>
           {commits.map((entry) => (
-            <LeaderboardRow key={entry.rank} entry={entry} {...LEADERBOARD_THEMES.pink} />
+            <LeaderboardRow key={entry.rank} entry={entry} theme={LEADERBOARD_THEMES.pink} />
           ))}
         </section>
 
         <section className="flex flex-col gap-3 w-[415px]">
           <h2 className="text-lg font-semibold">Pull Requests This Week</h2>
           {prs.map((entry) => (
-            <LeaderboardRow key={entry.rank} entry={entry} {...LEADERBOARD_THEMES.blue} />
+            <LeaderboardRow key={entry.rank} entry={entry} theme={LEADERBOARD_THEMES.blue} />
           ))}
         </section>
 
         <section className="flex flex-col gap-3 w-[415px]">
           <h2 className="text-lg font-semibold">Lines Changed This Week</h2>
           {lines.map((entry) => (
-            <LeaderboardRow key={entry.rank} entry={entry} {...LEADERBOARD_THEMES.orange} />
+            <LeaderboardRow key={entry.rank} entry={entry} theme={LEADERBOARD_THEMES.orange} />
           ))}
         </section>
       </div>

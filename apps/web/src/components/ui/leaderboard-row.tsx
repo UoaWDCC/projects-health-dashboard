@@ -1,23 +1,24 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Plus_Jakarta_Sans } from 'next/font/google'
-import { formatStat, LeaderboardEntry } from '@/lib/exec-dashboard/leaderboard-row'
+import {
+  formatStat,
+  LeaderboardEntry,
+  LeaderboardRowTheme,
+} from '@/lib/exec-dashboard/leaderboard-row'
 import Image from 'next/image'
 import { useState } from 'react'
-
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
 
 const NEUTRAL = { bg: '#D9D9D9', text: '#4E4E4D' }
 
 interface LeaderboardRowProps {
   entry: LeaderboardEntry
-  fillColor: string
-  borderColor?: string
+  theme: LeaderboardRowTheme
 }
 
-export default function LeaderboardRow({ entry, fillColor, borderColor }: LeaderboardRowProps) {
+export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
   const { rank, projectName, thumbnailUrl, statValue } = entry
+  const { fillColor, borderColor } = theme
   const [imgError, setImgError] = useState(false)
   const [hovered, setHovered] = useState(false)
   const isFirstPlace = rank === 1
@@ -29,7 +30,7 @@ export default function LeaderboardRow({ entry, fillColor, borderColor }: Leader
 
   return (
     <div
-      className={cn('flex flex-row items-center gap-4 px-5 w-full', plusJakartaSans.className)}
+      className="flex flex-row items-center gap-4 px-5 w-full"
       style={{
         maxWidth: '415px',
         height: '84px',
@@ -41,9 +42,10 @@ export default function LeaderboardRow({ entry, fillColor, borderColor }: Leader
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* Rank — mono 24px */}
       <span
         className={cn(
-          'text-xl min-w-[28px] text-center',
+          'font-mono text-2xl min-w-[28px] text-center',
           isFirstPlace ? 'font-bold' : 'font-medium'
         )}
         style={{ color: textColor }}
@@ -51,6 +53,7 @@ export default function LeaderboardRow({ entry, fillColor, borderColor }: Leader
         {rank}
       </span>
 
+      {/* Thumbnail */}
       <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-[#CFE8FC] flex items-center justify-center">
         {thumbnailUrl && !imgError ? (
           <Image
@@ -64,14 +67,19 @@ export default function LeaderboardRow({ entry, fillColor, borderColor }: Leader
         ) : null}
       </div>
 
+      {/* Project name — sans 24px, bold when first */}
       <span
-        className={cn('flex-1 text-base truncate', isFirstPlace ? 'font-bold' : 'font-medium')}
+        className={cn(
+          'font-sans text-2xl flex-1 truncate',
+          isFirstPlace ? 'font-bold' : 'font-medium'
+        )}
         style={{ color: textColor }}
       >
         {projectName}
       </span>
 
-      <span className="text-base font-medium shrink-0" style={{ color: textColor }}>
+      {/* Stat value — mono 20px */}
+      <span className="font-mono text-xl font-medium shrink-0" style={{ color: textColor }}>
         {formatStat(statValue)}
       </span>
     </div>
