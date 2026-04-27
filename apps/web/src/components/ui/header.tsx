@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
             alt="WDCC Webster mascot"
             width={320}
             height={320}
-            className="object-contain"
+            className="object-contain hover:scale-110 transition-all duration-500 ease-in-out hover:drop-shadow-2xl hover:-rotate-12"
           />
         </div>
       </div>
