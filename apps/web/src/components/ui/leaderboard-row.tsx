@@ -1,11 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import {
-  formatStat,
-  LeaderboardEntry,
-  LeaderboardRowTheme,
-} from '@/lib/exec-dashboard/leaderboard-row'
+import { formatStat, LeaderboardEntry, LeaderboardRowTheme } from '@/lib/project/leaderboard-row'
 import Image from 'next/image'
 import { useState } from 'react'
 

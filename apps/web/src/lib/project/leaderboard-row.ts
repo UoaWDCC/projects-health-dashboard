@@ -41,19 +41,25 @@ export interface WeeklyLeaderboard {
   linesOfCode: LeaderboardRowProps[]
 }
 
-// Fetches the weekly leaderboard from the route handler and attaches the
-// correct theme to each category so rows can be rendered without extra mapping.
-export async function getWeeklyLeaderboard(): Promise<WeeklyLeaderboard> {
-  const { GET } = await import('@/app/api/weekly-leaderboard/route')
-  const res = await GET()
-  const data = await res.json()
+function attach(entries: LeaderboardEntry[], theme: LeaderboardRowTheme): LeaderboardRowProps[] {
+  return entries.map((entry) => ({ entry, theme }))
+}
 
-  const attach = (entries: LeaderboardEntry[], theme: LeaderboardRowTheme): LeaderboardRowProps[] =>
-    entries.map((entry) => ({ entry, theme }))
+// Fetches the weekly leaderboard from the API and attaches the correct theme
+// to each category so rows can be passed directly to <LeaderboardRow />.
+export async function fetchWeeklyLeaderboard(): Promise<WeeklyLeaderboard> {
+  try {
+    const response = await fetch('/api/weekly-leaderboard')
+    if (!response.ok) throw new Error('Failed to fetch weekly leaderboard')
+    const data = await response.json()
 
-  return {
-    commits: attach(data.commits ?? [], LEADERBOARD_THEMES.pink),
-    merges: attach(data.merges ?? [], LEADERBOARD_THEMES.blue),
-    linesOfCode: attach(data['lines-of-code'] ?? [], LEADERBOARD_THEMES.orange),
+    return {
+      commits: attach(data.commits ?? [], LEADERBOARD_THEMES.pink),
+      merges: attach(data.merges ?? [], LEADERBOARD_THEMES.blue),
+      linesOfCode: attach(data['lines-of-code'] ?? [], LEADERBOARD_THEMES.orange),
+    }
+  } catch (error) {
+    console.error('Error fetching weekly leaderboard:', error)
+    return { commits: [], merges: [], linesOfCode: [] }
   }
 }
