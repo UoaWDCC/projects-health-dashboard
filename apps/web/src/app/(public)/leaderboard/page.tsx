@@ -23,11 +23,11 @@ export default async function Leaderboard() {
     }
   }
 
-  const learderboardLastUpdated = await getLeaderboardLastUpdated()
+  const leaderboardLastUpdated = await getLeaderboardLastUpdated()
 
   return (
     <>
-      <LeaderboardHeader lastUpdated={learderboardLastUpdated} />
+      <LeaderboardHeader lastUpdated={leaderboardLastUpdated} />
     </>
   )
 }

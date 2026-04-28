@@ -27,7 +27,7 @@ const LeaderboardHeader: React.FC<LeaderboardHeaderProps> = ({
         </svg>
         <span className="text-wdcc-grey text-xs sm:text-sm lg:text-xl font-medium whitespace-nowrap">
           Last updated on{' '}
-          {lastUpdated.toLocaleTimeString(undefined, {
+          {lastUpdated.toLocaleString(undefined, {
             month: 'long',
             day: 'numeric',
             hour: '2-digit',

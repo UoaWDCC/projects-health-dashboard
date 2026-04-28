@@ -85,7 +85,7 @@ const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
 
         <div className="mt-auto pt-3 sm:pt-4 xl:pt-[clamp(8px,2vw,16px)] flex items-center gap-2">
           <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${statusStyle.dot}`} />
-          <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)] text-grey-light font-mono">
+          <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)] text-wdcc-grey-light font-mono">
             {statusStyle.label}
           </span>
         </div>
