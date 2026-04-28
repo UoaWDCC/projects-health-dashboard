@@ -29,7 +29,7 @@ const config: Config = {
             light: '#9A9EB8',
             DEFAULT: '#5A5E7A',
           },
-          black: '#1F2031',
+          oshan: '#1F2031', // black (...)
         },
       },
     },

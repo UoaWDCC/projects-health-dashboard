@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="mt-6 sm:mt-8 lg:mt-11 flex items-end justify-between">
         <div className="flex flex-col justify-between">
           <div>
-            <h1 className="text-wdcc-black uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
+            <h1 className="text-wdcc-oshan uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
               Projects Health Dashboard
             </h1>
 
@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="pt-12 sm:pt-14 lg:pt-16">
             <Link
               href="/leaderboard"
-              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-wdcc-black hover:bg-wdcc-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
+              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-wdcc-oshan hover:bg-wdcc-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
             >
               See leaderboard
             </Link>

@@ -45,7 +45,7 @@ export async function Navbar() {
           {(isExec || isAdmin) && (
             <Link
               href="/exec-dashboard"
-              className="rounded-full bg-wdcc-black text-white hover:bg-gray-300 px-4 py-1.5"
+              className="rounded-full bg-wdcc-oshan text-white hover:bg-gray-300 px-4 py-1.5"
             >
               Exec dashboard
             </Link>
@@ -53,7 +53,7 @@ export async function Navbar() {
           {isAdmin && (
             <Link
               href="/admin-dashboard"
-              className="rounded-full bg-wdcc-black text-white hover:bg-gray-300 px-4 py-1.5"
+              className="rounded-full bg-wdcc-oshan text-white hover:bg-gray-300 px-4 py-1.5"
             >
               Admin dashboard
             </Link>
