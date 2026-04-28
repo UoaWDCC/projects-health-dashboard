@@ -26,7 +26,7 @@ export async function Navbar() {
     : null
 
   return (
-    <header className="sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200">
+    <header className="z-50 sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200">
       <div className="flex items-center gap-4 xl:gap-6">
         <Link href="/">
           <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
@@ -37,8 +37,24 @@ export async function Navbar() {
       </div>
       <div className="flex items-center gap-4 xl:gap-10 text-[16px]">
         <div className="flex gap-4 xl:gap-8 font-figtree">
-          <Link href="/">{'( Projects )'}</Link>
-          <Link href="/leaderboard">{'( Leaderboard )'}</Link>
+          <Link href="/" className="group flex items-center">
+            <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
+              {'('}
+            </span>
+            <span className="px-1">Projects</span>
+            <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
+              {')'}
+            </span>
+          </Link>
+          <Link href="/leaderboard" className="group flex items-center">
+            <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
+              {'('}
+            </span>
+            <span className="px-1">Leaderboard</span>
+            <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
+              {')'}
+            </span>
+          </Link>
         </div>
 
         <div className="flex items-center gap-2 xl:gap-4 font-arial text-[16px]">
