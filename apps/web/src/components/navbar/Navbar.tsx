@@ -26,13 +26,13 @@ export async function Navbar() {
     : null
 
   return (
-    <header className="sticky top-0 flex items-center justify-between px-6 xl:px-12 h-16 bg-white/65 border-b border-gray-200">
+    <header className="sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200">
       <div className="flex items-center gap-4 xl:gap-6">
         <Link href="/">
           <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
         </Link>
-        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none translate-y-[3px] font-courier-prime">
-          PROJECT HEALTH DASHBOARD
+        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none translate-y-[3px] font-courier-prime uppercase">
+          Projects Health Dashboard
         </span>
       </div>
       <div className="flex items-center gap-4 xl:gap-10 text-[16px]">

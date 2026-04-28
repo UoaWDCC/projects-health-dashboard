@@ -12,7 +12,7 @@ const statusStyles = {
   },
 }
 
-export const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
+const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
   const { name, description, isActive, imageUrl } = project
   const statusKey: keyof typeof statusStyles = isActive === true ? 'active' : 'archived'
   const statusStyle = statusStyles[statusKey]
