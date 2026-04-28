@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${plusJakartaSans.variable} ${dmMono.variable} ${courierPrime.variable} ${figtree.variable} font-sans`}
       >
         <Navbar />
+
         <main>{children}</main>
       </body>
     </html>

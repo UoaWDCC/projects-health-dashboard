@@ -39,7 +39,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full px-2 py-1 flex items-center gap-2 bg-white/60 border border-wdcc-blue/[18%] hover:bg-gray-50"
+        className="rounded-full px-4 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:bg-gray-50"
       >
         {user &&
           (user.avatarUrl ? (
@@ -55,7 +55,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
               {initials}
             </span>
           ))}
-        <span className={`text-sm  font-sans`}>{user?.displayName ?? 'Sign in'}</span>
+        <span className="text-sm font-sans font-semibold">{user?.displayName ?? 'Sign In'}</span>
       </button>
 
       {open && (
