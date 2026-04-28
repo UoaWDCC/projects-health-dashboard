@@ -26,7 +26,7 @@ export async function Navbar() {
     : null
 
   return (
-    <header className="sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200">
+    <header className="z-50 sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200">
       <div className="flex items-center gap-4 xl:gap-6">
         <Link href="/">
           <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
