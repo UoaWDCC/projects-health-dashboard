@@ -15,7 +15,6 @@ import LeaderboardSections from '@/components/ui/leaderboard-sections'
 export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
 
-
   return (
     <>
       <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
@@ -35,9 +34,6 @@ export default async function PublicDashboardPage() {
       </div>
 
       <LeaderboardSections />
-      
     </>
-
-
   )
 }
