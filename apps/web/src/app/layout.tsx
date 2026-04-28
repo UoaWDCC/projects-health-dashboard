@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Plus_Jakarta_Sans, DM_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, DM_Mono, Courier_Prime, Figtree } from 'next/font/google'
+import { Navbar } from '@/components/navbar/Navbar'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -13,6 +14,17 @@ const dmMono = DM_Mono({
   variable: '--font-mono',
 })
 
+const courierPrime = Courier_Prime({
+  subsets: ['latin'],
+  weight: ['700'],
+  variable: '--font-courier-prime',
+})
+
+const figtree = Figtree({
+  subsets: ['latin'],
+  variable: '--font-figtree',
+})
+
 export const metadata: Metadata = {
   title: 'WDCC Projects Health Dashboard',
   description: 'A dashboard for tracking WDCC project health',
@@ -21,7 +33,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${plusJakartaSans.variable} ${dmMono.variable} font-sans`}>{children}</body>
+      <body
+        className={`${plusJakartaSans.variable} ${dmMono.variable} ${courierPrime.variable} ${figtree.variable} font-sans`}
+      >
+        <Navbar />
+        <main>{children}</main>
+      </body>
     </html>
   )
 }

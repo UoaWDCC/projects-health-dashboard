@@ -7,6 +7,18 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
+        arial: ['Arial', 'sans-serif'],
+        'courier-prime': ['var(--font-courier-prime)'],
+        figtree: ['var(--font-figtree)'],
+      },
+      colors: {
+        'wdcc-blue': {
+          light: '#CFE0FD',
+          DEFAULT: '#077CF1',
+        },
+        'wdcc-black': {
+          DEFAULT: '#1F2031',
+        },
       },
     },
   },
