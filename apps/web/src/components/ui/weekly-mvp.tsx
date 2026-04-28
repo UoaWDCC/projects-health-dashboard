@@ -52,9 +52,9 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
         )}
       >
         <p className="font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3">{name}</p>
-        <p className="text-lg md:text-2xl mt-1 md:mt-3 font-medium text-[#5A5E7A]">
+        <p className="text-lg md:text-2xl mt-1 md:mt-3 font-medium text-wdcc-grey">
           Lines Committed:{' '}
-          <span className="font-bold text-[#1F2031]">{linesCommitted.toLocaleString()}</span>
+          <span className="font-bold text-wdcc-black">{linesCommitted.toLocaleString()}</span>
         </p>
       </div>
     </div>

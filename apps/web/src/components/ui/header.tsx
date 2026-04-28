@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <rect width="12" height="12" rx="5.90908" fill="#16A34A" />
           </svg>
-          <span className="text-brand-slate text-xs sm:text-sm lg:text-2xl font-medium whitespace-nowrap">
+          <span className="text-wdcc-grey text-xs sm:text-sm lg:text-2xl font-medium whitespace-nowrap">
             {activeProjectCount} active project{activeProjectCount !== 1 ? 's' : ''}
           </span>
         </div>
@@ -33,13 +33,13 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="mt-6 sm:mt-8 lg:mt-11 flex items-end justify-between">
         <div className="flex flex-col justify-between">
           <div>
-            <h1 className="text-brand-navy uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
+            <h1 className="text-wdcc-black uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
               Projects Health Dashboard
             </h1>
 
             {/* Subheading */}
             <div className="mt-6 sm:mt-8 lg:mt-10 max-w-[54.1875rem]">
-              <h3 className="text-brand-slate font-medium text-[clamp(1rem,2.5vw,1.75rem)] leading-relaxed m-0">
+              <h3 className="text-wdcc-grey font-medium text-[clamp(1rem,2.5vw,1.75rem)] leading-relaxed m-0">
                 Track commits, team vibes, and health scores across all WDCC projects — live and at
                 a glance.
               </h3>
@@ -50,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="pt-12 sm:pt-14 lg:pt-16">
             <Link
               href="/leaderboard"
-              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-brand-navy hover:bg-brand-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
+              className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-wdcc-black hover:bg-wdcc-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"
             >
               See leaderboard
             </Link>
