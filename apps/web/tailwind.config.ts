@@ -8,7 +8,7 @@ const config: Config = {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
         arial: ['Arial', 'sans-serif'],
-        'courier-prime': ['var(--font-courier-prime)'],
+        'cartograph-mono-cf': ['var(--font-cartograph-mono-cf)'],
         figtree: ['var(--font-figtree)'],
       },
       colors: {
