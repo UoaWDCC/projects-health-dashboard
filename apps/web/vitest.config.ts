@@ -15,7 +15,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
     exclude: ['node_modules', '.next', 'src/**/*.test.tsx'],
-    setupFiles: ['./src/test-setup.ts'],
+    setupFiles: ['./src/test-config/vitest.setup.ts'],
     passWithNoTests: true,
   },
   resolve: {

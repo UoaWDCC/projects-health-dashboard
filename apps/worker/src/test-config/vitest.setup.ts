@@ -1,52 +1,6 @@
 import { db } from '@repo/db'
 import { vi } from 'vitest'
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-  })),
-  headers: vi.fn(() => ({
-    get: vi.fn(),
-  })),
-}))
-
-vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-  revalidateTag: vi.fn(),
-  unstable_cache: vi.fn((fn) => fn),
-}))
-
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(() => ({
-    auth: {
-      getUser: vi.fn(),
-      getSession: vi.fn(),
-      signOut: vi.fn(),
-      exchangeCodeForSession: vi.fn(),
-      signInWithOAuth: vi.fn(),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-    })),
-    storage: {
-      from: vi.fn(() => ({
-        upload: vi.fn(),
-        download: vi.fn(),
-        remove: vi.fn(),
-        getPublicUrl: vi.fn(),
-        list: vi.fn(),
-      })),
-    },
-  })),
-}))
-
 vi.mock('@repo/db', () => ({
   db: {
     profile: {

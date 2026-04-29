@@ -1,4 +1,4 @@
-import path from 'path/win32'
+import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
@@ -14,7 +14,7 @@ export default defineConfig({
       // Entry point wires up the cron schedule and is not unit-testable in isolation
       exclude: ['src/index.ts'],
     },
-    setupFiles: ['./src/test-setup.ts'],
+    setupFiles: ['./src/test-config/vitest.setup.ts'],
   },
   resolve: {
     // Mirror the @/* path alias from tsconfig.json so imports resolve correctly in tests
