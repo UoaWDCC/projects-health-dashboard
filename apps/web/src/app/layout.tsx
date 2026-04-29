@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Plus_Jakarta_Sans, DM_Mono, Courier_Prime, Figtree } from 'next/font/google'
+import { Plus_Jakarta_Sans, DM_Mono, Figtree } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Navbar } from '@/components/navbar/Navbar'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -14,10 +15,9 @@ const dmMono = DM_Mono({
   variable: '--font-mono',
 })
 
-const courierPrime = Courier_Prime({
-  subsets: ['latin'],
-  weight: ['700'],
-  variable: '--font-courier-prime',
+const cartographMonoCf = localFont({
+  src: '../fonts/cartograph-mono-cf.otf',
+  variable: '--font-cartograph-mono-cf',
 })
 
 const figtree = Figtree({
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body
-        className={`${plusJakartaSans.variable} ${dmMono.variable} ${courierPrime.variable} ${figtree.variable} font-sans`}
+        className={`${plusJakartaSans.variable} ${dmMono.variable} ${cartographMonoCf.variable} ${figtree.variable} font-sans`}
       >
         <Navbar />
 
