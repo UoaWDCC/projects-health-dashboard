@@ -16,7 +16,7 @@ export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
 
   return (
-    <>
+    <div style={{ background: 'linear-gradient(to bottom, #077CF1 -4000px, #FFFFFF 100%)' }}>
       <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
 
       <div className="ml-10">
@@ -34,6 +34,6 @@ export default async function PublicDashboardPage() {
       </div>
 
       <LeaderboardSections />
-    </>
+    </div>
   )
 }
