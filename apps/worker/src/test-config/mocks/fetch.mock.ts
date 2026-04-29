@@ -1,13 +1,13 @@
-import { vi } from 'vitest'
+import { mockFetch } from '../vitest.setup'
 
-export const mockFetch = vi.fn()
-global.fetch = mockFetch
-
-export function mockDiscordResponse(messages: object[]) {
+export function mockDiscordResponseWithHeaders(
+  messages: object[],
+  headers: Record<string, string> = {}
+) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     status: 200,
-    headers: { get: () => null },
+    headers: { get: (key: string) => headers[key] ?? null },
     json: async () => messages,
   })
 }

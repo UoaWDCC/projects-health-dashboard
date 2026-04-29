@@ -1,5 +1,17 @@
-import { db } from '@repo/db'
-import { vi } from 'vitest'
+import { vi, beforeEach, afterEach } from 'vitest'
+
+process.env.DISCORD_BOT_TOKEN = 'test-token'
+
+export const mockFetch = vi.fn()
+global.fetch = mockFetch
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 vi.mock('@repo/db', () => ({
   db: {
@@ -159,6 +171,8 @@ vi.mock('@repo/db', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
-    $transaction: vi.fn((fn) => fn(db)),
+    $transaction: vi.fn((ops) =>
+      Array.isArray(ops) ? Promise.resolve(ops) : Promise.resolve(ops())
+    ),
   },
 }))
