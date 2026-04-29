@@ -14,12 +14,10 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
-    "node-cron": "^3.0.3",
     "octokit": "^5.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/node-cron": "^3.0.11",
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.0.0",
     "tsup": "^8.0.0",
