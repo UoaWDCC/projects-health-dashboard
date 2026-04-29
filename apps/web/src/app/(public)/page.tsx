@@ -2,6 +2,7 @@ import WeeklyMvp from '@/components/ui/weekly-mvp'
 import ProjectCard from '@/components/ui/project-card'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
+import LeaderboardSections from '@/components/ui/leaderboard-sections'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -31,6 +32,8 @@ export default async function PublicDashboardPage() {
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
+
+      <LeaderboardSections />
     </>
   )
 }

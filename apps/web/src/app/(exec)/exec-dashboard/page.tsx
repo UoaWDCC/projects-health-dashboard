@@ -1,14 +1,9 @@
-/**
- * Exec dashboard — accessible to users with EXEC or ADMIN role.
- * Shows executive-level project health metrics and views.
- *
- * TODO: Implement exec dashboard UI
- */
-export default function ExecDashboardPage() {
+export default async function ExecDashboardPage() {
   return (
-    <main>
-      <h1>WDCC Projects Health Dashboard - Exec View</h1>
-      <p>Exec dashboard coming soon.</p>
+    <main className="p-8 flex flex-col gap-10">
+      <h1 className="text-2xl font-bold">WDCC Projects Health Dashboard — Exec View</h1>
+
+      <div className="flex justify-center gap-[21px]"></div>
     </main>
   )
 }
