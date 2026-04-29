@@ -39,7 +39,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full px-4 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:bg-gray-50"
+        className="rounded-full px-4 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:brightness-95 transition-all duration-500 ease-in-out"
       >
         {user &&
           (user.avatarUrl ? (
@@ -55,11 +55,11 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
               {initials}
             </span>
           ))}
-        <span className="text-sm font-sans font-semibold">{user?.displayName ?? 'Sign In'}</span>
+        <span className="text-xs font-sans font-semibold">{user?.displayName ?? 'Sign In'}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-52 rounded-lg shadow-lg bg-white ring-1 ring-black/5 z-50 overflow-hidden">
+        <div className="absolute min-w-max right-0 mt-2 rounded-lg shadow-lg bg-white ring-1 ring-black/5 z-50 overflow-hidden hover:brightness-95 transition-all duration-500 ease-in-out">
           {user ? (
             <>
               <div className="px-4 py-3 border-b border-gray-100">
@@ -67,10 +67,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
                 <p className={`text-xs font-sans`}>{user.email}</p>
               </div>
               <form action={signOut}>
-                <button
-                  type="submit"
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
-                >
+                <button type="submit" className="w-full text-left px-4 py-2.5 text-sm">
                   Sign out
                 </button>
               </form>
@@ -79,10 +76,10 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
             <form action={signInWithGoogle}>
               <button
                 type="submit"
-                className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
+                className="flex items-center justify-center gap-2 w-full text-left px-4 py-2.5 text-sm"
               >
                 <GoogleIcon />
-                Sign in with Google
+                <span className="w-full">Sign in with Google</span>
               </button>
             </form>
           )}
