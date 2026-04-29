@@ -128,8 +128,9 @@ model GitHubRepository {
   name           String       // GitHub repo name
   installationId String       // GitHub App installation id; required for API access
   project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  commits        CommitFact[]
-  prs            PRFact[]
+  commits             CommitFact[]
+  prs                 PRFact[]
+  editedLinesByUser   ContributorWeeklyEditedLines[]
 
   @@unique([owner, name])
 }
@@ -266,6 +267,23 @@ model PRFact {
   @@index([repoId, createdAt])
 }
 
+// Lines added/removed per GitHub username per repo per week, from non-main branches only.
+// username is the raw GitHub login — not resolved to a PersonIdentity.
+model ContributorWeeklyEditedLines {
+  id           String           @id @default(cuid())
+  username     String           // GitHub login
+  repoId       String
+  weekStart    DateTime         // Monday 00:00 UTC
+  linesAdded   Int              @default(0)
+  linesRemoved Int              @default(0)
+  computedAt   DateTime         @default(now())
+  repo         GitHubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([username, repoId, weekStart])
+  @@index([repoId, weekStart])
+  @@index([weekStart])
+}
+
 // ─── Derived / Aggregated ─────────────────────────────────────────────────────
 
 // Project-level weekly metrics and computed health scores.
@@ -392,6 +410,8 @@ model LiveCommit {
   branch       String
   message      String   // full commit message
   commitUrl    String?  // html_url from the GitHub push payload
+  linesAdded   Int      @default(0)
+  linesRemoved Int      @default(0)
   authorName   String   // display name from GitHub payload (no identity resolution needed)
   authorUsername String?  // GitHub username
   authorAvatar String?  // GitHub avatar URL for carousel display
