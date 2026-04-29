@@ -1,6 +1,29 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from '@supabase/supabase-js'
 
+const encoder = new TextEncoder()
+
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  const len = hex.length / 2
+  const bytes = new Uint8Array(new ArrayBuffer(len))
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16)
+  }
+  return bytes
+}
+
+async function verifySignature(secret: string, header: string, payload: string): Promise<boolean> {
+  const sigHex = header.split('=')[1]
+  const algorithm = { name: 'HMAC', hash: { name: 'SHA-256' } }
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), algorithm, false, [
+    'sign',
+    'verify',
+  ])
+  const sigBytes = hexToBytes(sigHex)
+  const dataBytes = encoder.encode(payload)
+  return crypto.subtle.verify(algorithm.name, key, sigBytes, dataBytes)
+}
+
 Deno.serve(async (req) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -15,7 +38,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { ref, commits, repository } = await req.json()
+    const rawBody = await req.text()
+
+    const secret = Deno.env.get('GITHUB_WEBHOOK_SECRET')!
+
+    const signature = req.headers.get('x-hub-signature-256')
+
+    if (!signature) {
+      return new Response(JSON.stringify({ error: 'Missing signature' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const valid = await verifySignature(secret, signature, rawBody)
+    if (!valid) {
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { ref, commits, repository } = JSON.parse(rawBody)
 
     if (!ref || !repository) {
       return new Response(JSON.stringify({ error: 'Missing required fields: ref, repository' }), {
