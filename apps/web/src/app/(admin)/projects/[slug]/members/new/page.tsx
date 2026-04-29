@@ -11,8 +11,7 @@
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { use, useState, useEffect } from 'react'
-
-type IdentityProvider = 'GITHUB' | 'DISCORD'
+import { IdentityProvider } from '@repo/db'
 
 type PersonIdentity = {
   id: string

@@ -3,8 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-
-type IdentityProvider = 'GITHUB' | 'DISCORD'
+import { IdentityProvider } from '@repo/db'
 
 type PersonIdentity = {
   id: string

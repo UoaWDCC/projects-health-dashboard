@@ -3,8 +3,7 @@
 import { useEffect, useState, use, FormEvent, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-
-type IdentityProvider = 'GITHUB' | 'DISCORD'
+import { IdentityProvider } from '@repo/db'
 
 type PersonIdentity = {
   id: string
