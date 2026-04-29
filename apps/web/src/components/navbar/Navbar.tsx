@@ -31,7 +31,7 @@ export async function Navbar() {
         <Link href="/">
           <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
         </Link>
-        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none translate-y-[3px] font-cartograph-mono-cf uppercase">
+        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase">
           Projects Health Dashboard
         </span>
       </div>
