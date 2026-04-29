@@ -67,8 +67,8 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (ref === 'refs/heads/main') {
-      return new Response(JSON.stringify({ message: 'Ignoring main branch' }), {
+    if (ref === `refs/heads/${repository.default_branch}`) {
+      return new Response(JSON.stringify({ message: 'Ignoring default branch' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
