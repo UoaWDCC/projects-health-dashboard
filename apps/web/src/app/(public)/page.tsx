@@ -2,7 +2,6 @@ import WeeklyMvp from '@/components/ui/weekly-mvp'
 import ProjectCard from '@/components/ui/project-card'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
-import LeaderboardSections from '@/components/ui/leaderboard-sections'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -16,7 +15,7 @@ export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
 
   return (
-    <>
+    <div style={{ background: 'linear-gradient(to bottom, #077CF1 -4000px, #FFFFFF 100%)' }}>
       <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
 
       <div className="ml-10">
@@ -32,8 +31,6 @@ export default async function PublicDashboardPage() {
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
-
-      <LeaderboardSections />
-    </>
+    </div>
   )
 }

@@ -1,4 +1,5 @@
 import LeaderboardHeader from '@/components/headers/LeaderboardHeader'
+import LeaderboardSections from '@/components/ui/leaderboard-sections'
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
 
 export default async function Leaderboard() {
@@ -28,6 +29,8 @@ export default async function Leaderboard() {
   return (
     <>
       <LeaderboardHeader lastUpdated={leaderboardLastUpdated} />
+
+      <LeaderboardSections />
     </>
   )
 }
