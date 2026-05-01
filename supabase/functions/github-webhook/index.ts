@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         projectId,
         authorName: commit.author.name,
         authorUsername: commit.author.username ?? null,
-        committedAt: new Date(commit.timestamp),
+        committedAt: new Date(commit.timestamp).toISOString(),
       }
       const { error } = await supabase.from('LiveCommit').insert(data)
       // ignore duplicate commits (same sha + repo already exists)
@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error('github-webhook error:', error)
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
