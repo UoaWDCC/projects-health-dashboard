@@ -21,12 +21,12 @@ colors: {
       DEFAULT: '#077CF1',
     },
     orange: '#FFB05F',
-    kelvin: '#E333A3', // pink (zesty kelvin)
+    kelvin: '#E333A3', // pink
     grey: {
       light: '#9A9EB8',
       DEFAULT: '#5A5E7A',
     },
-    oshan: '#1F2031', // black (...)
+    oshan: '#1F2031', // blac
   },
 },
 ```
