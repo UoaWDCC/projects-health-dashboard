@@ -1,5 +1,5 @@
-import Image from 'next/image'
 import Link from 'next/link'
+import WebsterFolder from '../ui/WebsterFolder'
 
 interface HomeHeaderProps {
   activeProjectCount: number
@@ -59,13 +59,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
 
         {/* Illustration */}
         <div className="hidden lg:flex items-end shrink-0">
-          <Image
-            src="/webster-header.png"
-            alt="WDCC Webster mascot"
-            width={320}
-            height={320}
-            className="object-contain hover:scale-110 transition-all duration-500 ease-in-out hover:drop-shadow-2xl hover:-rotate-12"
-          />
+          <WebsterFolder />
         </div>
       </div>
     </div>
