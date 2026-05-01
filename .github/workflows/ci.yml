@@ -56,7 +56,9 @@ jobs:
 
           if [ $PRISMA_EXIT -ne 0 ]; then
             echo ""
-            echo "✘ ERROR: Schema drift detected"
+            echo "╔══════════════════════════════════════════════════════════════╗"
+            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                  ║"
+            echo "╚══════════════════════════════════════════════════════════════╝"
             echo ""
             echo "The live dev DB schema does not match the latest migration."
             echo "Someone likely changed the schema directly in the Supabase dashboard"
