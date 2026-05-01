@@ -108,12 +108,8 @@ jobs:
             CHANGED=$(echo "$DIFF_OUTPUT" | grep -Ei "^\+.*(table|column|index|constraint|sequence|type|function|alter)" | head -20 || true)
             echo ""
             echo "╔══════════════════════════════════════════════════════════════╗"
-            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                   ║"
+            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                  ║"
             echo "╚══════════════════════════════════════════════════════════════╝"
-            echo ""
-            echo "The live dev DB schema does not match the latest migration."
-            echo "Someone likely changed the schema directly in the Supabase dashboard"
-            echo "without generating a corresponding Prisma migration."
             echo ""
             echo "────────────────────────────────────────────────────────────────"
             echo "Diff (expected ← → live, capped at 200 lines):"
@@ -126,13 +122,9 @@ jobs:
               echo "$CHANGED"
               echo ""
             fi
-            echo "How to fix:"
-            echo "  1. Introspect the live DB:  prisma db pull"
-            echo "  2. Generate a migration:    prisma migrate dev --name <describe_change>"
-            echo "  3. Commit and push the new migration file."
-            exit 1  # fail fast — no point running Prisma check if SQL diff already caught drift
+            exit 1
           else
-            echo "✅ SQL diff clean."
+            echo "✓ SQL diff clean."
           fi
 
       - name: Prisma-native drift check
@@ -158,7 +150,7 @@ jobs:
             echo "  3. Commit and push the new migration file."
             exit 1
           else
-            echo "✅ Prisma drift check clean."
+            echo "✓ Prisma drift check clean."
           fi
 
       - name: Cleanup shadow DB container
