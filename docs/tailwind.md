@@ -29,7 +29,7 @@ colors: {
       light: '#9A9EB8',
       DEFAULT: '#5A5E7A',
     },
-    oshan: '#1F2031', // blac
+    oshan: '#1F2031', // black
   },
 },
 ```
