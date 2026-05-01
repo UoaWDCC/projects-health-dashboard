@@ -5,8 +5,124 @@ on:
     branches: [main]
 
 jobs:
+  schema-drift:
+    name: Detect DB Schema Drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump live dev DB schema
+        env:
+          # DIRECT_URL uses the session pooler (port 5432) which pg_dump
+          # requires. DATABASE_URL uses the transaction pooler (port 6543)
+          # which does NOT support the extended query protocol pg_dump needs.
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          pg_dump \
+            --schema-only \
+            --no-owner \
+            --no-acl \
+            --no-comments \
+            "$DIRECT_URL" \
+            --schema=public \
+            -f /tmp/live_schema.sql
+
+      - name: Generate expected schema from migrations
+        run: |
+          docker run -d \
+            --name migration_db \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=shadow \
+            -p 5433:5432 \
+            postgres:15
+
+          until pg_isready -h localhost -p 5433 -U postgres; do
+            echo "Waiting for shadow DB..."
+            sleep 1
+          done
+
+          for f in $(ls packages/db/prisma/migrations/*/migration.sql 2>/dev/null | sort); do
+            echo "Applying migration: $f"
+            PGPASSWORD=postgres psql \
+              -h localhost -p 5433 \
+              -U postgres -d shadow \
+              -f "$f"
+          done
+
+          PGPASSWORD=postgres pg_dump \
+            --schema-only \
+            --no-owner \
+            --no-acl \
+            --no-comments \
+            -h localhost -p 5433 \
+            -U postgres shadow \
+            --schema=public \
+            -f /tmp/expected_schema.sql
+
+      - name: Normalise schemas for comparison
+        run: |
+          grep -v "^--" /tmp/live_schema.sql \
+            | grep -v "^SET " \
+            | grep -v "^SELECT " \
+            | sed '/^$/d' \
+            | sort > /tmp/live_sorted.sql
+
+          grep -v "^--" /tmp/expected_schema.sql \
+            | grep -v "^SET " \
+            | grep -v "^SELECT " \
+            | sed '/^$/d' \
+            | sort > /tmp/expected_sorted.sql
+
+      - name: Diff schemas
+        run: |
+          set +e
+          DIFF_OUTPUT=$(diff --unified /tmp/expected_sorted.sql /tmp/live_sorted.sql)
+          DIFF_EXIT=$?
+          set -e
+
+          if [ $DIFF_EXIT -ne 0 ]; then
+            CHANGED=$(echo "$DIFF_OUTPUT" | grep -E "^\+.*(TABLE|COLUMN|INDEX|CONSTRAINT|SEQUENCE|TYPE|FUNCTION)" | head -20 || true)
+            echo ""
+            echo "╔══════════════════════════════════════════════════════════════╗"
+            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                   ║"
+            echo "╚══════════════════════════════════════════════════════════════╝"
+            echo ""
+            echo "The live dev DB schema does not match the latest migration."
+            echo "Someone likely changed the schema directly in the Supabase dashboard"
+            echo "without generating a corresponding Prisma migration."
+            echo ""
+            echo "────────────────────────────────────────────────────────────────"
+            echo "Diff (expected ← → live):"
+            echo "────────────────────────────────────────────────────────────────"
+            echo "$DIFF_OUTPUT"
+            echo ""
+            if [ -n "$CHANGED" ]; then
+              echo "────────────────────────────────────────────────────────────────"
+              echo "Affected objects:"
+              echo "$CHANGED"
+              echo ""
+            fi
+            exit 1
+          else
+            echo "✓ Schema matches latest migration. No drift detected."
+          fi
+
+      - name: Cleanup shadow DB container
+        if: always()
+        run: docker rm -f migration_db || true
+
   ci:
     name: Lint, Format, Test & Build
+    needs: schema-drift
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
