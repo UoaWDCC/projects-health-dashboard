@@ -24,18 +24,37 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Start shadow DB
+        run: |
+          docker run -d \
+            --name shadow_db \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=shadow \
+            -p 5433:5432 \
+            postgres:17.6
+
+          until pg_isready -h localhost -p 5433 -U postgres; do
+            echo "Waiting for shadow DB..."
+            sleep 1
+          done
+          sleep 2
+
       - name: Prisma-native drift check
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/shadow
         run: |
           pnpm --filter @repo/db exec prisma migrate diff \
             --from-url "$DIRECT_URL" \
-            --to-migrations prisma/migrations
+            --to-migrations prisma/migrations \
+            --shadow-database-url "$SHADOW_DATABASE_URL"
 
           set +e
           pnpm --filter @repo/db exec prisma migrate diff \
             --from-url "$DIRECT_URL" \
             --to-migrations prisma/migrations \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
             --exit-code > /dev/null 2>&1
           PRISMA_EXIT=$?
           set -e
@@ -54,6 +73,10 @@ jobs:
           else
             echo "✅ No schema drift detected."
           fi
+
+      - name: Cleanup shadow DB
+        if: always()
+        run: docker rm -f shadow_db || true
 
   ci:
     name: Lint, Format, Test & Build
