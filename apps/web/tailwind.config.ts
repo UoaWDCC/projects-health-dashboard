@@ -17,7 +17,7 @@ const config: Config = {
           purple: '#E9CFFC',
           peach: '#FDE6CF',
           mint: '#D4F7ED',
-      
+
           // Dark colours
           blue: {
             light: '#CFE0FD',
