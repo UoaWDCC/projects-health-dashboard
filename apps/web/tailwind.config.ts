@@ -14,7 +14,7 @@ const config: Config = {
       colors: {
         wdcc: {
           // Light colours
-          purple: '#E9CFCC',
+          purple: '#E9CFFC',
           peach: '#FDE6CF',
           mint: '#D4F7ED',
 
@@ -24,12 +24,12 @@ const config: Config = {
             DEFAULT: '#077CF1',
           },
           orange: '#FFB05F',
-          kelvin: '#E333A3', // pink (zesty kelvin)
+          kelvin: '#E333A3', // pink
           grey: {
             light: '#9A9EB8',
             DEFAULT: '#5A5E7A',
           },
-          oshan: '#1F2031', // black (...)
+          oshan: '#1F2031', // black
         },
       },
     },
