@@ -2,6 +2,7 @@ import WeeklyMvp from '@/components/ui/WeeklyMvp'
 import ProjectCard from '@/components/ui/ProjectCard'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
+import Link from 'next/link'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -33,7 +34,9 @@ export default async function PublicDashboardPage() {
 
         <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <Link href={`/project/${project.id}`} key={project.id}>
+              <ProjectCard key={project.id} project={project} />
+            </Link>
           ))}
         </div>
       </div>
