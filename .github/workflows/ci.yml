@@ -14,18 +14,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL 17 client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y curl ca-certificates
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
-          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client-17
-          /usr/lib/postgresql/17/bin/pg_dump --version
-
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -35,108 +23,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
-
-      - name: Dump live dev DB schema
-        env:
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          /usr/lib/postgresql/17/bin/pg_dump \
-            --schema-only \
-            --no-owner \
-            --no-acl \
-            --no-comments \
-            --clean \
-            --quote-all-identifiers \
-            --exclude-schema=extensions \
-            --exclude-table=_prisma_migrations \
-            "$DIRECT_URL" \
-            --schema=public \
-            -f /tmp/live_schema.sql
-
-      - name: Generate expected schema from migrations
-        run: |
-          docker run -d \
-            --name migration_db \
-            -e POSTGRES_USER=postgres \
-            -e POSTGRES_PASSWORD=postgres \
-            -e POSTGRES_DB=shadow \
-            -p 5433:5432 \
-            postgres:17.6
-
-          until pg_isready -h localhost -p 5433 -U postgres; do
-            echo "Waiting for shadow DB..."
-            sleep 1
-          done
-          sleep 2  # guard against ready-before-extensions race
-
-          # Install common Supabase extensions so migration replay doesn't fail
-          # on CREATE EXTENSION statements
-          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d shadow -c "
-            CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
-            CREATE EXTENSION IF NOT EXISTS pgcrypto;
-            CREATE EXTENSION IF NOT EXISTS citext;
-          "
-
-          for f in $(find packages/db/prisma/migrations -name migration.sql | sort); do
-            echo "Applying migration: $f"
-            PGPASSWORD=postgres psql \
-              -h localhost -p 5433 \
-              -U postgres -d shadow \
-              -f "$f"
-          done
-
-          PGPASSWORD=postgres /usr/lib/postgresql/17/bin/pg_dump \
-            --schema-only \
-            --no-owner \
-            --no-acl \
-            --no-comments \
-            --clean \
-            --quote-all-identifiers \
-            --exclude-schema=extensions \
-            --exclude-table=_prisma_migrations \
-            -h localhost -p 5433 \
-            -U postgres shadow \
-            --schema=public \
-            -f /tmp/expected_schema.sql
-
-      - name: SQL diff
-        run: |
-          # Strip pg_dump header metadata that varies between instances
-          # (\restrict tokens, version strings) but isn't schema
-          grep -v "^\\\\restrict\|^\\\\unrestrict" /tmp/live_schema.sql | grep -v "^-- Dumped" > /tmp/live_clean.sql
-          grep -v "^\\\\restrict\|^\\\\unrestrict" /tmp/expected_schema.sql | grep -v "^-- Dumped" > /tmp/expected_clean.sql
-
-          set +e
-          DIFF_OUTPUT=$(diff --unified /tmp/expected_clean.sql /tmp/live_clean.sql)
-          DIFF_EXIT=$?
-          set -e
-
-          if [ $DIFF_EXIT -ne 0 ]; then
-            CHANGED=$(echo "$DIFF_OUTPUT" | grep -Ei "^\+.*(table|column|index|constraint|sequence|type|function|alter)" | head -20 || true)
-            echo ""
-            echo "╔══════════════════════════════════════════════════════════════╗"
-            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                   ║"
-            echo "╚══════════════════════════════════════════════════════════════╝"
-            echo ""
-            echo "The live dev DB schema does not match the latest migration."
-            echo "Someone likely changed the schema directly in the Supabase dashboard"
-            echo "without generating a corresponding Prisma migration."
-            echo ""
-            echo "────────────────────────────────────────────────────────────────"
-            echo "Diff (expected ← → live, capped at 200 lines):"
-            echo "────────────────────────────────────────────────────────────────"
-            echo "$DIFF_OUTPUT" | head -200
-            echo ""
-            if [ -n "$CHANGED" ]; then
-              echo "────────────────────────────────────────────────────────────────"
-              echo "Affected objects:"
-              echo "$CHANGED"
-              echo ""
-            fi
-            exit 1
-          else
-            echo "✅ SQL diff clean."
-          fi
 
       - name: Prisma-native drift check
         env:
@@ -152,21 +38,18 @@ jobs:
 
           if [ $PRISMA_EXIT -ne 0 ]; then
             echo ""
-            echo "Prisma-native drift check detected differences."
-            echo "This catches ORM-level issues that SQL diff may miss."
+            echo "╔══════════════════════════════════════════════════════════════╗"
+            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                   ║"
+            echo "╚══════════════════════════════════════════════════════════════╝"
             echo ""
-            echo "How to fix:"
-            echo "  1. Introspect the live DB:  prisma db pull"
-            echo "  2. Generate a migration:    prisma migrate dev --name <describe_change>"
-            echo "  3. Commit and push the new migration file."
+            echo "The live dev DB schema does not match the latest migration."
+            echo "Someone likely changed the schema directly in the Supabase dashboard"
+            echo "without generating a corresponding Prisma migration."
+            echo ""
             exit 1
           else
-            echo "✅ Prisma drift check clean."
+            echo "✅ No schema drift detected."
           fi
-
-      - name: Cleanup shadow DB container
-        if: always()
-        run: docker rm -f migration_db || true
 
   ci:
     name: Lint, Format, Test & Build
