@@ -5,8 +5,85 @@ on:
     branches: [main]
 
 jobs:
+  schema-drift:
+    name: Detect DB Schema Drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Start shadow DB
+        run: |
+          docker run -d \
+            --name shadow_db \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=shadow \
+            -p 5433:5432 \
+            postgres:17.6
+
+          until pg_isready -h localhost -p 5433 -U postgres; do
+            echo "Waiting for shadow DB..."
+            sleep 1
+          done
+          sleep 2
+
+      - name: Prisma-native drift check
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/shadow
+        run: |
+          set +e
+          pnpm --filter @repo/db exec prisma migrate diff \
+            --from-url "$DIRECT_URL" \
+            --to-migrations prisma/migrations \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code > /dev/null 2>&1
+          PRISMA_EXIT=$?
+          set -e
+
+          if [ $PRISMA_EXIT -ne 0 ]; then
+            echo ""
+            echo "╔══════════════════════════════════════════════════════════════╗"
+            echo "║              ⚠️  SCHEMA DRIFT DETECTED  ⚠️                  ║"
+            echo "╚══════════════════════════════════════════════════════════════╝"
+            echo ""
+            echo "The live dev DB schema does not match the latest migration."
+            echo "Someone likely changed the schema directly in the Supabase dashboard"
+            echo "without generating a corresponding Prisma migration."
+            echo ""
+            echo "────────────────────────────────────────────────────────────────"
+            echo "Diff:"
+            echo "────────────────────────────────────────────────────────────────"
+            pnpm --filter @repo/db exec prisma migrate diff \
+              --from-url "$DIRECT_URL" \
+              --to-migrations prisma/migrations \
+              --shadow-database-url "$SHADOW_DATABASE_URL"
+            echo ""
+            exit 1
+          else
+            echo "✓ No schema drift detected."
+          fi
+
+      - name: Cleanup shadow DB
+        if: always()
+        run: docker rm -f shadow_db || true
+
   ci:
     name: Lint, Format, Test & Build
+    needs: schema-drift
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
