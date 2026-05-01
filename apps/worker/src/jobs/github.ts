@@ -2,7 +2,6 @@ import { db } from '@repo/db'
 import { logger } from '../lib/logger'
 import { ingestRepoCommits } from '../lib/github-commit-tracker'
 import { ingestRepoMergedPRs } from '../lib/github-PR-tracker'
-import { getGitHubEditedLinesByContributor } from '../lib/github-edited-lines-by-contributer'
 import { computeWeeklyGitHubMetrics } from '../lib/github-weekly-stats'
 
 export async function runGitHubIngestion(weekStart: Date): Promise<void> {
@@ -27,15 +26,6 @@ export async function runGitHubIngestion(weekStart: Date): Promise<void> {
         totalProcessed += commitCount
       } catch (err) {
         logger.error(`Failed to ingest commits for ${repo.owner}/${repo.name}: ${err}`)
-      }
-
-      try {
-        const contributorRows = await getGitHubEditedLinesByContributor(repo, weekStart)
-        totalProcessed += contributorRows
-      } catch (err) {
-        logger.error(
-          `Failed to compute contributor edited lines for ${repo.owner}/${repo.name}: ${err}`
-        )
       }
     }
 
