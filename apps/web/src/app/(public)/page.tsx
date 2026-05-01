@@ -1,5 +1,5 @@
-import WeeklyMvp from '@/components/ui/weekly-mvp'
-import ProjectCard from '@/components/ui/project-card'
+import WeeklyMvp from '@/components/ui/WeeklyMvp'
+import ProjectCard from '@/components/ui/ProjectCard'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
 
