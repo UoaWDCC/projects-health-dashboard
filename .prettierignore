@@ -4,4 +4,3 @@ node_modules/
 apps/web/.next/
 apps/worker/dist/
 packages/db/dist/
-**/*.md
