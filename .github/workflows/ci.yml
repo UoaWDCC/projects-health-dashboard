@@ -14,10 +14,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client & pnpm
+      - name: Install PostgreSQL 17 client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y curl ca-certificates
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client-17
 
       - uses: pnpm/action-setup@v4
 
@@ -27,7 +33,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm --filter @repo/db install
+        run: pnpm install
 
       - name: Dump live dev DB schema
         env:
@@ -38,6 +44,7 @@ jobs:
             --no-owner \
             --no-acl \
             --no-comments \
+            --clean \
             --quote-all-identifiers \
             --exclude-schema=extensions \
             "$DIRECT_URL" \
@@ -52,7 +59,7 @@ jobs:
             -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=shadow \
             -p 5433:5432 \
-            postgres:15
+            postgres:17
 
           until pg_isready -h localhost -p 5433 -U postgres; do
             echo "Waiting for shadow DB..."
@@ -81,6 +88,7 @@ jobs:
             --no-owner \
             --no-acl \
             --no-comments \
+            --clean \
             --quote-all-identifiers \
             --exclude-schema=extensions \
             -h localhost -p 5433 \
@@ -117,7 +125,11 @@ jobs:
               echo "$CHANGED"
               echo ""
             fi
-            exit 1
+            echo "How to fix:"
+            echo "  1. Introspect the live DB:  prisma db pull"
+            echo "  2. Generate a migration:    prisma migrate dev --name <describe_change>"
+            echo "  3. Commit and push the new migration file."
+            exit 1  # fail fast — no point running Prisma check if SQL diff already caught drift
           else
             echo "✓ SQL diff clean."
           fi
@@ -138,11 +150,6 @@ jobs:
             echo ""
             echo "Prisma-native drift check detected differences."
             echo "This catches ORM-level issues that SQL diff may miss."
-            echo ""
-            echo "How to fix:"
-            echo "  1. Introspect the live DB:  prisma db pull"
-            echo "  2. Generate a migration:    prisma migrate dev --name <describe_change>"
-            echo "  3. Commit and push the new migration file."
             exit 1
           else
             echo "✓ Prisma drift check clean."
