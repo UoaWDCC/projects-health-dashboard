@@ -34,7 +34,7 @@ export default async function PublicDashboardPage() {
 
         <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
           {projects.map((project) => (
-            <Link href={`/project/${project.id}`} key={project.id}>
+            <Link href={`/project/${project.slug}`} key={project.id}>
               <ProjectCard key={project.id} project={project} />
             </Link>
           ))}

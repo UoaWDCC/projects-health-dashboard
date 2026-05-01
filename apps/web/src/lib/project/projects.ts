@@ -22,6 +22,7 @@ const projectCardSelect = {
     description: true,
     isActive: true,
     imageUrl: true,
+    slug: true,
   },
 } satisfies Prisma.ProjectFindManyArgs
 
@@ -29,13 +30,13 @@ export type ProjectHeaderData = Prisma.ProjectGetPayload<typeof projectHeaderSel
 
 export type ProjectCardData = Prisma.ProjectGetPayload<typeof projectCardSelect>
 
-export async function getProjectHeaderData(id: string): Promise<ProjectHeaderData | null> {
+export async function getProjectHeaderData(slug: string): Promise<ProjectHeaderData | null> {
   'use cache'
   unstable_cacheLife('days')
   unstable_cacheTag('projects')
 
   try {
-    return await db.project.findUnique({ ...projectHeaderSelect, where: { id } })
+    return await db.project.findUnique({ ...projectHeaderSelect, where: { slug } })
   } catch {
     return null
   }
