@@ -61,7 +61,7 @@ jobs:
             -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=shadow \
             -p 5433:5432 \
-            postgres:17
+            postgres:17.6
 
           until pg_isready -h localhost -p 5433 -U postgres; do
             echo "Waiting for shadow DB..."
@@ -101,8 +101,13 @@ jobs:
 
       - name: SQL diff
         run: |
+          # Strip pg_dump header metadata that varies between instances
+          # (\restrict tokens, version strings) but isn't schema
+          grep -v "^\\\\" /tmp/live_schema.sql | grep -v "^-- Dumped" > /tmp/live_clean.sql
+          grep -v "^\\\\" /tmp/expected_schema.sql | grep -v "^-- Dumped" > /tmp/expected_clean.sql
+
           set +e
-          DIFF_OUTPUT=$(diff --unified /tmp/expected_schema.sql /tmp/live_schema.sql)
+          DIFF_OUTPUT=$(diff --unified /tmp/expected_clean.sql /tmp/live_clean.sql)
           DIFF_EXIT=$?
           set -e
 
