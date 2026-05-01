@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger'
 import { db, IdentityProvider, SyncJobStatus, SyncJobType } from '@repo/db'
+import { getWeekStart } from '../lib/date-utils'
 
 /**
  * 1st Jan 2015, the epoch used by Discord snowflakes.
@@ -68,19 +69,6 @@ function sleep(ms: number): Promise<void> {
  */
 function timestampToSnowflake(ms: number): string {
   return String((BigInt(ms) - DISCORD_EPOCH) << 22n)
-}
-
-/**
- * Utility function to get the start of the current week (Monday at 00:00:00 UTC) for a given date.
- * @param {Date} date The date to calculate the start of the week for.
- * @returns A new Date object representing the start of the week.
- */
-function startOfWeek(date: Date): Date {
-  const d = new Date(date)
-  const day = d.getUTCDay()
-  d.setUTCDate(d.getUTCDate() - day + (day === 0 ? -6 : 1))
-  d.setUTCHours(0, 0, 0, 0)
-  return d
 }
 
 /**
@@ -193,7 +181,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
   }
 
   const data: ProjectData[] = []
-  const weekStart = startOfWeek(new Date())
+  const weekStart = getWeekStart()
   const weekEnd = new Date()
 
   for (const project of projects) {
@@ -307,8 +295,7 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
           itemsProcessed,
         },
       })
-
-      throw err
+      logger.error(`Discord ingestion failed for project "${project.name}": ${err}`)
     }
   }
 
