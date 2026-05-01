@@ -103,8 +103,8 @@ jobs:
         run: |
           # Strip pg_dump header metadata that varies between instances
           # (\restrict tokens, version strings) but isn't schema
-          grep -v "^\\\\" /tmp/live_schema.sql | grep -v "^-- Dumped" > /tmp/live_clean.sql
-          grep -v "^\\\\" /tmp/expected_schema.sql | grep -v "^-- Dumped" > /tmp/expected_clean.sql
+          grep -v "^\\\\restrict\|^\\\\unrestrict" /tmp/live_schema.sql | grep -v "^-- Dumped" > /tmp/live_clean.sql
+          grep -v "^\\\\restrict\|^\\\\unrestrict" /tmp/expected_schema.sql | grep -v "^-- Dumped" > /tmp/expected_clean.sql
 
           set +e
           DIFF_OUTPUT=$(diff --unified /tmp/expected_clean.sql /tmp/live_clean.sql)
