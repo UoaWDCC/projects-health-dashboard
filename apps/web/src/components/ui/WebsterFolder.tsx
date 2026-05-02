@@ -30,7 +30,7 @@ const FOLDER_VIEWBOX = '186 116 567 386'
 
 export default function WebsterFolder() {
   return (
-    <div className="group relative inline-block" style={{ paddingTop: 130 }}>
+    <div className="group relative inline-block drop-shadow-2xl" style={{ paddingTop: 130 }}>
       {/* Folder Back */}
       <div className="absolute inset-x-0 z-10" style={{ top: 130 }}>
         <svg
