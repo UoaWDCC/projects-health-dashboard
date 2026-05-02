@@ -1,5 +1,5 @@
 import LeaderboardHeader from '@/components/headers/LeaderboardHeader'
-import LeaderboardSections from '@/components/ui/leaderboard-sections'
+import LeaderboardSections from '@/components/ui/LeaderboardSections'
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
 
 export default async function Leaderboard() {

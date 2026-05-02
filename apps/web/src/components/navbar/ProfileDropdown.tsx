@@ -39,16 +39,16 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full px-4 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:brightness-95 transition-all duration-500 ease-in-out"
+        className="rounded-full px-3 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:bg-gray-200 transition-all duration-200 ease-in-out"
       >
         {user &&
           (user.avatarUrl ? (
             <Image
               src={user.avatarUrl}
               alt={user.displayName ?? 'Profile picture'}
-              width={36}
-              height={36}
-              className="rounded-full object-cover border-2 border-gray-200"
+              width={25}
+              height={25}
+              className="rounded-full object-cover"
             />
           ) : (
             <span className="flex items-center justify-center w-9 h-9 rounded-full">
@@ -59,7 +59,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
       </button>
 
       {open && (
-        <div className="absolute min-w-max right-0 mt-2 rounded-lg shadow-lg bg-white ring-1 ring-black/5 z-50 overflow-hidden hover:brightness-95 transition-all duration-500 ease-in-out">
+        <div className="absolute min-w-max right-0 mt-2 rounded-lg shadow-lg bg-white ring-1 ring-black/5 z-50 overflow-hidden">
           {user ? (
             <>
               <div className="px-4 py-3 border-b border-gray-100">
@@ -67,7 +67,10 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
                 <p className={`text-xs font-sans`}>{user.email}</p>
               </div>
               <form action={signOut}>
-                <button type="submit" className="w-full text-left px-4 py-2.5 text-sm">
+                <button
+                  type="submit"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:brightness-95 hover:bg-gray-50 transition-all duration-200"
+                >
                   Sign out
                 </button>
               </form>
@@ -76,10 +79,10 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
             <form action={signInWithGoogle}>
               <button
                 type="submit"
-                className="flex items-center justify-center gap-2 w-full text-left px-4 py-2.5 text-sm"
+                className="flex items-center justify-center gap-2 w-full text-left px-4 py-2.5 text-sm hover:brightness-95 hover:bg-gray-50 transition-all duration-200"
               >
                 <GoogleIcon />
-                <span className="w-full">Sign in with Google</span>
+                <span className="w-full translate-y-[0.0675rem]">Sign in with Google</span>
               </button>
             </form>
           )}

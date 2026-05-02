@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LeaderboardRow from '@/components/ui/leaderboard-row'
+import LeaderboardRow from '@/components/ui/LeaderboardRow'
 import { fetchWeeklyLeaderboard, WeeklyLeaderboard } from '@/lib/project/leaderboard-row'
 
 export default function LeaderboardSections() {
