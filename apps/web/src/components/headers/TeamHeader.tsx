@@ -21,7 +21,8 @@ export default function TeamHeader({ project }: { project: ProjectHeaderData }) 
             {project.name}
           </h1>
           <p className="xl:text-[20px] lg:text-[16px] text-[14px] xl:mt-[20px] md:mt-[16px] font-mono text-wdcc-grey max-w-[70%]">
-            {project.description} • {project._count.members} Members
+            {project.description && <span>{project.description} • </span>}
+            <span>{project._count.members} Members</span>
           </p>
         </div>
       </div>
