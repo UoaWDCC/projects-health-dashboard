@@ -27,14 +27,12 @@ export async function Navbar() {
 
   return (
     <header className="z-50 sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200 backdrop-blur-sm">
-      <div className="flex items-center gap-4 xl:gap-6">
-        <Link href="/">
-          <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
-        </Link>
+      <Link href="/" className="flex items-center gap-4 xl:gap-6">
+        <Image src="/logo.svg" alt="WDCC Logo" width={80} height={40} />
         <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase">
           Projects Health Dashboard
         </span>
-      </div>
+      </Link>
       <div className="flex items-center gap-4 xl:gap-10 text-[16px]">
         <div className="flex gap-4 xl:gap-8 font-figtree">
           <Link href="/" className="group flex items-center">
