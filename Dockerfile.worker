@@ -18,16 +18,18 @@ COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY . .
 # Generate Prisma client, bundle worker, then copy the engine binary next to
-# the bundle so Prisma can locate it at runtime regardless of pnpm store layout.
+# the bundle. Search all of /app (not just root node_modules) because pnpm may
+# place the binary under packages/db/node_modules after prisma generate.
 RUN corepack enable pnpm \
   && pnpm --filter @repo/db db:generate \
   && pnpm --filter worker build \
-  && find /app/node_modules -name "libquery_engine-linux-musl*.so.node" -exec cp {} /app/apps/worker/dist/ \;
+  && find /app -name "libquery_engine-linux-musl*.so.node" -exec cp {} /app/apps/worker/dist/ \;
 
 # ── Stage 3: runner ───────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/apps/worker/dist/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 worker
