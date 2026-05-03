@@ -1,4 +1,4 @@
-# fly.toml for wphd-worker — weekly cron daemon, no HTTP service
+# fly.toml for wphd-worker — weekly scheduled machine, no HTTP service
 app = 'wphd-worker'
 primary_region = 'syd'
 
