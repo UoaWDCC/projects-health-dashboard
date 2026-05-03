@@ -17,29 +17,28 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY . .
-# Generate Prisma client with linux-musl-openssl-3.0.x binary target,
-# then tsup-bundle worker + @repo/db source into a single CJS file
+# Generate Prisma client, bundle worker, then copy the engine binary next to
+# the bundle. Search all of /app (not just root node_modules) because pnpm may
+# place the binary under packages/db/node_modules after prisma generate.
 RUN corepack enable pnpm \
   && pnpm --filter @repo/db db:generate \
-  && pnpm --filter worker build
+  && pnpm --filter worker build \
+  && find /app -name "libquery_engine-linux-musl*.so.node" -exec cp {} /app/apps/worker/dist/ \;
 
 # ── Stage 3: runner ───────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/apps/worker/dist/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 worker
 
-# Copy root node_modules (pnpm virtual store) and worker's own node_modules.
-# pnpm keeps workspace-specific deps (node-cron, octokit) in apps/worker/node_modules,
-# not in root — so both are needed. dist lives under apps/worker/ so Node's module
-# resolution walks up to apps/worker/node_modules correctly.
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
 
 USER worker
 
-# No EXPOSE — worker is a long-running daemon, not a web server
+# No EXPOSE — worker is a one-shot job, not a web server
 CMD ["node", "apps/worker/dist/index.js"]
