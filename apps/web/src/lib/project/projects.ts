@@ -14,19 +14,17 @@ const projectHeaderSelect = {
 } satisfies Prisma.ProjectSelect
 
 const projectCardSelect = {
-  select: {
-    id: true,
-    name: true,
-    description: true,
-    isActive: true,
-    imageUrl: true,
-    slug: true,
-  },
-} satisfies Prisma.ProjectFindManyArgs
+  id: true,
+  name: true,
+  description: true,
+  isActive: true,
+  imageUrl: true,
+  slug: true,
+} satisfies Prisma.ProjectSelect
 
 export type ProjectHeaderData = Prisma.ProjectGetPayload<{ select: typeof projectHeaderSelect }>
 
-export type ProjectCardData = Prisma.ProjectGetPayload<typeof projectCardSelect>
+export type ProjectCardData = Prisma.ProjectGetPayload<{ select: typeof projectCardSelect }>
 
 export async function getProjectHeaderData(slug: string): Promise<ProjectHeaderData | null> {
   'use cache'
@@ -35,7 +33,8 @@ export async function getProjectHeaderData(slug: string): Promise<ProjectHeaderD
 
   try {
     return await db.project.findUnique({ where: { slug }, select: projectHeaderSelect })
-  } catch {
+  } catch (error) {
+    console.error('Error finding project from slug:', error)
     return null
   }
 }
@@ -46,8 +45,9 @@ export async function getProjectCardData(): Promise<ProjectCardData[]> {
   unstable_cacheTag('projects')
 
   try {
-    return await db.project.findMany(projectCardSelect)
-  } catch {
+    return await db.project.findMany({ select: projectCardSelect })
+  } catch (error) {
+    console.error('Error finding projects:', error)
     return []
   }
 }
