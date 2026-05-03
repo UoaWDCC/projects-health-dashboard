@@ -31,12 +31,7 @@ export async function getProjectHeaderData(slug: string): Promise<ProjectHeaderD
   unstable_cacheLife('days')
   unstable_cacheTag('projects')
 
-  try {
-    return await db.project.findUnique({ where: { slug }, select: projectHeaderSelect })
-  } catch (error) {
-    console.error('Error finding project from slug:', error)
-    return null
-  }
+  return await db.project.findUnique({ where: { slug }, select: projectHeaderSelect })
 }
 
 export async function getProjectCardData(): Promise<ProjectCardData[]> {
