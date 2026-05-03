@@ -1,0 +1,11 @@
+# fly.toml for wphd-worker — weekly cron daemon, no HTTP service
+app = 'wphd-worker'
+primary_region = 'syd'
+
+[build]
+  dockerfile = 'Dockerfile.worker'
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
