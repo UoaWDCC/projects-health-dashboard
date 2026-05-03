@@ -54,9 +54,9 @@ export async function fetchWeeklyLeaderboard(): Promise<WeeklyLeaderboard> {
     const data = await response.json()
 
     return {
-      commits: attach(data.commits ?? [], LEADERBOARD_THEMES.pink),
-      merges: attach(data.merges ?? [], LEADERBOARD_THEMES.blue),
-      linesOfCode: attach(data['lines-of-code'] ?? [], LEADERBOARD_THEMES.orange),
+      linesOfCode: attach(data['lines-of-code'] ?? [], LEADERBOARD_THEMES.pink),
+      commits: attach(data.commits ?? [], LEADERBOARD_THEMES.blue),
+      merges: attach(data.merges ?? [], LEADERBOARD_THEMES.orange),
     }
   } catch (error) {
     console.error('Error fetching weekly leaderboard:', error)
