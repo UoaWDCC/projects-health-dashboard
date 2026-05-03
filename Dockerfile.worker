@@ -31,15 +31,14 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 worker
 
-# Copy root node_modules (pnpm virtual store) and worker's own node_modules.
-# pnpm keeps workspace-specific deps (node-cron, octokit) in apps/worker/node_modules,
-# not in root — so both are needed. dist lives under apps/worker/ so Node's module
-# resolution walks up to apps/worker/node_modules correctly.
+# Copy root node_modules (pnpm virtual store) and workspace-specific node_modules.
+# packages/db/node_modules is required for the Prisma query engine binary (.prisma/client/).
 COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
+COPY --from=builder --chown=worker:nodejs /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./apps/worker/dist
 
 USER worker
 
-# No EXPOSE — worker is a long-running daemon, not a web server
+# No EXPOSE — worker is a one-shot job, not a web server
 CMD ["node", "apps/worker/dist/index.js"]
