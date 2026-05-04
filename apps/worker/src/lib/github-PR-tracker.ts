@@ -17,8 +17,10 @@ export async function ingestRepoMergedPRs(
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
-  const since = weekStart.toISOString().split('T')[0] // YYYY-MM-DD
-  const until = weekEnd.toISOString().split('T')[0]
+  // GitHub's search syntax supports optional time information in the format THH:MM:SS+00:00
+  // The times need to be included to ensure we capture all PRs merged until Sunday 23:59:59, not Sunday 00:00:00
+  const since = weekStart.toISOString().replace('Z', '+00:00')
+  const until = weekEnd.toISOString().replace('Z', '+00:00')
   const mergedThisWeek = await withRateLimit(() =>
     octokit.paginate('GET /search/issues', {
       q: `repo:${repo.owner}/${repo.name} is:pr is:merged merged:${since}..${until}`,

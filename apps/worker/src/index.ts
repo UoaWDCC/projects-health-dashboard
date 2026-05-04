@@ -3,7 +3,7 @@
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
 import { logger } from './lib/logger'
-import { getWeekStart } from './lib/date-utils'
+import { getCollectionWindow } from './lib/date-utils'
 
 // ─── Cron Schedules ───────────────────────────────────────────────────────────
 // Single weekly cron at Monday 00:00 UTC. Jobs run in sequence:
@@ -20,8 +20,7 @@ import { getWeekStart } from './lib/date-utils'
 //      in code, not by wall-clock timing.
 
 async function main() {
-  const weekStart = getWeekStart()
-  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const [weekStart, weekEnd] = getCollectionWindow()
 
   logger.info(
     `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
