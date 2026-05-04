@@ -4,7 +4,7 @@ import { ingestRepoCommits } from '../lib/github-commit-tracker'
 import { ingestRepoMergedPRs } from '../lib/github-PR-tracker'
 import { computeWeeklyGitHubMetrics } from '../lib/github-weekly-stats'
 
-export async function runGitHubIngestion(weekStart: Date): Promise<void> {
+export async function runGitHubIngestion(weekStart: Date, weekEnd: Date): Promise<void> {
   const syncJob = await db.syncJob.create({
     data: { type: 'GITHUB', status: 'RUNNING', startedAt: new Date() },
   })
@@ -15,21 +15,21 @@ export async function runGitHubIngestion(weekStart: Date): Promise<void> {
 
     for (const repo of repos) {
       try {
-        const PRcount = await ingestRepoMergedPRs(repo, weekStart)
+        const PRcount = await ingestRepoMergedPRs(repo, weekStart, weekEnd)
         totalProcessed += PRcount
       } catch (err) {
         logger.error(`Failed to ingest PRs for ${repo.owner}/${repo.name}: ${err}`)
       }
 
       try {
-        const commitCount = await ingestRepoCommits(repo, weekStart)
+        const commitCount = await ingestRepoCommits(repo, weekStart, weekEnd)
         totalProcessed += commitCount
       } catch (err) {
         logger.error(`Failed to ingest commits for ${repo.owner}/${repo.name}: ${err}`)
       }
     }
 
-    await computeWeeklyGitHubMetrics(weekStart)
+    await computeWeeklyGitHubMetrics(weekStart, weekEnd)
 
     await db.syncJob.update({
       where: { id: syncJob.id },

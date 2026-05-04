@@ -21,14 +21,16 @@ import { getWeekStart } from './lib/date-utils'
 
 async function main() {
   const weekStart = getWeekStart()
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+
   logger.info(
     `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
   )
   const [, discordMessages] = await Promise.all([
-    runGitHubIngestion(weekStart).catch((err: unknown) => {
+    runGitHubIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`GitHub ingestion failed: ${err}`)
     }),
-    runDiscordIngestion().catch((err: unknown) => {
+    runDiscordIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`Discord ingestion failed: ${err}`)
       return []
     }),

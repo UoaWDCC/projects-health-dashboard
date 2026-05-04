@@ -13,7 +13,8 @@ export async function ingestRepoCommits(
     name: string
     installationId: string
   },
-  weekStart: Date
+  weekStart: Date,
+  weekEnd: Date
 ): Promise<number> {
   logger.info(`Fetching commits for ${repo.owner}/${repo.name}`)
 
@@ -42,6 +43,7 @@ export async function ingestRepoCommits(
         repo: repo.name,
         sha: branch.name,
         since: weekStart.toISOString(),
+        until: weekEnd.toISOString(),
         per_page: 100,
       })
     )

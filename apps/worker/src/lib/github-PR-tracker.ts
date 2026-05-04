@@ -8,16 +8,20 @@ import { withRateLimit } from './github-utils'
 
 export async function ingestRepoMergedPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
-  weekStart: Date
+  weekStart: Date,
+  weekEnd: Date
 ): Promise<number> {
-  logger.info(`Fetching merged PRs for ${repo.owner}/${repo.name} since ${weekStart.toISOString()}`)
+  logger.info(
+    `Fetching merged PRs for ${repo.owner}/${repo.name} from ${weekStart.toISOString()} to ${weekEnd.toISOString()}`
+  )
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
   const since = weekStart.toISOString().split('T')[0] // YYYY-MM-DD
+  const until = weekEnd.toISOString().split('T')[0]
   const mergedThisWeek = await withRateLimit(() =>
     octokit.paginate('GET /search/issues', {
-      q: `repo:${repo.owner}/${repo.name} is:pr is:merged merged:>=${since}`,
+      q: `repo:${repo.owner}/${repo.name} is:pr is:merged merged:${since}..${until}`,
       per_page: 100,
     })
   )
