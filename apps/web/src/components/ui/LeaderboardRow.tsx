@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { formatStat, LeaderboardEntry, LeaderboardRowTheme } from '@/lib/project/leaderboard-row'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 
 const NEUTRAL = { bg: '#D9D9D9', text: '#4E4E4D' }
@@ -24,8 +25,10 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
   const border = isFirstPlace && borderColor ? `2px solid ${borderColor}` : '2px solid transparent'
   const textColor = isFirstPlace ? '#1F2031' : NEUTRAL.text
 
+  // TODO: replace '/' with the actual project team page route when available
   return (
-    <div
+    <Link
+      href="/"
       className="flex flex-row items-center gap-4 px-5 w-full"
       style={{
         maxWidth: '415px',
@@ -33,6 +36,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         borderRadius: '24.52px',
         backgroundColor: bg,
         border,
+        cursor: 'pointer',
         transition: 'background-color 0.15s ease',
       }}
       onMouseEnter={() => setHovered(true)}
@@ -78,6 +82,6 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
       <span className="font-mono text-xl font-medium shrink-0" style={{ color: textColor }}>
         {formatStat(statValue)}
       </span>
-    </div>
+    </Link>
   )
 }
