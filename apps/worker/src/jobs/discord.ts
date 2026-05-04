@@ -1,6 +1,5 @@
 import { logger } from '../lib/logger'
 import { db, IdentityProvider, SyncJobStatus, SyncJobType } from '@repo/db'
-import { getWeekStart } from '../lib/date-utils'
 
 /**
  * 1st Jan 2015, the epoch used by Discord snowflakes.
@@ -163,7 +162,7 @@ async function fetchWeeklyMessages(
  * DiscordWeeklyAggregate and DiscordIdentityWeeklyCount, and returns the
  * raw messages in-memory for the LLM job. Raw messages are never persisted.
  */
-export async function runDiscordIngestion(): Promise<ProjectData[]> {
+export async function runDiscordIngestion(weekStart: Date, weekEnd: Date): Promise<ProjectData[]> {
   logger.info('Running Discord ingestion job')
 
   if (!TOKEN) {
@@ -181,8 +180,6 @@ export async function runDiscordIngestion(): Promise<ProjectData[]> {
   }
 
   const data: ProjectData[] = []
-  const weekStart = getWeekStart()
-  const weekEnd = new Date()
 
   for (const project of projects) {
     if (project.channels.length === 0) {

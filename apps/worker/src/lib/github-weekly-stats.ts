@@ -3,7 +3,7 @@
 import { db } from '@repo/db'
 import { logger } from '../lib/logger'
 
-export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void> {
+export async function computeWeeklyGitHubMetrics(weekStart: Date, weekEnd: Date): Promise<void> {
   logger.info(`Starting weekly metrics computation for week starting ${weekStart.toISOString()}`)
 
   const projects = await db.project.findMany({
@@ -24,7 +24,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
       db.commitFact.findMany({
         where: {
           repoId: { in: repoIds },
-          committedAt: { gte: weekStart },
+          committedAt: { gte: weekStart, lte: weekEnd },
           branch: { notIn: ['main', 'master'], not: null }, // added just in case, I dont think there should be any data from main / master branches
         },
         select: {
@@ -36,7 +36,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
       db.pRFact.findMany({
         where: {
           repoId: { in: repoIds },
-          mergedAt: { gte: weekStart },
+          mergedAt: { gte: weekStart, lte: weekEnd },
         },
         select: {
           authorIdentityId: true,

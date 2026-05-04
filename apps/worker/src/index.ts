@@ -3,10 +3,10 @@
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
 import { logger } from './lib/logger'
-import { getWeekStart } from './lib/date-utils'
+import { getCollectionWindow } from './lib/date-utils'
 
 // ─── Cron Schedules ───────────────────────────────────────────────────────────
-// Single weekly cron at Sunday 00:00 UTC. Jobs run in sequence:
+// Single weekly cron at Monday 00:00 UTC. Jobs run in sequence:
 //
 //   1. GitHub + Discord run in parallel:
 //      GitHub:   fetch commits and PRs for the past week; write CommitFact and PRFact
@@ -20,15 +20,16 @@ import { getWeekStart } from './lib/date-utils'
 //      in code, not by wall-clock timing.
 
 async function main() {
-  const weekStart = getWeekStart()
+  const [weekStart, weekEnd] = getCollectionWindow()
+
   logger.info(
     `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
   )
   const [, discordMessages] = await Promise.all([
-    runGitHubIngestion(weekStart).catch((err: unknown) => {
+    runGitHubIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`GitHub ingestion failed: ${err}`)
     }),
-    runDiscordIngestion().catch((err: unknown) => {
+    runDiscordIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`Discord ingestion failed: ${err}`)
       return []
     }),
