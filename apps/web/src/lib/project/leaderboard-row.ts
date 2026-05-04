@@ -1,12 +1,18 @@
+import resolveConfig from 'tailwindcss/resolveConfig'
 import tailwindConfig from '../../../tailwind.config'
 
-const wdcc = tailwindConfig.theme.extend.colors.wdcc as {
-  purple: string
-  peach: string
-  blue: { light: string; DEFAULT: string }
-  kelvin: string
-  amber: string
-}
+const fullConfig = resolveConfig(tailwindConfig)
+const wdcc = (
+  fullConfig.theme.colors as unknown as {
+    wdcc: {
+      purple: string
+      peach: string
+      blue: { light: string; DEFAULT: string }
+      amber: string
+      kelvin: string
+    }
+  }
+).wdcc
 
 export const formatStat = (value: number | string): string => {
   if (typeof value === 'string') return value
