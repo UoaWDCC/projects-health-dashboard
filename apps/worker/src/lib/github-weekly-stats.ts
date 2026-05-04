@@ -24,7 +24,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date, weekEnd: Date)
       db.commitFact.findMany({
         where: {
           repoId: { in: repoIds },
-          committedAt: { gte: weekStart, lt: weekEnd },
+          committedAt: { gte: weekStart, lte: weekEnd },
           branch: { notIn: ['main', 'master'], not: null }, // added just in case, I dont think there should be any data from main / master branches
         },
         select: {
@@ -36,7 +36,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date, weekEnd: Date)
       db.pRFact.findMany({
         where: {
           repoId: { in: repoIds },
-          mergedAt: { gte: weekStart, lt: weekEnd },
+          mergedAt: { gte: weekStart, lte: weekEnd },
         },
         select: {
           authorIdentityId: true,
