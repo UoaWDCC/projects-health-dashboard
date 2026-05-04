@@ -6,7 +6,7 @@ import { logger } from './lib/logger'
 import { getWeekStart } from './lib/date-utils'
 
 // ─── Cron Schedules ───────────────────────────────────────────────────────────
-// Single weekly cron at Sunday 00:00 UTC. Jobs run in sequence:
+// Single weekly cron at Monday 00:00 UTC. Jobs run in sequence:
 //
 //   1. GitHub + Discord run in parallel:
 //      GitHub:   fetch commits and PRs for the past week; write CommitFact and PRFact
