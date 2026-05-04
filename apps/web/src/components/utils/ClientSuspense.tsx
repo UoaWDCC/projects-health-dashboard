@@ -1,15 +1,11 @@
 interface ClientSuspenseProps {
-  mounted: boolean
+  loading: boolean
   fallback: React.ReactNode
   children: React.ReactNode
 }
 
-const ClientSuspense: React.FC<ClientSuspenseProps> = ({
-  mounted,
-  fallback,
-  children,
-}: ClientSuspenseProps) => {
-  return mounted ? children : fallback
+const ClientSuspense: React.FC<ClientSuspenseProps> = ({ loading, fallback, children }) => {
+  return loading ? fallback : children
 }
 
 export default ClientSuspense

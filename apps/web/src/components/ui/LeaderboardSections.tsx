@@ -7,12 +7,12 @@ import ClientSuspense from '../utils/ClientSuspense'
 
 export default function LeaderboardSections() {
   const [data, setData] = useState<WeeklyLeaderboard | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchWeeklyLeaderboard()
       .then(setData)
-      .finally(() => setMounted(true))
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -22,7 +22,7 @@ export default function LeaderboardSections() {
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-kelvin" />
           Lines of Code Changed
         </h2>
-        <ClientSuspense mounted={mounted} fallback={<p>Loading...</p>}>
+        <ClientSuspense loading={loading} fallback={<p>Loading...</p>}>
           {data?.linesOfCode.map(({ entry, theme }) => (
             <LeaderboardRow key={entry.projectId} entry={entry} theme={theme} />
           ))}
@@ -34,7 +34,7 @@ export default function LeaderboardSections() {
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-blue" />
           Commits Made
         </h2>
-        <ClientSuspense mounted={mounted} fallback={<p>Loading...</p>}>
+        <ClientSuspense loading={loading} fallback={<p>Loading...</p>}>
           {data?.commits.map(({ entry, theme }) => (
             <LeaderboardRow key={entry.projectId} entry={entry} theme={theme} />
           ))}
@@ -46,7 +46,7 @@ export default function LeaderboardSections() {
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-amber" />
           Pull Requests Merged
         </h2>
-        <ClientSuspense mounted={mounted} fallback={<p>Loading...</p>}>
+        <ClientSuspense loading={loading} fallback={<p>Loading...</p>}>
           {data?.merges.map(({ entry, theme }) => (
             <LeaderboardRow key={entry.projectId} entry={entry} theme={theme} />
           ))}
