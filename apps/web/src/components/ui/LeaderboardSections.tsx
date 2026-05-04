@@ -15,7 +15,7 @@ export default function LeaderboardSections() {
     <div className="flex justify-center gap-[21px] mt-6">
       <section className="flex flex-col gap-3 w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
-          <span className="w-[4.9px] h-5 rounded-full bg-[#E333A3]" />
+          <span className="w-[4.9px] h-5 rounded-full bg-wdcc-kelvin" />
           Lines of Code Changed
         </h2>
         {data?.linesOfCode.map(({ entry, theme }) => (
@@ -25,7 +25,7 @@ export default function LeaderboardSections() {
 
       <section className="flex flex-col gap-3 w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
-          <span className="w-[4.9px] h-5 rounded-full bg-[#077CF1]" />
+          <span className="w-[4.9px] h-5 rounded-full bg-wdcc-blue" />
           Commits Made
         </h2>
         {data?.commits.map(({ entry, theme }) => (
@@ -35,7 +35,7 @@ export default function LeaderboardSections() {
 
       <section className="flex flex-col gap-3 w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
-          <span className="w-[4.9px] h-5 rounded-full bg-[#FFAC33]" />
+          <span className="w-[4.9px] h-5 rounded-full bg-wdcc-amber" />
           Pull Requests Merged
         </h2>
         {data?.merges.map(({ entry, theme }) => (

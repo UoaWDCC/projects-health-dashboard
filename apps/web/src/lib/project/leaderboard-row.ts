@@ -1,3 +1,13 @@
+import tailwindConfig from '../../../tailwind.config'
+
+const wdcc = tailwindConfig.theme.extend.colors.wdcc as {
+  purple: string
+  peach: string
+  blue: { light: string; DEFAULT: string }
+  kelvin: string
+  amber: string
+}
+
 export const formatStat = (value: number | string): string => {
   if (typeof value === 'string') return value
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
@@ -12,11 +22,11 @@ export interface LeaderboardRowTheme {
   borderColor?: string
 }
 
-// One theme per leaderboard category, matched to the Figma spec.
+// One theme per leaderboard category — colours sourced from tailwind.config.ts.
 export const LEADERBOARD_THEMES = {
-  pink: { fillColor: '#E9CFFC', borderColor: '#E333A3' },
-  blue: { fillColor: '#CFE0FD', borderColor: '#077CF1' },
-  orange: { fillColor: '#FDE6CF', borderColor: '#FFAC33' },
+  pink: { fillColor: wdcc.purple, borderColor: wdcc.kelvin },
+  blue: { fillColor: wdcc.blue.light, borderColor: wdcc.blue.DEFAULT },
+  orange: { fillColor: wdcc.peach, borderColor: wdcc.amber },
 } satisfies Record<string, LeaderboardRowTheme>
 
 // Shape returned by every leaderboard query — maps directly onto LeaderboardRowData.
