@@ -10,7 +10,7 @@ export default function LiveCommitRow({
 }) {
   const { message, commitUrl, repoName, authorName, committedAt, authorUsername } = commit
   return (
-    <div className="flex flex-row justify-between gap-4 border-t-2 border-[#1F20311A] bg-[#FFFFFF80] px-8 py-3">
+    <div className="flex flex-row justify-between gap-4 border-t-2 border-[#1F20311A] px-8 py-3">
       <div className="flex-1 min-w-0">
         <Link
           href={`${commitUrl}`}

@@ -1,5 +1,6 @@
 import WeeklyMvp from '@/components/ui/WeeklyMvp'
 import ProjectCard from '@/components/ui/ProjectCard'
+import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
@@ -38,6 +39,10 @@ export default async function PublicDashboardPage() {
               <ProjectCard project={project} />
             </Link>
           ))}
+        </div>
+
+        <div className="my-10">
+          <LiveCommitFeed />
         </div>
       </div>
     </>

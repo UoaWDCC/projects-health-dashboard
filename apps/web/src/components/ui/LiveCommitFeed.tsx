@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LiveCommitRow from './live-commit-row'
+import LiveCommitRow from './LiveCommitRow'
 import { getLatestLiveCommits } from '@/actions/live-commits'
 import { createClient } from '@/lib/supabase/client'
 import { LiveCommit } from '@repo/db'
 
-export default function LiveCommitSection() {
+export default function LiveCommitFeed() {
   const [commits, setCommits] = useState<LiveCommit[]>([])
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function LiveCommitSection() {
   }, [])
 
   return (
-    <div className="rounded-3xl border-2 border-white bg-[#FFFFFF80] w-4/5 mx-auto flex flex-col">
+    <div className="rounded-3xl border-2 border-white w-4/5 mx-auto flex flex-col bg-[#FFFFFFAF]">
       <div className="flex flex-row items-center gap-5 px-8 py-5">
         <svg
           width="12"
