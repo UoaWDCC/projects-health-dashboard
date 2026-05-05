@@ -65,7 +65,12 @@ function attach(entries: LeaderboardEntry[], theme: LeaderboardRowTheme): Leader
 // to each category so rows can be passed directly to <LeaderboardRow />.
 export async function fetchWeeklyLeaderboard(): Promise<WeeklyLeaderboard> {
   try {
-    const response = await fetch('/api/weekly-leaderboard')
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const response = await fetch(`${baseUrl}/api/weekly-leaderboard`, {
+      next: {
+        revalidate: 60,
+      },
+    })
     if (!response.ok) throw new Error('Failed to fetch weekly leaderboard')
     const data = await response.json()
 
