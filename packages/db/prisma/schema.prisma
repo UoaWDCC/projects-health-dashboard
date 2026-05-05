@@ -383,19 +383,20 @@ model WeeklySummary {
 // Maintained in FIFO order — when a new commit is inserted and the count exceeds 10,
 // the oldest row (by receivedAt) is deleted.
 model LiveCommit {
-  id           String   @id @default(cuid())
-  sha          String
-  shortSha     String   // first 7 chars, stored for display without re-computing
-  repoOwner    String
-  repoName     String
-  projectId    String?  // Denormalized — resolved at webhook time; no FK so Project has no backrelation
-  branch       String
-  message      String   // full commit message
-  commitUrl    String?  // html_url from the GitHub push payload
-  authorName   String   // display name from GitHub payload (no identity resolution needed)
-  authorAvatar String?  // GitHub avatar URL for carousel display
-  committedAt  DateTime // timestamp from the git commit object
-  receivedAt   DateTime @default(now()) // when the webhook was processed; used for FIFO ordering
+  id             String   @id @default(cuid())
+  sha            String
+  shortSha       String   // first 7 chars, stored for display without re-computing
+  repoOwner      String
+  repoName       String
+  projectId      String?  // Denormalized — resolved at webhook time; no FK so Project has no backrelation
+  branch         String
+  message        String   // full commit message
+  commitUrl      String?  // html_url from the GitHub push payload
+  authorName     String   // display name from GitHub payload (no identity resolution needed)
+  authorAvatar   String?  // GitHub avatar URL for carousel display
+  committedAt    DateTime // timestamp from the git commit object
+  receivedAt     DateTime @default(now()) // when the webhook was processed; used for FIFO ordering
+  authorUsername String? // GitHub username from the GitHub push payload
 
   @@unique([repoOwner, repoName, sha]) // Deduplicate if GitHub delivers the same push event twice
   @@index([receivedAt]) // ORDER BY receivedAt DESC for carousel queries

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Role } from '@repo/db'
 import { getUserRoles } from '@/lib/auth'
-import LiveCommitRow from '@/components/ui/live-commit-row'
+import LiveCommitSection from '@/components/ui/live-commit-section'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -16,7 +16,7 @@ export default async function PublicDashboardPage() {
   const isAdmin = roles.includes(Role.ADMIN)
 
   return (
-    <main>
+    <main className="bg-gray-50">
       <h1>WDCC Projects Health Dashboard</h1>
       <p>Public view coming soon.</p>
       <nav style={{ display: 'flex', gap: '0.5rem' }}>
@@ -32,18 +32,7 @@ export default async function PublicDashboardPage() {
         )}
       </nav>
       <div className="">
-        <LiveCommitRow
-          message="fix: resolve race condition in queue handler plus another bunch of really long bs for no apparent reason"
-          author="Ovuvuevuevue Enyetuenwuevue Ugbemugbem Osas"
-          projectName="Project Name"
-          timestamp={new Date('2026-04-17 05:22:07')}
-        />
-        <LiveCommitRow
-          message="feat: add OAuth2 token refresh logic"
-          author="Jamie K"
-          projectName="Project Name Which is long af holy jesus christ"
-          timestamp={new Date('2026-04-14 10:26:19')}
-        />
+        <LiveCommitSection />
       </div>
     </main>
   )

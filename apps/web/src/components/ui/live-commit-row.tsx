@@ -1,47 +1,54 @@
-import { DM_Mono, Plus_Jakarta_Sans } from 'next/font/google'
-
-const dmMono400 = DM_Mono({ subsets: ['latin'], weight: '400' })
-const dmMono500 = DM_Mono({ subsets: ['latin'], weight: '500' })
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
-
-interface LiveCommitRowProps {
-  message: string
-  author: string
-  projectName: string
-  timestamp: Date
-}
+import { LiveCommit } from '@repo/db'
+import Link from 'next/link'
 
 export default function LiveCommitRow({
-  message,
-  author,
-  projectName,
-  timestamp,
-}: LiveCommitRowProps) {
+  commit,
+  projectSlug,
+}: {
+  commit: LiveCommit
+  projectSlug: string
+}) {
+  const { message, commitUrl, repoName, authorName, committedAt, authorUsername } = commit
   return (
     <div className="flex flex-row justify-between gap-4 border-t-2 border-[#1F20311A] bg-[#FFFFFF80] px-8 py-3">
       <div className="flex-1 min-w-0">
-        <p
-          className={`${dmMono400.className} text-[clamp(0.625rem,2.5vw,1.1rem)] text-[#1F2031] truncate`}
+        <Link
+          href={`${commitUrl}`}
+          target="_blank"
+          className={`block font-mono font-normal text-[clamp(0.625rem,2.5vw,1.1rem)] text-[#1F2031] hover:text-[#505162] truncate`}
         >
           {message}
-        </p>
+        </Link>
         <div className="flex flex-row gap-3 min-w-0 mt-1">
-          <p
-            className={`${plusJakartaSans.className} text-[#5A5E7A] text-[clamp(0.625rem,2.5vw,1.1rem)] font-semibold place-self-center whitespace-nowrap shrink-0`}
+          {authorUsername && (
+            <Link
+              href={`https://github.com/${authorUsername}`}
+              target="_blank"
+              className={`font-sans text-[#5A5E7A] text-[clamp(0.625rem,2.5vw,1.1rem)] font-semibold place-self-center whitespace-nowrap shrink-0 hover:underline`}
+            >
+              {authorName}
+            </Link>
+          )}
+          {!authorUsername && (
+            <Link
+              href={`/projects/${projectSlug}`}
+              className={`font-sans text-[#5A5E7A] text-[clamp(0.625rem,2.5vw,1.1rem)] font-semibold place-self-center whitespace-nowrap shrink-0 hover:underline`}
+            >
+              {authorName}
+            </Link>
+          )}
+          <Link
+            href={`/projects/${projectSlug}`}
+            className={`font-mono font-medium text-[#077CF1] text-[clamp(0.5rem,2vw,1rem)] bg-[#E8E8E2] hover:bg-[#F4900C] hover:text-[#FFFFFF] transition-colors duration-200 rounded-lg px-3 h-fit place-self-center truncate`}
           >
-            {author}
-          </p>
-          <p
-            className={`${dmMono500.className} text-[#077CF1] text-[clamp(0.5rem,2vw,1rem)] bg-[#E8E8E2] rounded-lg px-3 h-fit place-self-center truncate`}
-          >
-            {projectName}
-          </p>
+            {repoName}
+          </Link>
         </div>
       </div>
       <p
-        className={`${dmMono400.className} text-[#9A9EB8] text-[clamp(0.5rem,2vw,1rem)] text-right place-self-center whitespace-nowrap shrink-0`}
+        className={`font-mono font-normal text-[#9A9EB8] text-[clamp(0.5rem,2vw,1rem)] text-right place-self-center whitespace-nowrap shrink-0`}
       >
-        {processDateTime(timestamp)}
+        {processDateTime(committedAt)}
       </p>
     </div>
   )
@@ -54,6 +61,9 @@ function processDateTime(timestamp: Date) {
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
+  if (seconds == 0) {
+    return 'Just now'
+  }
 
   if (seconds < 60) {
     return `${seconds}s ago`

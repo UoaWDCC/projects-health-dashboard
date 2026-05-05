@@ -1,11 +1,7 @@
 'use client'
 
-import { cn } from '@/lib/utils'
 import { useState } from 'react'
-import { Plus_Jakarta_Sans } from 'next/font/google'
 import Image from 'next/image'
-
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'] })
 
 interface WeeklyMvpProps {
   name: string
@@ -45,12 +41,7 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
           className="absolute -top-16 -left-12 md:-top-[85px] md:-left-[65px] w-full h-full drop-shadow-md z-10"
         />
       </div>
-      <div
-        className={cn(
-          'flex flex-col justify-center text-center md:text-left md:ml-2',
-          plusJakartaSans.className
-        )}
-      >
+      <div className="flex flex-col font-sans justify-center text-center md:text-left md:ml-2">
         <p className="font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3">{name}</p>
         <p className="text-lg md:text-2xl mt-1 md:mt-3 font-medium text-[#5A5E7A]">
           Lines Committed:{' '}
