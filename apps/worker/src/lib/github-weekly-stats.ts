@@ -3,8 +3,9 @@
 import { db } from '@repo/db'
 import { logger } from '../lib/logger'
 
-export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void> {
+export async function computeWeeklyGitHubMetrics(weekStart: Date, weekEnd: Date): Promise<void> {
   logger.info(`Starting weekly metrics computation for week starting ${weekStart.toISOString()}`)
+
   const projects = await db.project.findMany({
     select: {
       id: true,
@@ -23,7 +24,8 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
       db.commitFact.findMany({
         where: {
           repoId: { in: repoIds },
-          committedAt: { gte: weekStart },
+          committedAt: { gte: weekStart, lte: weekEnd },
+          branch: { notIn: ['main', 'master'], not: null }, // added just in case, I dont think there should be any data from main / master branches
         },
         select: {
           authorIdentityId: true,
@@ -34,7 +36,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
       db.pRFact.findMany({
         where: {
           repoId: { in: repoIds },
-          mergedAt: { gte: weekStart },
+          mergedAt: { gte: weekStart, lte: weekEnd },
         },
         select: {
           authorIdentityId: true,
@@ -139,6 +141,25 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
       memberContrib.set(projectMemberId, current)
     }
 
+    let mvpMemberId: string | null = null
+    let mvpLinesChanged = -1
+    let mvpCommits = -1
+
+    for (const contrib of memberContrib.values()) {
+      const linesChanged = contrib.linesAdded + contrib.linesRemoved
+      if (
+        linesChanged > mvpLinesChanged ||
+        (linesChanged === mvpLinesChanged && contrib.commits > mvpCommits) ||
+        (linesChanged === mvpLinesChanged &&
+          contrib.commits === mvpCommits &&
+          (mvpMemberId === null || contrib.projectMemberId < mvpMemberId))
+      ) {
+        mvpMemberId = contrib.projectMemberId
+        mvpLinesChanged = linesChanged
+        mvpCommits = contrib.commits
+      }
+    }
+
     logger.info(
       `Project ${project.id}: adding weeklyStats and ${memberContrib.size} member contributions`
     )
@@ -158,6 +179,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
             prsMerged,
             linesAdded,
             linesRemoved,
+            mvpMemberId,
             computedAt: new Date(),
           },
           update: {
@@ -165,6 +187,7 @@ export async function computeWeeklyGitHubMetrics(weekStart: Date): Promise<void>
             prsMerged,
             linesAdded,
             linesRemoved,
+            mvpMemberId,
             computedAt: new Date(),
           },
         })

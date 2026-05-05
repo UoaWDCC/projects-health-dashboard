@@ -1,12 +1,12 @@
-import cron from 'node-cron'
 // TODO: Uncomment imports as jobs are implemented
-// import { runGitHubIngestion } from './jobs/github'
-// import { runDiscordIngestion } from './jobs/discord'
 // import { runLlmAnalysis } from './jobs/llm'
+import { runGitHubIngestion } from './jobs/github'
+import { runDiscordIngestion } from './jobs/discord'
 import { logger } from './lib/logger'
+import { getCollectionWindow } from './lib/date-utils'
 
 // ─── Cron Schedules ───────────────────────────────────────────────────────────
-// Single weekly cron at Sunday 00:00 UTC. Jobs run in sequence:
+// Single weekly cron at Monday 00:00 UTC. Jobs run in sequence:
 //
 //   1. GitHub + Discord run in parallel:
 //      GitHub:   fetch commits and PRs for the past week; write CommitFact and PRFact
@@ -19,12 +19,29 @@ import { logger } from './lib/logger'
 //      sentimentParagraph, and summaryText to WeeklySummary. Dependency enforced
 //      in code, not by wall-clock timing.
 
-cron.schedule('0 0 * * 0', async () => {
-  logger.info('Starting weekly ingestion jobs (GitHub + Discord in parallel)')
-  // TODO: Implement — run both collection jobs concurrently, then LLM
-  // const [, discordMessages] = await Promise.all([runGitHubIngestion(), runDiscordIngestion()])
-  // logger.info('Data collection complete — starting LLM analysis')
-  // await runLlmAnalysis(discordMessages) // TODO: add discordMessages param once runLlmAnalysis is implemented
-})
+async function main() {
+  const [weekStart, weekEnd] = getCollectionWindow()
 
-logger.info('Worker started — 1 weekly cron job registered')
+  logger.info(
+    `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
+  )
+  const [, discordMessages] = await Promise.all([
+    runGitHubIngestion(weekStart, weekEnd).catch((err: unknown) => {
+      logger.error(`GitHub ingestion failed: ${err}`)
+    }),
+    runDiscordIngestion(weekStart, weekEnd).catch((err: unknown) => {
+      logger.error(`Discord ingestion failed: ${err}`)
+      return []
+    }),
+  ])
+
+  // TODO: await runLlmAnalysis(discordMessages)
+  void discordMessages // placeholder to avoid unused variable error until LLM analysis is implemented
+
+  logger.info('Weekly ingestion complete')
+}
+
+main().catch((err: unknown) => {
+  logger.error(`Fatal error in weekly job: ${err}`)
+  process.exit(1)
+})

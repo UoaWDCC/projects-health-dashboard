@@ -10,6 +10,8 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "test:watch": "pnpm -r test:watch",
+    "test:coverage": "pnpm -r test:coverage",
     "db:generate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:generate",
     "db:generate:prod": "dotenv -e .env -- pnpm --filter @repo/db db:generate",
     "db:migrate:dev": "dotenv -e .env.dev -- pnpm --filter @repo/db db:migrate",

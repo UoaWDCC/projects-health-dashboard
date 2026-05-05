@@ -128,8 +128,8 @@ model GitHubRepository {
   name           String       // GitHub repo name
   installationId String       // GitHub App installation id; required for API access
   project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  commits        CommitFact[]
-  prs            PRFact[]
+  commits             CommitFact[]
+  prs                 PRFact[]
 
   @@unique([owner, name])
 }

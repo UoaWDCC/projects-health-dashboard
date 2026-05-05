@@ -2,20 +2,20 @@ import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 
 // API route for getting all members of a project
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
+export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
 
-  const { projectId } = await params
+  const { slug } = await params
+
   try {
     const members = await db.projectMember.findMany({
       where: {
         isActive: true,
-        projectId: projectId,
+        project: {
+          slug,
+        },
       },
       include: {
         person: {
@@ -33,16 +33,13 @@ export async function GET(
 }
 
 // API route for adding a member to a project
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
 
   try {
-    const { projectId } = await params
+    const { slug } = await params
     const formData = await request.formData()
 
     let targetPersonId = String(formData.get('personId') ?? '').trim()
@@ -100,10 +97,19 @@ export async function POST(
         targetPersonId = newPerson.id
       }
 
+      const project = await tx.project.findUnique({
+        where: { slug },
+        select: { id: true },
+      })
+
+      if (!project) {
+        throw new Error('Project not found')
+      }
+
       // Prevent adding the exact same person to the project twice
       const existingMember = await tx.projectMember.findFirst({
         where: {
-          projectId,
+          projectId: project.id,
           personId: targetPersonId,
         },
       })
@@ -129,7 +135,7 @@ export async function POST(
       // Scenario 1 & 2: Link the person to the project
       return await tx.projectMember.create({
         data: {
-          projectId: projectId,
+          projectId: project.id,
           personId: targetPersonId,
           displayName: targetDisplayName, // Explicitly overriding ProjectMember's displayName
           isActive: true,
@@ -146,7 +152,11 @@ export async function POST(
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to add member'
     const status =
-      errorMessage === 'This person is already an active member of this project!' ? 409 : 500
+      errorMessage === 'This person is already an active member of this project!'
+        ? 409
+        : errorMessage === 'Project not found'
+          ? 404
+          : 500
 
     return Response.json({ error: errorMessage }, { status })
   }

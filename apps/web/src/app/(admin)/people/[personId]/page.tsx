@@ -3,8 +3,7 @@
 import { useEffect, useState, use, FormEvent, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-
-type IdentityProvider = 'GITHUB' | 'DISCORD'
+import { IdentityProvider } from '@repo/db'
 
 type PersonIdentity = {
   id: string
@@ -17,6 +16,7 @@ type PersonIdentity = {
 type Project = {
   id: string
   name: string
+  slug: string
 }
 
 type ProjectMember = {
@@ -451,7 +451,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                 <div>
                   <p style={{ margin: '0 0 8px 0' }}>
                     <strong>Project:</strong>{' '}
-                    <Link href={`/projects/${membership.projectId}`}>
+                    <Link href={`/projects/${membership.project.slug}`}>
                       {membership.project?.name || membership.projectId}
                     </Link>
                   </p>

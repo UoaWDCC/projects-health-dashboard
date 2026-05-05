@@ -11,27 +11,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Project } from '@/lib/project/types'
 import Link from 'next/link'
-
-type Project = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  startedAt: string | null
-  createdAt: string
-  repositories: {
-    id: string
-    owner: string
-    name: string
-    installationId: string
-  }[]
-  channels: {
-    id: string
-    externalId: string
-    name: string
-  }[]
-}
 
 const fetchProjects = async (): Promise<Project[]> => {
   try {
@@ -68,7 +49,7 @@ export default function AdminDashboardPage() {
         {projects.map((project) => (
           <li key={project.id}>
             <strong style={{ textDecoration: 'underline' }}>
-              <Link href={`/projects/${project.id}`}>{project.name}</Link>
+              <Link href={`/projects/${project.slug}`}>{project.name}</Link>
             </strong>
             <p>{project.description}</p>
             <p>Slug: {project.slug}</p>
