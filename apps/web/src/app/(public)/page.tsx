@@ -1,7 +1,8 @@
+import WeeklyMvp from '@/components/ui/WeeklyMvp'
+import ProjectCard from '@/components/ui/ProjectCard'
+import { getProjectCardData } from '@/lib/project/projects'
+import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
-import { Role } from '@repo/db'
-import { getUserRoles } from '@/lib/auth'
-import LiveCommitSection from '@/components/ui/live-commit-section'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -10,30 +11,35 @@ import LiveCommitSection from '@/components/ui/live-commit-section'
  *
  * TODO: Implement public dashboard UI
  */
+
 export default async function PublicDashboardPage() {
-  const roles = await getUserRoles()
-  const isExec = roles.includes(Role.EXEC)
-  const isAdmin = roles.includes(Role.ADMIN)
+  const projects = await getProjectCardData()
 
   return (
-    <main className="bg-gray-50">
-      <h1>WDCC Projects Health Dashboard</h1>
-      <p>Public view coming soon.</p>
-      <nav style={{ display: 'flex', gap: '0.5rem' }}>
-        {(isExec || isAdmin) && (
-          <Link className="underline" href="/exec-dashboard">
-            Exec Dashboard
-          </Link>
-        )}
-        {isAdmin && (
-          <Link className="underline" href="/admin-dashboard">
-            Admin Dashboard
-          </Link>
-        )}
-      </nav>
-      <div className="">
-        <LiveCommitSection />
+    <>
+      <div
+        className="fixed inset-0 -z-10"
+        style={{ background: 'linear-gradient(to bottom, #077CF1 -2000px, #FFFFFF 100%)' }}
+      />
+      <div>
+        <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
+
+        <div className="ml-10">
+          <WeeklyMvp
+            name="John Smith"
+            avatarUrl="https://github.com/johnsmith.png"
+            linesCommitted={2046}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
+          {projects.map((project) => (
+            <Link href={`/project/${project.slug}`} key={project.id}>
+              <ProjectCard project={project} />
+            </Link>
+          ))}
+        </div>
       </div>
-    </main>
+    </>
   )
 }
