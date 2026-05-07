@@ -3,10 +3,6 @@ import { hasRole } from '@/lib/auth'
 
 // API route for getting all members of a project
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
-  if (!(await hasRole('ADMIN'))) {
-    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
-  }
-
   const { slug } = await params
 
   try {
