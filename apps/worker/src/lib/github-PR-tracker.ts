@@ -5,6 +5,7 @@ import { getInstallationOctokit } from '../lib/github-auth'
 import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
+import { upsertCommit } from './github-commit-tracker'
 
 export async function ingestRepoMergedPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
@@ -84,6 +85,32 @@ export async function ingestRepoMergedPRs(
       },
     })
     count++
+
+    // Pull the PR's commits and upsert each.
+    try {
+      const prCommits = await withRateLimit(() =>
+        octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: fullPr.number,
+          per_page: 100,
+        })
+      )
+
+      for (const commit of prCommits) {
+        try {
+          await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
+        } catch (err) {
+          logger.error(
+            `Failed to upsert commit ${commit.sha} from PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+          )
+        }
+      }
+    } catch (err) {
+      logger.error(
+        `Failed to ingest commits for PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+      )
+    }
   }
 
   logger.info(`Saved ${count} merged PRs for ${repo.owner}/${repo.name}.`)

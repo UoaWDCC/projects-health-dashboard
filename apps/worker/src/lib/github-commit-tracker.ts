@@ -6,6 +6,54 @@ import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
 
+type Octokit = Awaited<ReturnType<typeof getInstallationOctokit>>
+
+// Fetches full commit details (for stats and author) and upserts a CommitFact row.
+// Dedup is handled by the (repoId, sha) unique constraint.
+export async function upsertCommit(
+  repo: { id: string; owner: string; name: string },
+  octokit: Octokit,
+  sha: string,
+  branch: string | null
+): Promise<void> {
+  const { data } = await withRateLimit(() =>
+    octokit.request('GET /repos/{owner}/{repo}/commits/{sha}', {
+      owner: repo.owner,
+      repo: repo.name,
+      sha,
+    })
+  )
+
+  const authorIdentityId = await resolveIdentity(
+    data.author ? { id: data.author.id, login: data.author.login } : null,
+    repo
+  )
+
+  await db.commitFact.upsert({
+    // compound key to avoid duplicate entries for the same commit
+    where: { repoId_sha: { repoId: repo.id, sha } },
+    create: {
+      repoId: repo.id,
+      sha,
+      authorIdentityId,
+      message: data.commit.message,
+      branch,
+      linesAdded: data.stats?.additions || 0,
+      linesRemoved: data.stats?.deletions || 0,
+      committedAt: new Date(data.commit.author?.date || Date.now()),
+      ingestedAt: new Date(Date.now()),
+    },
+    update: {
+      authorIdentityId,
+      message: data.commit.message,
+      linesAdded: data.stats?.additions || 0,
+      linesRemoved: data.stats?.deletions || 0,
+      committedAt: new Date(data.commit.author?.date || Date.now()),
+      ingestedAt: new Date(Date.now()),
+    },
+  })
+}
+
 export async function ingestRepoCommits(
   repo: {
     id: string
@@ -51,43 +99,7 @@ export async function ingestRepoCommits(
     totalCommits += commits.length
 
     for (const commit of commits) {
-      const authorIdentityId = await resolveIdentity(
-        commit.author ? { id: commit.author.id, login: commit.author.login } : null,
-        repo
-      )
-
-      const stats = await withRateLimit(() =>
-        octokit.request('GET /repos/{owner}/{repo}/commits/{sha}', {
-          owner: repo.owner,
-          repo: repo.name,
-          sha: commit.sha,
-        })
-      ).then((res) => res.data.stats)
-
-      await db.commitFact.upsert({
-        // compound key to avoid duplicate entries for the same commit
-        where: { repoId_sha: { repoId: repo.id, sha: commit.sha } },
-        create: {
-          repoId: repo.id,
-          sha: commit.sha,
-          authorIdentityId: authorIdentityId,
-          message: commit.commit.message,
-          branch: branch.name,
-          linesAdded: stats.additions || 0,
-          linesRemoved: stats.deletions || 0,
-          committedAt: new Date(commit.commit.author?.date || Date.now()),
-          ingestedAt: new Date(Date.now()),
-        },
-        update: {
-          authorIdentityId: authorIdentityId,
-          message: commit.commit.message,
-          branch: branch.name,
-          linesAdded: stats.additions || 0,
-          linesRemoved: stats.deletions || 0,
-          committedAt: new Date(commit.commit.author?.date || Date.now()),
-          ingestedAt: new Date(Date.now()),
-        },
-      })
+      await upsertCommit(repo, octokit, commit.sha, branch.name)
     }
   }
 
