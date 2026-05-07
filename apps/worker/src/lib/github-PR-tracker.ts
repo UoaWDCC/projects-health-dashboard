@@ -87,23 +87,29 @@ export async function ingestRepoMergedPRs(
     count++
 
     // Pull the PR's commits and upsert each.
-    const prCommits = await withRateLimit(() =>
-      octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
-        owner: repo.owner,
-        repo: repo.name,
-        pull_number: fullPr.number,
-        per_page: 100,
-      })
-    )
+    try {
+      const prCommits = await withRateLimit(() =>
+        octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: fullPr.number,
+          per_page: 100,
+        })
+      )
 
-    for (const commit of prCommits) {
-      try {
-        await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
-      } catch (err) {
-        logger.error(
-          `Failed to upsert commit ${commit.sha} from PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
-        )
+      for (const commit of prCommits) {
+        try {
+          await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
+        } catch (err) {
+          logger.error(
+            `Failed to upsert commit ${commit.sha} from PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+          )
+        }
       }
+    } catch (err) {
+      logger.error(
+        `Failed to ingest commits for PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+      )
     }
   }
 

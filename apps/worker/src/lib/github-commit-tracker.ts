@@ -46,7 +46,6 @@ export async function upsertCommit(
     update: {
       authorIdentityId,
       message: data.commit.message,
-      branch,
       linesAdded: data.stats?.additions || 0,
       linesRemoved: data.stats?.deletions || 0,
       committedAt: new Date(data.commit.author?.date || Date.now()),
