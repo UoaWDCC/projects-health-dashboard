@@ -1,4 +1,3 @@
-// No 'use client' needed
 import { cn } from '@/lib/utils'
 import { formatStat, LeaderboardEntry, LeaderboardRowTheme } from '@/lib/project/leaderboard'
 import Image from 'next/image'

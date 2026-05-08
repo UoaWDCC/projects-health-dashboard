@@ -1,10 +1,9 @@
 import LeaderboardHeader from '@/components/headers/LeaderboardHeader'
 import LeaderboardSections from '@/components/ui/LeaderboardSections'
-import { fetchWeeklyLeaderboard } from '@/lib/project/leaderboard'
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
 
 export default async function Leaderboard() {
-  const fetchLeaderboardLastUpdated = async (): Promise<Date> => {
+  const getLeaderboardLastUpdated = async (): Promise<Date> => {
     try {
       const syncJob = await db.syncJob.findFirst({
         where: {
@@ -25,13 +24,13 @@ export default async function Leaderboard() {
     }
   }
 
-  const leaderboardLastUpdated = await fetchLeaderboardLastUpdated()
-  const leaderboardData = await fetchWeeklyLeaderboard()
+  const leaderboardLastUpdated = await getLeaderboardLastUpdated()
 
   return (
     <>
       <LeaderboardHeader lastUpdated={leaderboardLastUpdated} />
-      <LeaderboardSections data={leaderboardData} />
+
+      <LeaderboardSections />
     </>
   )
 }
