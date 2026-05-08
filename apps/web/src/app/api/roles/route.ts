@@ -1,5 +1,6 @@
 import { db, Role } from '@repo/db'
 import { createClient } from '@/lib/supabase/server'
+import { hasRole } from '@/lib/auth'
 
 /**
  * TODO: Add authentication and authorization to ensure only admins can access these routes
@@ -12,6 +13,10 @@ function isValidEmail(email: string) {
 
 // API route for adding new admin and/or execs
 export async function POST(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const body = await request.json()
     const email = String(body.email).trim()
@@ -72,6 +77,10 @@ export async function POST(request: Request) {
 
 // API route for removing admin and/or exec roles
 export async function DELETE(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const body = await request.json()
     const email = String(body.email).trim()

@@ -1,3 +1,4 @@
+import { hasRole } from '@/lib/auth'
 import { db } from '@repo/db'
 import { revalidateTag } from 'next/cache'
 
@@ -23,6 +24,10 @@ function parseDate(input: string): Date | null {
 
 // API route for handling project creation
 export async function POST(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   try {
     const formData = await request.formData()
     const projectName = String(formData.get('projectName') ?? '').trim()
