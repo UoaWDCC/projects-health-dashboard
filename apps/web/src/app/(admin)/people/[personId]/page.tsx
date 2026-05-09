@@ -62,19 +62,25 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
   const [forceCascade, setForceCascade] = useState(false)
+  const [editPersonError, setEditPersonError] = useState<string | null>(null)
 
   const [isAddingIdentity, setIsAddingIdentity] = useState(false)
   const [newIdentityProvider, setNewIdentityProvider] = useState<IdentityProvider>('DISCORD')
   const [newIdentityUsername, setNewIdentityUsername] = useState('')
   const [newIdentityExternalId, setNewIdentityExternalId] = useState('')
+  const [addIdentityError, setAddIdentityError] = useState<string | null>(null)
 
   const [editingIdentityId, setEditingIdentityId] = useState<string | null>(null)
   const [editIdentityUsername, setEditIdentityUsername] = useState('')
   const [editIdentityExternalId, setEditIdentityExternalId] = useState('')
+  const [editIdentityError, setEditIdentityError] = useState<string | null>(null)
+
+  const [deleteIdentityError, setDeleteIdentityError] = useState<string | null>(null)
 
   const [editingMembershipId, setEditingMembershipId] = useState<string | null>(null)
   const [editMembershipName, setEditMembershipName] = useState('')
   const [editMembershipActive, setEditMembershipActive] = useState(true)
+  const [editMembershipError, setEditMembershipError] = useState<string | null>(null)
 
   const fetchPerson = useCallback(async () => {
     setLoading(true)
@@ -86,6 +92,9 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
         setEditDisplayName(data.displayName)
         setEditImageUrl(data.imageUrl || '')
         setForceCascade(false)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        console.error('Failed to load person:', data?.error ?? res.status)
       }
     } catch (e) {
       console.error(e)
@@ -100,6 +109,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
 
   const handleUpdatePerson = async (e: FormEvent) => {
     e.preventDefault()
+    setEditPersonError(null)
     const res = await fetch(`/api/people/${personId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -112,11 +122,15 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     if (res.ok) {
       setIsEditingPerson(false)
       fetchPerson()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setEditPersonError(data?.error ?? 'Failed to update person.')
     }
   }
 
   const handleAddIdentity = async (e: FormEvent) => {
     e.preventDefault()
+    setAddIdentityError(null)
     const res = await fetch(`/api/people/${personId}/identities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -131,12 +145,16 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
       setNewIdentityExternalId('')
       setNewIdentityUsername('')
       fetchPerson()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setAddIdentityError(data?.error ?? 'Failed to add identity.')
     }
   }
 
   const handleUpdateIdentity = async (e: FormEvent) => {
     e.preventDefault()
     if (!editingIdentityId) return
+    setEditIdentityError(null)
     const res = await fetch(`/api/people/${personId}/identities/${editingIdentityId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -145,20 +163,30 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     if (res.ok) {
       setEditingIdentityId(null)
       fetchPerson()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setEditIdentityError(data?.error ?? 'Failed to update identity.')
     }
   }
 
   const handleDeleteIdentity = async (identityId: string) => {
     if (!confirm('Are you sure you want to delete this identity?')) return
+    setDeleteIdentityError(null)
     const res = await fetch(`/api/people/${personId}/identities/${identityId}`, {
       method: 'DELETE',
     })
-    if (res.ok) fetchPerson()
+    if (res.ok) {
+      fetchPerson()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setDeleteIdentityError(data?.error ?? 'Failed to delete identity.')
+    }
   }
 
   const handleUpdateMembership = async (e: FormEvent) => {
     e.preventDefault()
     if (!editingMembershipId) return
+    setEditMembershipError(null)
     const res = await fetch(`/api/people/${personId}/memberships/${editingMembershipId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -170,6 +198,9 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     if (res.ok) {
       setEditingMembershipId(null)
       fetchPerson()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setEditMembershipError(data?.error ?? 'Failed to update membership.')
     }
   }
 
@@ -282,6 +313,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   </p>
                 </div>
               </label>
+              {editPersonError && <ErrorMessage message={editPersonError} />}
               <div className="flex justify-end gap-3 pt-4 border-t border-wdcc-grey-light/20">
                 <button
                   type="button"
@@ -404,6 +436,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   />
                 </div>
               </div>
+              {addIdentityError && <ErrorMessage message={addIdentityError} />}
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -413,6 +446,13 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Delete identity error */}
+          {deleteIdentityError && (
+            <div className="mb-3">
+              <ErrorMessage message={deleteIdentityError} />
+            </div>
           )}
 
           {/* Identity list */}
@@ -453,6 +493,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                           />
                         </div>
                       </div>
+                      {editIdentityError && <ErrorMessage message={editIdentityError} />}
                       <div className="flex justify-end gap-3">
                         <button
                           type="button"
@@ -490,6 +531,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                             setEditingIdentityId(identity.id)
                             setEditIdentityUsername(identity.username || '')
                             setEditIdentityExternalId(identity.externalId)
+                            setEditIdentityError(null)
                           }}
                           className="font-mono text-xs text-wdcc-grey-light hover:text-wdcc-blue transition-colors px-2 py-1"
                         >
@@ -563,6 +605,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                         </p>
                       </div>
                     </label>
+                    {editMembershipError && <ErrorMessage message={editMembershipError} />}
                     <div className="flex justify-end gap-3">
                       <button
                         type="button"
@@ -607,6 +650,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                         setEditingMembershipId(membership.id)
                         setEditMembershipName(membership.displayName || '')
                         setEditMembershipActive(membership.isActive)
+                        setEditMembershipError(null)
                       }}
                       className="font-mono text-xs text-wdcc-grey-light hover:text-wdcc-blue transition-colors px-2 py-1 shrink-0"
                     >
@@ -624,6 +668,14 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
 }
 
 /* ─── Helpers ─── */
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-wdcc-kelvin/10 border border-wdcc-kelvin/20 rounded-xl px-4 py-3 font-mono text-xs text-wdcc-kelvin">
+      ✗ &nbsp;{message}
+    </div>
+  )
+}
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
