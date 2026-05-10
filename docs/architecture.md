@@ -27,7 +27,7 @@ graph TD
     end
 
     subgraph apps/worker
-        CRON[Weekly Cron<br/>Sun 00:00 UTC]
+        CRON[Weekly Cron<br/>Mon 00:00 UTC]
         GH_JOB[GitHub Job]
         DC_JOB[Discord Job]
         LLM_JOB[LLM Job]
@@ -68,7 +68,7 @@ graph TD
 
 ## Weekly data pipeline
 
-The worker fires one cron job every Sunday at 00:00 UTC. The three jobs always run in this order:
+The worker fires one cron job every Monday at 00:00 UTC. The three jobs always run in this order:
 
 ```mermaid
 sequenceDiagram

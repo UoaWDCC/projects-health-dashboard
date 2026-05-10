@@ -15,11 +15,11 @@ In production it runs as a Docker container on Fly.io alongside the web app.
 
 ## Job structure
 
-The cron fires every **Sunday at 00:00 UTC** (`0 0 * * 0`). Three jobs run each week:
+The cron fires every **Monday at 00:00 UTC** (`0 0 * * 1`). Three jobs run each week:
 
 ```mermaid
 flowchart TD
-    CRON["Cron fires<br/>Sunday 00:00 UTC"]
+    CRON["Cron fires<br/>Monday 00:00 UTC"]
     GH["GitHub Job<br/>github.ts"]
     DC["Discord Job<br/>discord.ts"]
     LLM["LLM Job<br/>llm.ts"]
@@ -66,7 +66,7 @@ flowchart TD
 
 ## Running the jobs manually
 
-The cron fires on Sundays only. During development, trigger a job run directly:
+The cron fires on Mondays only. During development, trigger a job run directly:
 
 ```typescript
 // apps/worker/src/index.ts — call the job functions directly for ad-hoc testing
@@ -109,7 +109,7 @@ This gives visibility into which projects succeeded and which failed without nee
 
 ```
 apps/worker/src/
-├── index.ts          # Cron entry point — registers the Sunday job
+├── index.ts          # Entry point — runs the weekly ingestion pipeline
 ├── jobs/
 │   ├── github.ts     # GitHub ingestion
 │   ├── discord.ts    # Discord ingestion
