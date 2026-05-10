@@ -114,6 +114,8 @@ jobs:
         run: pnpm test
 
       - name: Integration test
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'
         run: pnpm --filter worker test:integration
 
       - name: Build
