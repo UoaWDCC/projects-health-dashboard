@@ -28,36 +28,33 @@ export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) 
         <h3 className="font-mono text-xl font-bold text-wdcc-oshan">{title}</h3>
       </div>
 
-      {/* Chart area */}
-      <div className="bg-white mx-0 px-2 pt-4 pb-2 overflow-x-auto">
-        <div style={{ minWidth: `${Math.max(data.length * 60, 400)}px`, height: '280px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
-              <CartesianGrid vertical={false} stroke="#E0E0E0" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontFamily: 'var(--font-mono)', fontSize: 12, fill: '#5A5E7A' }}
-                axisLine={false}
-                tickLine={false}
-                interval={0}
-              />
-              <YAxis
-                tick={{ fontFamily: 'var(--font-mono)', fontSize: 12, fill: '#5A5E7A' }}
-                axisLine={false}
-                tickLine={false}
-                width={40}
-              />
-              <Line
-                type="linear"
-                dataKey="value"
-                stroke="#077CF1"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, fill: '#077CF1' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Chart area — fixed height, data points spread evenly across full width */}
+      <div className="bg-white px-2 pt-4 pb-2" style={{ height: '280px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+            <CartesianGrid vertical={false} stroke="#E0E0E0" />
+            <XAxis
+              dataKey="date"
+              tick={{ fontFamily: 'var(--font-mono)', fontSize: 12, fill: '#5A5E7A' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontFamily: 'var(--font-mono)', fontSize: 12, fill: '#5A5E7A' }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+            />
+            <Line
+              type="linear"
+              dataKey="value"
+              stroke="#077CF1"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: '#077CF1' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )

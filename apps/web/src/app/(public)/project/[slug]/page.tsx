@@ -1,4 +1,5 @@
 import TeamHeader from '@/components/headers/TeamHeader'
+import ProjectGraphs from './ProjectGraphs'
 import { getProjectHeaderData } from '@/lib/project/projects'
 import { notFound } from 'next/navigation'
 
@@ -10,5 +11,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     notFound()
   }
 
-  return <TeamHeader project={project} />
+  return (
+    <>
+      <TeamHeader project={project} />
+      <ProjectGraphs slug={slug} />
+    </>
+  )
 }
