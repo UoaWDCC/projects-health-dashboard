@@ -62,7 +62,7 @@ flowchart TD
 - Writes `GlobalWeeklySummary` (cross-project executive overview)
 - Denormalizes `sentimentScore` from `WeeklySummary` back into `WeeklyStats` so it can be graphed alongside health scores
 
-> **Current status:** all three jobs are stubbed — they exist as empty functions that throw `'Not implemented'`. The schema is ready to receive data but nothing is ingested yet.
+> **Current status:** the GitHub and Discord jobs are fully implemented and running. The LLM job (`jobs/llm.ts`) is not yet implemented — it throws `'Not implemented'` and its import and call in `index.ts` are commented out.
 
 ## Running the jobs manually
 
