@@ -10,13 +10,15 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.ts"
   },
   "dependencies": {
     "@repo/db": "workspace:*",
     "octokit": "^5.0.5"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^10.0.0",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.0.0",
