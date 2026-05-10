@@ -1,0 +1,34 @@
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { execSync } from 'node:child_process'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+// apps/worker/src/test-config/ → packages/db/
+const DB_PACKAGE_DIR = resolve(__dirname, '../../../../packages/db')
+
+let container: StartedPostgreSqlContainer
+
+export async function setup({ provide }: { provide: (key: string, value: unknown) => void }) {
+  container = await new PostgreSqlContainer('postgres:17.6')
+    .withDatabase('testdb')
+    .withUsername('postgres')
+    .withPassword('postgres')
+    .start()
+
+  const dbUrl = container.getConnectionUri()
+
+  // Apply all migrations (including triggers and functions) to the fresh container.
+  // DIRECT_URL = DATABASE_URL — no connection pooler for a direct TCP container.
+  execSync('pnpm prisma migrate deploy', {
+    cwd: DB_PACKAGE_DIR,
+    env: { ...process.env, DATABASE_URL: dbUrl, DIRECT_URL: dbUrl },
+    stdio: 'inherit',
+  })
+
+  provide('databaseUrl', dbUrl)
+}
+
+export async function teardown() {
+  await container?.stop()
+}
