@@ -1,9 +1,13 @@
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
 import { execSync } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+declare module 'vitest' {
+  export interface ProvidedContext {
+    databaseUrl: string
+  }
+}
+
 // apps/worker/src/test-config/ → packages/db/
 const DB_PACKAGE_DIR = resolve(__dirname, '../../../../packages/db')
 
