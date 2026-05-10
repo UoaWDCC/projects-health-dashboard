@@ -9,7 +9,7 @@ export interface ProjectWeeklyStats {
 }
 
 export async function getProjectWeeklyStats(projectId: string): Promise<ProjectWeeklyStats> {
-  const yearStart = new Date(new Date().getFullYear(), 0, 1)
+  const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
 
   const rows = await db.weeklyStats.findMany({
     where: {

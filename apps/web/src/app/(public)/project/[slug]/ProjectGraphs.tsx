@@ -19,7 +19,7 @@ export default function ProjectGraphs({ slug }: { slug: string }) {
   return (
     <div className="grid grid-cols-2 gap-6 mx-4 mt-6">
       <LineGraph title="Weekly Commits" dates={dates} dataPoints={stats?.commits ?? []} />
-      <LineGraph title="Weekly PR's" dates={dates} dataPoints={stats?.prs ?? []} />
+      <LineGraph title="Weekly PRs" dates={dates} dataPoints={stats?.prs ?? []} />
       <LineGraph
         title="Weekly Lines Changed"
         dates={dates}
