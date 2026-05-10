@@ -83,8 +83,7 @@ export async function POST(request: Request) {
             create: {
               owner: githubLink.split('/')[3],
               name: githubLink.split('/')[4],
-              // placeholder value
-              installationId: '0',
+              installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
             },
           },
           channels: {
