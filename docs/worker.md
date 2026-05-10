@@ -115,7 +115,7 @@ apps/worker/src/
 │   ├── discord.ts    # Discord ingestion
 │   └── llm.ts        # LLM analysis
 └── lib/
-    └── logger.ts     # Timestamp logger
+    └── *.ts          # logger, date utilities, GitHub auth and ingestion helpers
 ```
 
 ## Environment variables used by the worker
