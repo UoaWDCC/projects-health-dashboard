@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { db } from '@repo/db'
-import { getInstallationOctokit } from '../lib/github-auth'
+import { getInstallationOctokit } from './github-auth'
 import { ingestRepoMergedPRs } from './github-PR-tracker'
 import { seedRepo, seedIdentity } from '../test-config/integration.helpers.js'
 
-vi.mock('../lib/github-auth', () => ({
+vi.mock('./github-auth', () => ({
   getInstallationOctokit: vi.fn(),
 }))
 
@@ -79,7 +79,7 @@ describe('ingestRepoMergedPRs (integration)', () => {
 
   it('writes the PR to the DB with correct fields', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
+    setupOctokit([[{ number: 1 }]], [makeFullPr()])
 
     await ingestRepoMergedPRs(repo, weekStart, weekEnd)
 
@@ -97,7 +97,7 @@ describe('ingestRepoMergedPRs (integration)', () => {
   it('resolves a known author identity and saves it on the PR', async () => {
     const repo = await seedRepo()
     const identity = await seedIdentity(42, 'author')
-    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
+    setupOctokit([[{ number: 1 }]], [makeFullPr()])
 
     await ingestRepoMergedPRs(repo, weekStart, weekEnd)
 
@@ -110,7 +110,7 @@ describe('ingestRepoMergedPRs (integration)', () => {
 
   it('creates an unmatchedIdentity when author is not in the DB', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
+    setupOctokit([[{ number: 1 }]], [makeFullPr()])
 
     await ingestRepoMergedPRs(repo, weekStart, weekEnd)
 
@@ -129,7 +129,7 @@ describe('ingestRepoMergedPRs (integration)', () => {
 
   it('handles a PR with no author or mergedBy without throwing', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }], []], [makeFullPr({ user: null, merged_by: null })])
+    setupOctokit([[{ number: 1 }]], [makeFullPr({ user: null, merged_by: null })])
 
     await expect(ingestRepoMergedPRs(repo, weekStart, weekEnd)).resolves.toBe(1)
 
@@ -144,10 +144,10 @@ describe('ingestRepoMergedPRs (integration)', () => {
     const repo = await seedRepo()
     const identity = await seedIdentity(42, 'author')
 
-    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
+    setupOctokit([[{ number: 1 }]], [makeFullPr()])
     await ingestRepoMergedPRs(repo, weekStart, weekEnd)
 
-    setupOctokit([[{ number: 1 }], []], [makeFullPr({ title: 'Updated Title' })])
+    setupOctokit([[{ number: 1 }]], [makeFullPr({ title: 'Updated Title' })])
     await ingestRepoMergedPRs(repo, weekStart, weekEnd)
 
     expect(await db.pRFact.count()).toBe(1)
