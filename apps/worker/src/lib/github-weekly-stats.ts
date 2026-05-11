@@ -23,7 +23,7 @@ export async function computeWeeklyGitHubMetrics(
       where: {
         repoId: { in: repoIds },
         committedAt: { gte: weekStart, lte: weekEnd },
-        branch: { notIn: ['main', 'master'], not: null }, // added just in case, I dont think there should be any data from main / master branches
+        branch: { notIn: ['main', 'master'], not: null },
       },
       select: {
         authorIdentityId: true,
