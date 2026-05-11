@@ -14,6 +14,12 @@ export default defineConfig({
     // forks give each worker a clean globalThis so the @repo/db singleton
     // always constructs after DATABASE_URL is set by integration.setup.ts
     pool: 'forks',
+    poolOptions: {
+      forks: {
+        minForks: 1,
+        maxForks: 1,
+      },
+    },
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
