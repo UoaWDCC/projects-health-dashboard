@@ -6,6 +6,7 @@ import { computeWeeklyGitHubMetrics } from '../lib/github-weekly-stats'
 
 export async function runGitHubIngestion(weekStart: Date, weekEnd: Date): Promise<void> {
   const projects = await db.project.findMany({
+    where: { isActive: true },
     select: {
       id: true,
       repositories: true,
