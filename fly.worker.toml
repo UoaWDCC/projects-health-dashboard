@@ -1,6 +1,7 @@
 # fly.toml for wphd-worker — weekly scheduled machine, no HTTP service
 app = 'wphd-worker'
 primary_region = 'syd'
+schedule = 'weekly'
 
 [build]
   dockerfile = 'Dockerfile.worker'
