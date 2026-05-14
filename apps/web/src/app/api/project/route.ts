@@ -76,6 +76,8 @@ async function validateSnowflakeExists(snowflakeId: string) {
       )
     if (res.status === 401)
       return Response.json({ error: 'Invalid Discord token provided' }, { status: 401 })
+
+    return Response.json({ error: 'Failed to validate Discord channel' }, { status: 500 })
   } catch (err: unknown) {
     console.error('Discord validation error:', err)
     return Response.json({ error: 'Failed to validate Discord channel' }, { status: 500 })
