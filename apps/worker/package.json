@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
+    "@repo/github": "workspace:*",
     "octokit": "^5.0.5"
   },
   "devDependencies": {

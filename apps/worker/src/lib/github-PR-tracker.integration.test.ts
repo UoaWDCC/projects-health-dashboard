@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { db } from '@repo/db'
-import { getInstallationOctokit } from './github-auth'
+import { getInstallationOctokit } from '@repo/github'
 import { ingestRepoMergedPRs } from './github-PR-tracker'
 import { seedRepo, seedIdentity } from '../test-config/integration.helpers.js'
 
-vi.mock('./github-auth', () => ({
+vi.mock('@repo/github', () => ({
   getInstallationOctokit: vi.fn(),
 }))
 

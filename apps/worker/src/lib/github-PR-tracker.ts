@@ -1,7 +1,7 @@
 // Fetches merged PRs for the week and stores them in the database.
 
 import { db } from '@repo/db'
-import { getInstallationOctokit } from '../lib/github-auth'
+import { getInstallationOctokit } from '@repo/github'
 import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
