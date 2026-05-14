@@ -226,12 +226,12 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
                 <div className="flex flex-col gap-1.5">
                   <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
-                    Discord username / ID
+                    Discord username
                   </label>
                   <input
                     type="text"
                     name="discordId"
-                    placeholder="e.g. janesmith or 123456789"
+                    placeholder="e.g. janesmith"
                     className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
                   />
                 </div>

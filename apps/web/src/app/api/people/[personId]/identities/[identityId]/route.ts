@@ -1,4 +1,4 @@
-import { db } from '@repo/db'
+import { db, Prisma } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 
 export async function PATCH(
@@ -28,6 +28,8 @@ export async function PATCH(
     const { username } = body
 
     let resolvedExternalId: string | undefined
+    let resolvedUsername: string | undefined
+
     if (username !== undefined) {
       const trimmed = username ? String(username).trim() : null
       if (identity.provider === 'GITHUB' && trimmed) {
@@ -51,14 +53,57 @@ export async function PATCH(
             )
           }
           resolvedExternalId = String(githubData.id)
+          resolvedUsername = trimmed
         } catch {
           return Response.json(
             { error: `Failed to resolve GitHub user "${trimmed}". Please try again later.` },
             { status: 400 }
           )
         }
-      } else if (trimmed) {
-        resolvedExternalId = trimmed
+      } else if (identity.provider === 'DISCORD' && trimmed) {
+        const guildId = process.env.DISCORD_GUILD_ID
+        if (!guildId) {
+          return Response.json(
+            { error: 'DISCORD_GUILD_ID is not configured on the server.' },
+            { status: 500 }
+          )
+        }
+        try {
+          const discordRes = await fetch(
+            `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(trimmed)}&limit=10`,
+            { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+          )
+          if (!discordRes.ok) {
+            return Response.json(
+              {
+                error: `Failed to search Discord guild members. Check the bot token and guild ID.`,
+              },
+              { status: 400 }
+            )
+          }
+          const members = await discordRes.json()
+          const match = members.find(
+            (m: { user: { username: string; id: string } }) =>
+              m.user.username.toLowerCase() === trimmed.toLowerCase()
+          )
+          if (!match) {
+            return Response.json(
+              {
+                error: `Discord user "${trimmed}" not found in the server. They must be a member of the Discord server.`,
+              },
+              { status: 400 }
+            )
+          }
+          resolvedExternalId = String(match.user.id)
+          resolvedUsername = trimmed
+        } catch {
+          return Response.json(
+            { error: `Failed to resolve Discord user "${trimmed}". Please try again later.` },
+            { status: 400 }
+          )
+        }
+      } else {
+        resolvedUsername = trimmed ?? undefined
       }
     }
 
@@ -66,13 +111,19 @@ export async function PATCH(
       where: { id: identityId },
       data: {
         ...(resolvedExternalId !== undefined && { externalId: resolvedExternalId }),
-        ...(username !== undefined && { username: username ? String(username).trim() : null }),
+        ...(resolvedUsername !== undefined && { username: resolvedUsername }),
       },
     })
 
     return Response.json(updatedIdentity, { status: 200 })
   } catch (error) {
     console.error('Error updating identity:', error)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return Response.json(
+        { error: 'This account is already linked to another person.' },
+        { status: 409 }
+      )
+    }
     return Response.json({ error: 'Failed to update identity' }, { status: 500 })
   }
 }
