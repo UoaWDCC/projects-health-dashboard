@@ -39,9 +39,12 @@ async function validateGitHubExists(link: string) {
       owner: link.split('/')[3],
       repo: link.split('/')[4],
     })
+
+    return null
   } catch (err: unknown) {
     console.error('GitHub validation error:', err)
     const status = (err as { status?: number })?.status
+
     if (status === 404)
       return Response.json({ error: 'GitHub repository not found' }, { status: 404 })
     if (status === 403)
