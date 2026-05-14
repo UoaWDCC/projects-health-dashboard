@@ -69,6 +69,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       targetDisplayName = existingPerson.displayName
     }
 
+    // Resolve GitHub username to numeric ID before the transaction
+    let githubNumericId: string | null = null
+    if (githubId) {
+      try {
+        const githubRes = await fetch(`https://api.github.com/users/${githubId}`, {
+          headers: { 'User-Agent': 'projects-health-dashboard' },
+        })
+        if (!githubRes.ok) {
+          return Response.json(
+            {
+              error: `GitHub user "${githubId}" not found. Please check the username and try again.`,
+            },
+            { status: 400 }
+          )
+        }
+        const githubData = await githubRes.json()
+        if (!githubData?.id) {
+          return Response.json(
+            { error: `Could not resolve GitHub numeric ID for user "${githubId}".` },
+            { status: 400 }
+          )
+        }
+        githubNumericId = String(githubData.id)
+      } catch {
+        return Response.json(
+          { error: `Failed to resolve GitHub user "${githubId}". Please try again later.` },
+          { status: 400 }
+        )
+      }
+    }
+
     const newMember = await db.$transaction(async (tx) => {
       // Scenario 2: Create a brand new person (No personId provided)
       if (!targetPersonId) {
@@ -81,8 +112,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         if (discordId) {
           identitiesToCreate.push({ provider: 'DISCORD', externalId: discordId })
         }
-        if (githubId) {
-          identitiesToCreate.push({ provider: 'GITHUB', externalId: githubId, username: githubId })
+        if (githubId && githubNumericId) {
+          identitiesToCreate.push({
+            provider: 'GITHUB',
+            externalId: githubNumericId,
+            username: githubId,
+          })
         }
 
         const newPerson = await tx.person.create({

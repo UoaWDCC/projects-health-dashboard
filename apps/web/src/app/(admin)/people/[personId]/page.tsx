@@ -67,12 +67,10 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
   const [isAddingIdentity, setIsAddingIdentity] = useState(false)
   const [newIdentityProvider, setNewIdentityProvider] = useState<IdentityProvider>('DISCORD')
   const [newIdentityUsername, setNewIdentityUsername] = useState('')
-  const [newIdentityExternalId, setNewIdentityExternalId] = useState('')
   const [addIdentityError, setAddIdentityError] = useState<string | null>(null)
 
   const [editingIdentityId, setEditingIdentityId] = useState<string | null>(null)
   const [editIdentityUsername, setEditIdentityUsername] = useState('')
-  const [editIdentityExternalId, setEditIdentityExternalId] = useState('')
   const [editIdentityError, setEditIdentityError] = useState<string | null>(null)
 
   const [deleteIdentityError, setDeleteIdentityError] = useState<string | null>(null)
@@ -136,13 +134,11 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: newIdentityProvider,
-        externalId: newIdentityExternalId,
         username: newIdentityUsername,
       }),
     })
     if (res.ok) {
       setIsAddingIdentity(false)
-      setNewIdentityExternalId('')
       setNewIdentityUsername('')
       fetchPerson()
     } else {
@@ -158,7 +154,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     const res = await fetch(`/api/people/${personId}/identities/${editingIdentityId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ externalId: editIdentityExternalId, username: editIdentityUsername }),
+      body: JSON.stringify({ username: editIdentityUsername }),
     })
     if (res.ok) {
       setEditingIdentityId(null)
@@ -402,7 +398,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
               onSubmit={handleAddIdentity}
               className="mt-6 flex flex-col gap-4 bg-wdcc-blue/5 border-[1.5px] border-wdcc-blue/20 rounded-xl p-4 mb-4"
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>Platform</label>
                   <select
@@ -415,22 +411,13 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Username</label>
+                  <label className={labelClass}>
+                    Username <span className="text-wdcc-kelvin">*</span>
+                  </label>
                   <input
                     value={newIdentityUsername}
                     onChange={(e) => setNewIdentityUsername(e.target.value)}
                     placeholder="e.g. janesmith"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>
-                    External ID <span className="text-wdcc-kelvin">*</span>
-                  </label>
-                  <input
-                    value={newIdentityExternalId}
-                    onChange={(e) => setNewIdentityExternalId(e.target.value)}
-                    placeholder="Snowflake / GitHub ID"
                     required
                     className={inputClass}
                   />
@@ -472,26 +459,13 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                       onSubmit={handleUpdateIdentity}
                       className="flex flex-col gap-4 bg-wdcc-blue/5 border-[1.5px] border-wdcc-blue/20 rounded-xl p-4"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1.5">
-                          <label className={labelClass}>Username</label>
-                          <input
-                            value={editIdentityUsername}
-                            onChange={(e) => setEditIdentityUsername(e.target.value)}
-                            className={inputClass}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <label className={labelClass}>
-                            External ID <span className="text-wdcc-kelvin">*</span>
-                          </label>
-                          <input
-                            value={editIdentityExternalId}
-                            onChange={(e) => setEditIdentityExternalId(e.target.value)}
-                            required
-                            className={inputClass}
-                          />
-                        </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Username</label>
+                        <input
+                          value={editIdentityUsername}
+                          onChange={(e) => setEditIdentityUsername(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       {editIdentityError && <ErrorMessage message={editIdentityError} />}
                       <div className="flex justify-end gap-3">
@@ -530,7 +504,6 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                           onClick={() => {
                             setEditingIdentityId(identity.id)
                             setEditIdentityUsername(identity.username || '')
-                            setEditIdentityExternalId(identity.externalId)
                             setEditIdentityError(null)
                           }}
                           className="font-mono text-xs text-wdcc-grey-light hover:text-wdcc-blue transition-colors px-2 py-1"

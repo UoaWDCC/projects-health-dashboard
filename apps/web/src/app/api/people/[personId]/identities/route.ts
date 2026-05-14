@@ -13,22 +13,53 @@ export async function POST(
     const { personId } = await params
     const body = await request.json()
 
-    const { provider, externalId, username } = body
+    const { provider, username } = body
 
-    if (!provider || !externalId) {
-      return Response.json({ error: 'Provider and externalId are required' }, { status: 400 })
+    if (!provider || !username) {
+      return Response.json({ error: 'Provider and username are required' }, { status: 400 })
     }
 
     if (provider !== 'GITHUB' && provider !== 'DISCORD') {
       return Response.json({ error: 'Invalid provider' }, { status: 400 })
     }
 
+    let resolvedExternalId: string = String(username).trim()
+
+    if (provider === 'GITHUB') {
+      try {
+        const githubRes = await fetch(`https://api.github.com/users/${username}`, {
+          headers: { 'User-Agent': 'projects-health-dashboard' },
+        })
+        if (!githubRes.ok) {
+          return Response.json(
+            {
+              error: `GitHub user "${username}" not found. Please check the username and try again.`,
+            },
+            { status: 400 }
+          )
+        }
+        const githubData = await githubRes.json()
+        if (!githubData?.id) {
+          return Response.json(
+            { error: `Could not resolve GitHub numeric ID for user "${username}".` },
+            { status: 400 }
+          )
+        }
+        resolvedExternalId = String(githubData.id)
+      } catch {
+        return Response.json(
+          { error: `Failed to resolve GitHub user "${username}". Please try again later.` },
+          { status: 400 }
+        )
+      }
+    }
+
     const newIdentity = await db.personIdentity.create({
       data: {
         personId,
-        provider, // e.g. 'DISCORD' or 'GITHUB'
-        externalId: String(externalId).trim(),
-        ...(username ? { username: String(username).trim() } : {}),
+        provider,
+        externalId: resolvedExternalId,
+        username: String(username).trim(),
       },
     })
 
