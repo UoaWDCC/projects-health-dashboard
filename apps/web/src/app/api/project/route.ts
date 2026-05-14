@@ -24,7 +24,14 @@ function parseDate(input: string): Date | null {
 }
 
 async function validateGitHubExists(link: string) {
-  const installationId = process.env.GITHUB_APP_INSTALLATION_ID ?? '0'
+  const installationId = process.env.GITHUB_APP_INSTALLATION_ID
+  if (!installationId) {
+    console.error('GitHub App Installation ID is not configured')
+    return Response.json(
+      { error: 'GitHub configuration error, Installation ID not found' },
+      { status: 500 }
+    )
+  }
   const octokit = await getInstallationOctokit(installationId)
 
   try {
@@ -57,6 +64,8 @@ async function validateSnowflakeExists(snowflakeId: string) {
         Authorization: `Bot ${TOKEN}`,
       },
     })
+
+    if (res.ok) return null
 
     if (res.status === 404)
       return Response.json({ error: 'Discord channel not found' }, { status: 404 })
@@ -94,13 +103,13 @@ export async function POST(request: Request) {
     if (!validateGitHubLinkFormat(githubLink))
       return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
 
-    const GithubError = await validateGitHubExists(githubLink)
+    const githubError = await validateGitHubExists(githubLink)
 
-    if (GithubError) return GithubError
+    if (githubError) return githubError
 
-    const DiscordError = await validateSnowflakeExists(discordSnowflakeId)
+    const discordError = await validateSnowflakeExists(discordSnowflakeId)
 
-    if (DiscordError) return DiscordError
+    if (discordError) return discordError
 
     const [existingProject, existingRepo, existingChannel] = await Promise.all([
       db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
