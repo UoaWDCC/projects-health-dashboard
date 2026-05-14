@@ -1,7 +1,7 @@
 // Finds the commits for each non-main branch in a repo and stores it in a database.
 
 import { db } from '@repo/db'
-import { getInstallationOctokit } from '../lib/github-auth'
+import { getInstallationOctokit } from '@repo/github'
 import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'

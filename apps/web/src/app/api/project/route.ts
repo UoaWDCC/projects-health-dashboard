@@ -1,5 +1,6 @@
 import { hasRole } from '@/lib/auth'
 import { db } from '@repo/db'
+import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
 
 /**
@@ -7,7 +8,7 @@ import { revalidateTag } from 'next/cache'
  * Add error validation for checking if the project name is unique and if the Discord link is valid.
  */
 
-function validateGitHubLink(link: string) {
+function validateGitHubLinkFormat(link: string) {
   // expected GitHub Link - https://github.com/owner/reponame
   const regex = /^https:\/\/github\.com\/[^\/]+\/[^\/]+$/
   return regex.test(link)
@@ -20,6 +21,56 @@ function parseDate(input: string): Date | null {
     return null
   }
   return new Date(Date.UTC(year, month - 1))
+}
+
+async function validateGitHubExists(link: string) {
+  const installationId = process.env.GITHUB_APP_INSTALLATION_ID ?? '0'
+  const octokit = await getInstallationOctokit(installationId)
+
+  try {
+    await octokit.request('GET /repos/{owner}/{repo}', {
+      owner: link.split('/')[3],
+      repo: link.split('/')[4],
+    })
+  } catch (err: unknown) {
+    console.error('GitHub validation error:', err)
+    const status = (err as { status?: number })?.status
+    if (status === 404)
+      return Response.json({ error: 'GitHub repository not found' }, { status: 404 })
+    if (status === 403)
+      return Response.json(
+        { error: 'GitHub repository not accessible (private or rate limited)' },
+        { status: 403 }
+      )
+    if (status === 401)
+      return Response.json({ error: 'Invalid GitHub token provided' }, { status: 401 })
+
+    return Response.json({ error: 'Failed to validate GitHub repository' }, { status: 500 })
+  }
+}
+
+async function validateSnowflakeExists(snowflakeId: string) {
+  try {
+    const TOKEN = process.env.DISCORD_BOT_TOKEN
+    const res = await fetch(`https://discord.com/api/v10/channels/${snowflakeId}`, {
+      headers: {
+        Authorization: `Bot ${TOKEN}`,
+      },
+    })
+
+    if (res.status === 404)
+      return Response.json({ error: 'Discord channel not found' }, { status: 404 })
+    if (res.status === 403)
+      return Response.json(
+        { error: 'Bot cannot access the Discord channel (forbidden)' },
+        { status: 403 }
+      )
+    if (res.status === 401)
+      return Response.json({ error: 'Invalid Discord token provided' }, { status: 401 })
+  } catch (err: unknown) {
+    console.error('Discord validation error:', err)
+    return Response.json({ error: 'Failed to validate Discord channel' }, { status: 500 })
+  }
 }
 
 // API route for handling project creation
@@ -40,9 +91,16 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    if (!validateGitHubLink(githubLink)) {
+    if (!validateGitHubLinkFormat(githubLink))
       return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
-    }
+
+    const GithubError = await validateGitHubExists(githubLink)
+
+    if (GithubError) return GithubError
+
+    const DiscordError = await validateSnowflakeExists(discordSnowflakeId)
+
+    if (DiscordError) return DiscordError
 
     const [existingProject, existingRepo, existingChannel] = await Promise.all([
       db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
