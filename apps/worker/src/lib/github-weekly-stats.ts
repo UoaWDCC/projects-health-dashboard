@@ -18,7 +18,7 @@ export async function computeWeeklyGitHubMetrics(
     return
   }
 
-  const [commitFacts, mergedPrFacts] = await Promise.all([
+  const [commitFacts, mergedPrFacts, discordCounts] = await Promise.all([
     db.commitFact.findMany({
       where: {
         repoId: { in: repoIds },
@@ -39,6 +39,10 @@ export async function computeWeeklyGitHubMetrics(
       select: {
         authorIdentityId: true,
       },
+    }),
+    db.discordIdentityWeeklyCount.findMany({
+      where: { projectId: project.id, weekStart },
+      select: { authorIdentityId: true, messageCount: true },
     }),
   ])
 
@@ -61,6 +65,9 @@ export async function computeWeeklyGitHubMetrics(
   }
   for (const mergedPrFact of mergedPrFacts) {
     if (mergedPrFact.authorIdentityId) identityIds.add(mergedPrFact.authorIdentityId)
+  }
+  for (const discordCount of discordCounts) {
+    identityIds.add(discordCount.authorIdentityId)
   }
 
   const personIdentities = identityIds.size
@@ -94,6 +101,7 @@ export async function computeWeeklyGitHubMetrics(
       prsMerged: number
       linesAdded: number
       linesRemoved: number
+      discordMessages: number
     }
   >()
 
@@ -111,6 +119,7 @@ export async function computeWeeklyGitHubMetrics(
       prsMerged: 0,
       linesAdded: 0,
       linesRemoved: 0,
+      discordMessages: 0,
     }
 
     current.commits += 1
@@ -133,9 +142,30 @@ export async function computeWeeklyGitHubMetrics(
       prsMerged: 0,
       linesAdded: 0,
       linesRemoved: 0,
+      discordMessages: 0,
     }
 
     current.prsMerged += 1
+    memberContrib.set(projectMemberId, current)
+  }
+
+  for (const discordCount of discordCounts) {
+    const personId = identityToPersonId.get(discordCount.authorIdentityId)
+    if (!personId) continue
+    const projectMemberId = personToProjectMember.get(personId)
+    if (!projectMemberId) continue
+
+    const current = memberContrib.get(projectMemberId) ?? {
+      projectMemberId,
+      personId,
+      commits: 0,
+      prsMerged: 0,
+      linesAdded: 0,
+      linesRemoved: 0,
+      discordMessages: 0,
+    }
+
+    current.discordMessages += discordCount.messageCount
     memberContrib.set(projectMemberId, current)
   }
 
@@ -206,12 +236,14 @@ export async function computeWeeklyGitHubMetrics(
             prsMerged: contrib.prsMerged,
             linesAdded: contrib.linesAdded,
             linesRemoved: contrib.linesRemoved,
+            discordMessages: contrib.discordMessages,
           },
           update: {
             commits: contrib.commits,
             prsMerged: contrib.prsMerged,
             linesAdded: contrib.linesAdded,
             linesRemoved: contrib.linesRemoved,
+            discordMessages: contrib.discordMessages,
           },
         })
       }
