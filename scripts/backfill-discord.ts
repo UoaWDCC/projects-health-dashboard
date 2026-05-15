@@ -191,7 +191,7 @@ async function main() {
         )
       }
 
-      for (const { weekStart, messageCount } of affectedWeeks) {
+      for (const { weekStart } of affectedWeeks) {
         const [, weekEnd] = getCollectionWindow(weekStart)
         try {
           await computeWeeklyGitHubMetrics(
@@ -204,18 +204,6 @@ async function main() {
             `Failed to recompute GitHub metrics for project "${project.name}" week ${weekStart.toISOString()}: ${err}`
           )
         }
-
-        // Update WeeklyStats.discordMessages as computeWeeklyGitHubMetrics does not write this field.
-        await db.weeklyStats.upsert({
-          where: { projectId_weekStart: { projectId: project.id, weekStart } },
-          create: {
-            projectId: project.id,
-            weekStart,
-            discordMessages: messageCount,
-            computedAt: new Date(),
-          },
-          update: { discordMessages: messageCount },
-        })
       }
 
       // Zero out discordMessages on GitHub-only historical weeks
@@ -269,7 +257,9 @@ async function main() {
   logger.info('Discord historical backfill complete')
 }
 
-main().catch((err: unknown) => {
-  logger.error(`Fatal error in Discord backfill script: ${err}`)
-  process.exit(1)
-})
+main()
+  .catch((err: unknown) => {
+    logger.error(`Fatal error in Discord backfill script: ${err}`)
+    process.exit(1)
+  })
+  .finally(() => db.$disconnect())
