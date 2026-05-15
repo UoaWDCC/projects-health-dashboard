@@ -7,6 +7,7 @@ const PACKAGES = [
   { dir: 'apps/web', filter: 'web' },
   { dir: 'apps/worker', filter: 'worker' },
   { dir: 'packages/db', filter: '@repo/db' },
+  { dir: 'packages/github', filter: '@repo/github' },
 ]
 
 export default {

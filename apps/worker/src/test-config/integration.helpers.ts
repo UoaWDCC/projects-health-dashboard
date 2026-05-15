@@ -1,24 +1,39 @@
+import { randomUUID } from 'node:crypto'
 import { db } from '@repo/db'
 
 export async function seedRepo() {
+  const token = randomUUID().replace(/-/g, '').slice(0, 12)
   const project = await db.project.create({
-    data: { name: 'Test Project', slug: `test-project-${Date.now()}` },
+    data: {
+      name: `Test Project ${token}`,
+      slug: `test-project-${token}`,
+      description: 'Test project',
+    },
   })
-  const repo = await db.gitHubRepository.create({
-    data: { projectId: project.id, owner: 'org', name: 'project', installationId: 'install-1' },
+
+  return db.gitHubRepository.create({
+    data: {
+      projectId: project.id,
+      owner: `org-${token}`,
+      name: `project-${token}`,
+      installationId: '123456',
+    },
   })
-  return repo
 }
 
-export async function seedIdentity(githubId: number, login: string) {
-  const person = await db.person.create({ data: { displayName: login } })
-  const identity = await db.personIdentity.create({
+export async function seedIdentity(externalId: number, username: string) {
+  const person = await db.person.create({
+    data: {
+      displayName: username,
+    },
+  })
+
+  return db.personIdentity.create({
     data: {
       personId: person.id,
       provider: 'GITHUB',
-      externalId: String(githubId),
-      username: login,
+      externalId: String(externalId),
+      username,
     },
   })
-  return identity
 }
