@@ -8,3 +8,18 @@ export async function getLatestLiveCommits() {
     take: 10,
   })
 }
+
+export async function getProjectSlugs() {
+  const projects = await db.project.findMany({
+    select: { id: true, slug: true },
+  })
+
+  // Return as a record mapping ID to slug for O(1) lookups on the client
+  return projects.reduce(
+    (acc, project) => {
+      acc[project.id] = project.slug
+      return acc
+    },
+    {} as Record<string, string>
+  )
+}

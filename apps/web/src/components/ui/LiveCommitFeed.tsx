@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import LiveCommitRow from './LiveCommitRow'
-import { getLatestLiveCommits } from '@/actions/live-commits'
+import { getLatestLiveCommits, getProjectSlugs } from '@/actions/live-commits'
 import { createClient } from '@/lib/supabase/client'
 import { LiveCommit } from '@repo/db'
 
 export default function LiveCommitFeed() {
   const [commits, setCommits] = useState<LiveCommit[]>([])
+  const [projectSlugs, setProjectSlugs] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Fetch initial commits
-    getLatestLiveCommits().then(setCommits)
+    // Fetch initial commits and projects
+    getProjectSlugs()
+      .then(setProjectSlugs)
+      .catch((err) => console.error('Failed to fetch project slugs:', err))
+
+    getLatestLiveCommits()
+      .then(setCommits)
+      .catch((err) => {
+        console.error('Failed to fetch live commits:', err)
+        setError('Failed to load live commits. Please try again later.')
+      })
 
     // Subscribe to real-time updates
     const supabase = createClient()
@@ -21,9 +32,14 @@ export default function LiveCommitFeed() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'LiveCommit' },
         async () => {
-          // Refetch the latest 10 commits when a new one is inserted
-          const latest = await getLatestLiveCommits()
-          setCommits(latest)
+          try {
+            // Refetch the latest 10 commits when a new one is inserted
+            const latest = await getLatestLiveCommits()
+            setCommits(latest)
+            setError(null)
+          } catch (err) {
+            console.error('Failed to fetch latest live commits:', err)
+          }
         }
       )
       .subscribe()
@@ -34,7 +50,7 @@ export default function LiveCommitFeed() {
   }, [])
 
   return (
-    <div className="rounded-3xl border-2 border-white w-4/5 mx-auto flex flex-col bg-[#FFFFFFAF]">
+    <div className="rounded-3xl border-2 border-white w-4/5 mx-auto flex flex-col bg-white/70">
       <div className="flex flex-row items-center gap-5 px-8 py-5">
         <svg
           width="12"
@@ -46,11 +62,23 @@ export default function LiveCommitFeed() {
         >
           <rect width="12" height="12" rx="5.90908" fill="#16A34A" />
         </svg>
-        <p className="font-mono font-medium text-[18px] text-wdcc-grey">LIVE COMMITS</p>
+        <p className="font-mono font-medium text-lg text-wdcc-grey">LIVE COMMITS</p>
       </div>
-      {commits.map((commit) => (
-        <LiveCommitRow key={commit.id} commit={commit} projectSlug={commit.repoName} />
-      ))}
+      {error ? (
+        <div className="flex items-center justify-center py-8 border-t-2 border-wdcc-oshan/10">
+          <p className="font-sans font-medium text-wdcc-grey text-center">{error}</p>
+        </div>
+      ) : (
+        commits.map((commit) => (
+          <LiveCommitRow
+            key={commit.id}
+            commit={commit}
+            projectSlug={
+              commit.projectId ? projectSlugs[commit.projectId] || commit.repoName : commit.repoName
+            }
+          />
+        ))
+      )}
     </div>
   )
 }
