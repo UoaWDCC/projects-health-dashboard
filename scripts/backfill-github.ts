@@ -210,6 +210,12 @@ async function main() {
 
   logger.info(`Starting GitHub historical backfill for ${projects.length} active project(s)`)
 
+  let grandTotalPRs = 0
+  let grandTotalCommits = 0
+  let grandTotalWeeks = 0
+  let projectsSucceeded = 0
+  let projectsFailed = 0
+
   for (const project of projects) {
     if (project.repositories.length === 0) {
       logger.info(`Skipping project "${project.name}" — no repositories configured`)
@@ -279,6 +285,11 @@ async function main() {
         },
       })
 
+      grandTotalPRs += totalPRs
+      grandTotalCommits += totalCommits
+      grandTotalWeeks += sortedWeekStarts.length
+      projectsSucceeded++
+
       logger.info(
         `Project "${project.name}" backfill complete: ${totalPRs} PRs, ${totalCommits} commits, ${sortedWeekStarts.length} weeks recomputed`
       )
@@ -292,11 +303,20 @@ async function main() {
           itemsProcessed: totalPRs + totalCommits,
         },
       })
+      projectsFailed++
       logger.error(`Backfill failed for project "${project.name}": ${err}`)
     }
   }
 
-  logger.info('GitHub historical backfill complete')
+  logger.info(
+    `GitHub historical backfill complete — ${projectsSucceeded} project(s) succeeded, ${projectsFailed} failed | ` +
+      `${grandTotalPRs} PRs, ${grandTotalCommits} commits, ${grandTotalWeeks} weeks recomputed`
+  )
+  if (projectsFailed > 0) {
+    logger.info(
+      'Check the SyncJob table for FAILED entries to see which projects need to be re-run.'
+    )
+  }
 }
 
 main()
