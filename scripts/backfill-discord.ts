@@ -151,6 +151,12 @@ function parseArgs(): { fromMs: number; toMs: number } {
     }
   }
 
+  if (fromMs > 0 && fromMs >= toMs) {
+    throw new Error(
+      `--from (${new Date(fromMs).toISOString()}) must be before --to (${new Date(toMs).toISOString()})`
+    )
+  }
+
   return { fromMs, toMs }
 }
 
