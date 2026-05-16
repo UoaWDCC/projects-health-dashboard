@@ -6,7 +6,7 @@
  * DiscordWeeklyAggregate + DiscordIdentityWeeklyCount rows for every historical week
  * that precedes the earliest row already recorded for that project.
  *
- * Run with:
+ * Run with (no date args needed — automatically backfills all history up to now):
  *   pnpm backfill:discord:dev
  *   pnpm backfill:discord:prod
  */

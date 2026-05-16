@@ -22,6 +22,8 @@
     "db:studio:prod": "dotenv -e .env -- pnpm --filter @repo/db db:studio",
     "backfill:discord:dev": "dotenv -e .env.dev -- tsx scripts/backfill-discord.ts",
     "backfill:discord:prod": "dotenv -e .env -- tsx scripts/backfill-discord.ts",
+    "backfill:github:dev": "dotenv -e .env.dev -- tsx scripts/backfill-github.ts",
+    "backfill:github:prod": "dotenv -e .env -- tsx scripts/backfill-github.ts",
     "storage:setup:dev": "dotenv -e .env.dev -- tsx scripts/setup-storage.ts",
     "storage:setup:prod": "dotenv -e .env -- tsx scripts/setup-storage.ts",
     "prepare": "husky"
