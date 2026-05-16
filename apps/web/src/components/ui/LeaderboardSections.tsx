@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import LeaderboardRow from '@/components/ui/LeaderboardRow'
-import { fetchWeeklyLeaderboard, WeeklyLeaderboard } from '@/lib/project/leaderboard-row'
+import { fetchWeeklyLeaderboard, WeeklyLeaderboard } from '@/lib/project/leaderboard'
 import ClientSuspense from '../utils/ClientSuspense'
 
 export default function LeaderboardSections() {
