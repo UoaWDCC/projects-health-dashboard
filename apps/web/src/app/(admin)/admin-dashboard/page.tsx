@@ -15,6 +15,7 @@ import { Project } from '@/lib/project/types'
 import Link from 'next/link'
 import Image from 'next/image'
 import ClientSuspense from '@/components/utils/ClientSuspense'
+import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 
 const fetchProjects = async (): Promise<Project[]> => {
   try {
@@ -29,11 +30,6 @@ const fetchProjects = async (): Promise<Project[]> => {
     return []
   }
 }
-
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
 
 export default function AdminDashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -147,10 +143,11 @@ export default function AdminDashboardPage() {
                           Started
                         </span>
                         <span className="text-[12px] font-mono font-medium text-wdcc-grey">
-                          {(project.startedAt
-                            ? new Date(project.startedAt)
-                            : new Date()
-                          ).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+                          {project.startedAt
+                            ? new Date(project.startedAt).toLocaleDateString('en-NZ', {
+                                dateStyle: 'medium',
+                              })
+                            : 'N/A'}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-wdcc-grey-light/10 rounded-lg px-2.5 py-1.5">
@@ -158,10 +155,11 @@ export default function AdminDashboardPage() {
                           Created
                         </span>
                         <span className="text-[12px] font-mono font-medium text-wdcc-grey">
-                          {(project.createdAt
-                            ? new Date(project.createdAt)
-                            : new Date()
-                          ).toLocaleDateString('en-NZ', { dateStyle: 'medium' })}
+                          {project.createdAt
+                            ? new Date(project.createdAt).toLocaleDateString('en-NZ', {
+                                dateStyle: 'medium',
+                              })
+                            : 'N/A'}
                         </span>
                       </div>
                     </div>

@@ -1,12 +1,8 @@
 'use client'
 
+import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 import Image from 'next/image'
 import { useState } from 'react'
-
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
 
 type Status = { ok: boolean; message: string } | null
 
