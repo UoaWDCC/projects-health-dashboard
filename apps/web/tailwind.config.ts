@@ -5,11 +5,27 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)'],
-        mono: ['var(--font-mono)'],
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: [
+          'var(--font-mono)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
         arial: ['Arial', 'sans-serif'],
-        'cartograph-mono-cf': ['var(--font-cartograph-mono-cf)'],
-        figtree: ['var(--font-figtree)'],
+        'cartograph-mono-cf': [
+          'var(--font-cartograph-mono-cf)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
+        figtree: ['var(--font-figtree)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         wdcc: {
