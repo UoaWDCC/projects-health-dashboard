@@ -4,6 +4,7 @@ import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
+import LineGraph from '@/components/ui/LineGraph'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -43,6 +44,21 @@ export default async function PublicDashboardPage() {
 
         <div className="my-10">
           <LiveCommitFeed />
+          <div className="mx-4 mt-6 max-w-2xl">
+            <LineGraph
+              title="Weekly Commits"
+              dates={[
+                '2026-04-28',
+                '2026-05-05',
+                '2026-05-12',
+                '2026-05-19',
+                '2026-05-26',
+                '2026-06-02',
+                '2026-06-09',
+              ]}
+              dataPoints={[100, 160, 220, 195, 260, 330, 370]}
+            />
+          </div>
         </div>
       </div>
     </>

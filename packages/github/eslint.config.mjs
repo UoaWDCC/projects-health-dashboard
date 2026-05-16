@@ -11,7 +11,7 @@ export default defineConfig(
       parser: tseslint.parser,
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.config.mjs', '*.config.ts', '*.integration.ts'],
+          allowDefaultProject: ['*.config.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },

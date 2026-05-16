@@ -66,7 +66,7 @@ function sleep(ms: number): Promise<void> {
  * @param {number} ms The unix timestamp in milliseconds to convert.
  * @returns The converted Discord snowflake ID as a string.
  */
-function timestampToSnowflake(ms: number): string {
+export function timestampToSnowflake(ms: number): string {
   return String((BigInt(ms) - DISCORD_EPOCH) << 22n)
 }
 
@@ -76,7 +76,7 @@ function timestampToSnowflake(ms: number): string {
  * @param {string} path The API path to make the request to, e.g. "/channels/{channel_id}/messages"
  * @returns Either void if an error is thrown or the JSON response in a promise.
  */
-async function requestMessages(path: string): Promise<APIMessage[]> {
+export async function requestMessages(path: string): Promise<APIMessage[]> {
   const url = `https://discord.com/api/v10${path}`
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

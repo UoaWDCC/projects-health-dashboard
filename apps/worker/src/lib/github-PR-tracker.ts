@@ -1,10 +1,11 @@
 // Fetches merged PRs for the week and stores them in the database.
 
 import { db } from '@repo/db'
-import { getInstallationOctokit } from '../lib/github-auth'
+import { getInstallationOctokit } from '@repo/github'
 import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
+import { upsertCommit } from './github-commit-tracker'
 
 export async function ingestRepoMergedPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
@@ -17,10 +18,9 @@ export async function ingestRepoMergedPRs(
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
-  // GitHub's search syntax supports optional time information in the format THH:MM:SS+00:00
-  // The times need to be included to ensure we capture all PRs merged until Sunday 23:59:59, not Sunday 00:00:00
-  const since = weekStart.toISOString().replace('Z', '+00:00')
-  const until = weekEnd.toISOString().replace('Z', '+00:00')
+  // GitHub's search API only accepts YYYY-MM-DD for the merged: qualifier.
+  const since = weekStart.toISOString().slice(0, 10)
+  const until = weekEnd.toISOString().slice(0, 10)
   const mergedThisWeek = await withRateLimit(() =>
     octokit.paginate('GET /search/issues', {
       q: `repo:${repo.owner}/${repo.name} is:pr is:merged merged:${since}..${until}`,
@@ -84,6 +84,32 @@ export async function ingestRepoMergedPRs(
       },
     })
     count++
+
+    // Pull the PR's commits and upsert each.
+    try {
+      const prCommits = await withRateLimit(() =>
+        octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: fullPr.number,
+          per_page: 100,
+        })
+      )
+
+      for (const commit of prCommits) {
+        try {
+          await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
+        } catch (err) {
+          logger.error(
+            `Failed to upsert commit ${commit.sha} from PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+          )
+        }
+      }
+    } catch (err) {
+      logger.error(
+        `Failed to ingest commits for PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+      )
+    }
   }
 
   logger.info(`Saved ${count} merged PRs for ${repo.owner}/${repo.name}.`)
