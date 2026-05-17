@@ -112,6 +112,13 @@ export async function ingestRepoCommits(
       )
     )
 
+    // GitHub's compare endpoint caps data.commits at 250 regardless of pagination.
+    if (commits.length >= 250) {
+      logger.warn(
+        `Compare endpoint returned ${commits.length} commits for ${repo.owner}/${repo.name} ${basehead} — may be truncated at GitHub's 250-commit cap.`
+      )
+    }
+
     const inWindow = commits.filter((commit) => {
       const dateStr = commit.commit?.author?.date
       if (!dateStr) return false
