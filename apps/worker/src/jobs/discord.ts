@@ -254,6 +254,11 @@ export async function runDiscordIngestion(weekStart: Date, weekEnd: Date): Promi
           },
           update: { messageCount, uniqueAuthors, unmappedMessageCount, computedAt: new Date() },
         }),
+        db.weeklyStats.upsert({
+          where: { projectId_weekStart: { projectId: project.id, weekStart } },
+          create: { projectId: project.id, weekStart, discordMessages: messageCount },
+          update: { discordMessages: messageCount },
+        }),
         ...[...identityCounts].map(([authorIdentityId, count]) =>
           db.discordIdentityWeeklyCount.upsert({
             where: {
