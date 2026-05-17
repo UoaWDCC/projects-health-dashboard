@@ -1,4 +1,4 @@
-// Finds the commits for each non-main branch in a repo and stores it in a database.
+// Finds the commits unique to each non-default branch in a repo and stores them in the database.
 
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
@@ -68,6 +68,14 @@ export async function ingestRepoCommits(
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
+  const { data: repoData } = await withRateLimit(() =>
+    octokit.request('GET /repos/{owner}/{repo}', {
+      owner: repo.owner,
+      repo: repo.name,
+    })
+  )
+  const defaultBranch = repoData.default_branch
+
   const branches = await withRateLimit(() =>
     octokit.paginate('GET /repos/{owner}/{repo}/branches', {
       owner: repo.owner,
@@ -77,28 +85,44 @@ export async function ingestRepoCommits(
   )
 
   let totalCommits = 0
+  const weekStartMs = weekStart.getTime()
+  const weekEndMs = weekEnd.getTime()
 
   for (const branch of branches) {
-    if (branch.name === 'main' || branch.name === 'master') {
+    if (branch.name === defaultBranch) {
       continue
     }
 
     logger.info(`Fetching commits for branch ${branch.name} of ${repo.owner}/${repo.name}`)
 
+    // Compare endpoint returns commits reachable from head but NOT from base,
+    // so commits inherited from the default branch (e.g. via merge or rebase) are excluded.
+    const basehead = `${defaultBranch}...${branch.name}`
     const commits = await withRateLimit(() =>
-      octokit.paginate('GET /repos/{owner}/{repo}/commits', {
-        owner: repo.owner,
-        repo: repo.name,
-        sha: branch.name,
-        since: weekStart.toISOString(),
-        until: weekEnd.toISOString(),
-        per_page: 100,
-      })
+      octokit.paginate(
+        'GET /repos/{owner}/{repo}/compare/{basehead}',
+        {
+          owner: repo.owner,
+          repo: repo.name,
+          basehead,
+          per_page: 100,
+        },
+        (response: {
+          data: { commits: Array<{ sha: string; commit: { author?: { date?: string } | null } }> }
+        }) => response.data.commits
+      )
     )
 
-    totalCommits += commits.length
+    const inWindow = commits.filter((commit) => {
+      const dateStr = commit.commit?.author?.date
+      if (!dateStr) return false
+      const t = new Date(dateStr).getTime()
+      return t >= weekStartMs && t <= weekEndMs
+    })
 
-    for (const commit of commits) {
+    totalCommits += inWindow.length
+
+    for (const commit of inWindow) {
       await upsertCommit(repo, octokit, commit.sha, branch.name)
     }
   }
