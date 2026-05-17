@@ -50,6 +50,10 @@ function parseDateRange(): { fromDate: Date; toDate: Date } {
   if (isNaN(fromDate.getTime())) throw new Error(`Invalid --from date: ${fromStr}`)
   if (toStr && isNaN(toDate.getTime())) throw new Error(`Invalid --to date: ${toStr}`)
 
+  if (fromDate > toDate) {
+    throw new Error(`--from (${fromStr}) must be before --to (${toStr ?? 'today'})`)
+  }
+
   return { fromDate, toDate }
 }
 
