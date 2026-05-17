@@ -14,6 +14,9 @@ afterEach(() => {
 })
 
 vi.mock('@repo/db', () => ({
+  SyncJobType: { GITHUB: 'GITHUB', DISCORD: 'DISCORD', LLM: 'LLM' },
+  SyncJobStatus: { PENDING: 'PENDING', RUNNING: 'RUNNING', SUCCESS: 'SUCCESS', FAILED: 'FAILED' },
+  IdentityProvider: { GITHUB: 'GITHUB', DISCORD: 'DISCORD' },
   db: {
     profile: {
       findMany: vi.fn(),
