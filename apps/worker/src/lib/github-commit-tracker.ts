@@ -97,8 +97,9 @@ export async function ingestRepoCommits(
 
     // Compare endpoint returns commits reachable from head but NOT from base,
     // so commits inherited from the default branch (e.g. via merge or rebase) are excluded.
+    type CompareCommit = { sha: string; commit: { author?: { date?: string } | null } }
     const basehead = `${defaultBranch}...${branch.name}`
-    const commits = await withRateLimit(() =>
+    const commits = await withRateLimit<CompareCommit[]>(() =>
       octokit.paginate(
         'GET /repos/{owner}/{repo}/compare/{basehead}',
         {
@@ -107,9 +108,7 @@ export async function ingestRepoCommits(
           basehead,
           per_page: 100,
         },
-        (response: {
-          data: { commits: Array<{ sha: string; commit: { author?: { date?: string } | null } }> }
-        }) => response.data.commits
+        (response: { data: { commits: CompareCommit[] } }) => response.data.commits
       )
     )
 
