@@ -2,9 +2,14 @@
  * One-time backfill script: populates historical GitHub PR and commit data for all active projects.
  *
  * The weekly cron job (jobs/github.ts) only collects data within the previous week's window.
- * This script walks all merged PRs within the given date range for each project's repos, extracts
+ * This script walks all PRs within the given date range for each project's repos, extracts
  * their commits, and upserts CommitFact and PRFact rows. After raw facts are loaded, WeeklyStats
  * and MemberWeeklyContribution are recomputed for every distinct week that the data spans.
+ *
+ * PR date attribution:
+ *   - Merged PRs:              filtered and attributed by merged_at
+ *   - Closed (unmerged) PRs:   filtered and attributed by closed_at
+ *   - Open PRs:                filtered and attributed by created_at
  *
  * Run with:
  *   pnpm backfill:github:dev
@@ -12,8 +17,8 @@
  *   pnpm backfill:github:dev -- --from YYYY-MM-DD [--to YYYY-MM-DD]
  *   pnpm backfill:github:prod -- --from YYYY-MM-DD [--to YYYY-MM-DD]
  *
- * --from  Start of the merged-at range (inclusive, UTC midnight). Required.
- * --to    End of the merged-at range (inclusive, UTC end-of-day). Defaults to today.
+ * --from  Start date — snapped to Monday 00:00 UTC of the containing week. Required.
+ * --to    End date   — snapped to Monday 00:00 UTC of the following week (exclusive). Defaults to today.
  */
 
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
@@ -27,7 +32,13 @@ import { getCollectionWindow } from '../apps/worker/src/lib/date-utils'
 type Octokit = Awaited<ReturnType<typeof getInstallationOctokit>>
 
 // Minimal shapes for the paginated Octokit responses we consume.
-type ListedPR = { number: number; merged_at: string | null }
+type ListedPR = {
+  number: number
+  state: string
+  merged_at: string | null
+  created_at: string
+  closed_at: string | null
+}
 type PRCommit = { sha: string; commit: { author: { date: string } | null } }
 
 function parseDateRange(): { fromDate: Date; toDate: Date } {
@@ -44,11 +55,18 @@ function parseDateRange(): { fromDate: Date; toDate: Date } {
     throw new Error('Usage: pnpm backfill:github:[dev|prod] -- --from YYYY-MM-DD [--to YYYY-MM-DD]')
   }
 
-  const fromDate = new Date(`${fromStr}T00:00:00.000Z`)
-  const toDate = toStr ? new Date(`${toStr}T23:59:59.999Z`) : new Date()
+  const parsedFrom = new Date(`${fromStr}T00:00:00.000Z`)
+  const parsedTo = toStr ? new Date(`${toStr}T00:00:00.000Z`) : new Date()
 
-  if (isNaN(fromDate.getTime())) throw new Error(`Invalid --from date: ${fromStr}`)
-  if (toStr && isNaN(toDate.getTime())) throw new Error(`Invalid --to date: ${toStr}`)
+  if (isNaN(parsedFrom.getTime())) throw new Error(`Invalid --from date: ${fromStr}`)
+  if (toStr && isNaN(parsedTo.getTime())) throw new Error(`Invalid --to date: ${toStr}`)
+
+  // Snap to week boundaries — mirrors the discord backfill approach.
+  // --from → Monday 00:00 UTC of the containing week
+  // --to   → Monday 00:00 UTC of the following week (exclusive upper bound)
+  const [fromDate] = getCollectionWindow(parsedFrom)
+  const [toWeekStart] = getCollectionWindow(parsedTo)
+  const toDate = new Date(toWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
 
   if (fromDate > toDate) {
     throw new Error(`--from (${fromStr}) must be before --to (${toStr ?? 'today'})`)
@@ -58,42 +76,55 @@ function parseDateRange(): { fromDate: Date; toDate: Date } {
 }
 
 /**
- * Paginates all closed PRs for a repo, filters for merged PRs within the date range,
- * upserts PRFact and each PR's CommitFact rows, and collects affected week starts.
+ * Paginates all PRs (open, closed-unmerged, and merged) for a repo, filters for those
+ * within the date range, upserts PRFact and each PR's CommitFact rows, and collects
+ * affected week starts.
  */
-async function backfillRepoMergedPRs(
+async function backfillRepoPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
   octokit: Octokit,
   fromDate: Date,
   toDate: Date
 ): Promise<{ prCount: number; commitCount: number; weekStarts: Set<string> }> {
   logger.info(
-    `  Fetching closed PRs for ${repo.owner}/${repo.name} (${fromDate.toISOString().slice(0, 10)} → ${toDate.toISOString().slice(0, 10)})`
+    `  Fetching all PRs for ${repo.owner}/${repo.name} (${fromDate.toISOString().slice(0, 10)} → ${toDate.toISOString().slice(0, 10)})`
   )
 
   // Use list-pulls endpoint (not search API) to avoid the 1000-result search cap.
-  const closedPRs = (await withRateLimit(() =>
+  const allPRs = (await withRateLimit(() =>
     octokit.paginate('GET /repos/{owner}/{repo}/pulls', {
       owner: repo.owner,
       repo: repo.name,
-      state: 'closed',
+      state: 'all',
       per_page: 100,
     })
   )) as ListedPR[]
 
-  const mergedInRange = closedPRs.filter((pr) => {
-    if (!pr.merged_at) return false
-    const mergedAt = new Date(pr.merged_at)
-    return mergedAt >= fromDate && mergedAt <= toDate
+  const prsInRange = allPRs.filter((pr) => {
+    if (pr.merged_at) {
+      const d = new Date(pr.merged_at)
+      return d >= fromDate && d <= toDate
+    } else if (pr.state === 'closed' && pr.closed_at) {
+      const d = new Date(pr.closed_at)
+      return d >= fromDate && d <= toDate
+    } else {
+      const d = new Date(pr.created_at)
+      return d >= fromDate && d <= toDate
+    }
   })
 
-  logger.info(`  ${mergedInRange.length} merged PR(s) in range for ${repo.owner}/${repo.name}`)
+  const merged = prsInRange.filter((pr) => pr.merged_at).length
+  const closedUnmerged = prsInRange.filter((pr) => pr.state === 'closed' && !pr.merged_at).length
+  const open = prsInRange.filter((pr) => pr.state === 'open').length
+  logger.info(
+    `  ${prsInRange.length} PR(s) in range for ${repo.owner}/${repo.name} (${merged} merged, ${closedUnmerged} closed-unmerged, ${open} open)`
+  )
 
   const weekStarts = new Set<string>()
   let prCount = 0
   let commitCount = 0
 
-  for (const pr of mergedInRange) {
+  for (const pr of prsInRange) {
     // Fetch full PR details to get additions/deletions (not included in list response).
     const { data: fullPr } = (await withRateLimit(() =>
       octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -145,10 +176,13 @@ async function backfillRepoMergedPRs(
 
     prCount++
 
-    if (fullPr.merged_at) {
-      const [prWeekStart] = getCollectionWindow(new Date(fullPr.merged_at))
-      weekStarts.add(prWeekStart.toISOString())
-    }
+    const prRefDate = fullPr.merged_at
+      ? new Date(fullPr.merged_at)
+      : fullPr.closed_at
+        ? new Date(fullPr.closed_at)
+        : new Date(fullPr.created_at)
+    const [prWeekStart] = getCollectionWindow(prRefDate)
+    weekStarts.add(prWeekStart.toISOString())
 
     // Fetch and upsert each commit from this PR.
     try {
@@ -185,7 +219,9 @@ async function backfillRepoMergedPRs(
     }
   }
 
-  logger.info(`  → ${prCount} PRs, ${commitCount} commits upserted for ${repo.owner}/${repo.name}`)
+  logger.info(
+    `  → ${prCount} PRs (all states), ${commitCount} commits upserted for ${repo.owner}/${repo.name}`
+  )
 
   return { prCount, commitCount, weekStarts }
 }
@@ -246,7 +282,7 @@ async function main() {
         logger.info(`  Repo ${repo.owner}/${repo.name}`)
         try {
           const octokit = await getInstallationOctokit(repo.installationId)
-          const result = await backfillRepoMergedPRs(repo, octokit, fromDate, toDate)
+          const result = await backfillRepoPRs(repo, octokit, fromDate, toDate)
           totalPRs += result.prCount
           totalCommits += result.commitCount
           for (const ws of result.weekStarts) allWeekStarts.add(ws)
