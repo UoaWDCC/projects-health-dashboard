@@ -71,19 +71,30 @@ async function validateSnowflakeExists(snowflakeId: string) {
     if (res.ok) return null
 
     if (res.status === 404)
-      return Response.json({ error: 'Discord channel not found' }, { status: 404 })
+      return Response.json(
+        { error: `Discord channel with snowflakeId ${snowflakeId} not found` },
+        { status: 404 }
+      )
     if (res.status === 403)
       return Response.json(
-        { error: 'Bot cannot access the Discord channel (forbidden)' },
+        { error: `Bot cannot access Discord channel with snowflakeId ${snowflakeId} (forbidden)` },
         { status: 403 }
       )
     if (res.status === 401)
-      return Response.json({ error: 'Invalid Discord token provided' }, { status: 401 })
-
-    return Response.json({ error: 'Failed to validate Discord channel' }, { status: 500 })
+      return Response.json(
+        { error: `Invalid Discord token provided for snowflakeId ${snowflakeId}` },
+        { status: 401 }
+      )
+    return Response.json(
+      { error: `Failed to validate Discord channel with snowflakeId ${snowflakeId}` },
+      { status: 500 }
+    )
   } catch (err: unknown) {
     console.error('Discord validation error:', err)
-    return Response.json({ error: 'Failed to validate Discord channel' }, { status: 500 })
+    return Response.json(
+      { error: `Failed to validate Discord channel with snowflakeId ${snowflakeId}` },
+      { status: 500 }
+    )
   }
 }
 
@@ -96,32 +107,36 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const projectName = String(formData.get('projectName') ?? '').trim()
-    const githubLink = String(formData.get('githubLink') ?? '').trim()
-    const discordSnowflakeId = String(formData.get('discordSnowflakeId') ?? '').trim()
+    const githubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
+    const discordSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
+      .map(String)
+      .map((s) => s.trim())
     const projectDescription = String(formData.get('projectDescription') ?? '').trim()
     const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
 
-    if (!projectName || !githubLink || !discordSnowflakeId) {
+    if (!projectName || githubLinks.length === 0 || discordSnowflakeIds.length === 0) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // For now we only support linking one GitHub repo per project, so we take the first link provided
+    const githubLink = githubLinks[0]
 
     if (!validateGitHubLinkFormat(githubLink))
       return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
 
     const githubError = await validateGitHubExists(githubLink)
-
     if (githubError) return githubError
 
-    const discordError = await validateSnowflakeExists(discordSnowflakeId)
+    for (const discordSnowflakeId of discordSnowflakeIds) {
+      const discordError = await validateSnowflakeExists(discordSnowflakeId)
+      if (discordError) return discordError
+    }
 
-    if (discordError) return discordError
-
-    const [existingProject, existingRepo, existingChannel] = await Promise.all([
+    const [existingProject, existingRepo] = await Promise.all([
       db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
       db.gitHubRepository.findFirst({
         where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
       }),
-      db.discordChannel.findUnique({ where: { externalId: discordSnowflakeId } }),
     ])
 
     if (existingProject) {
@@ -134,14 +149,20 @@ export async function POST(request: Request) {
         },
         { status: 409 }
       )
-    } else if (existingChannel) {
-      return Response.json(
-        {
-          error:
-            'Discord Channel with this Snowflake ID has already been linked to another project',
-        },
-        { status: 409 }
-      )
+    }
+
+    for (const snowflakeId of discordSnowflakeIds) {
+      const existingChannel = await db.discordChannel.findUnique({
+        where: { externalId: snowflakeId },
+      })
+      if (existingChannel) {
+        return Response.json(
+          {
+            error: `Discord Channel with Snowflake ID ${snowflakeId} has already been linked to another project`,
+          },
+          { status: 409 }
+        )
+      }
     }
 
     const newProject = await db.$transaction(async (tx) => {
@@ -159,11 +180,11 @@ export async function POST(request: Request) {
             },
           },
           channels: {
-            create: {
+            create: discordSnowflakeIds.map((discordSnowflakeId) => ({
               externalId: discordSnowflakeId,
               // placeholder value
               name: projectName + ' Discord Channel',
-            },
+            })),
           },
         },
         include: {
