@@ -6,9 +6,11 @@
  * DiscordWeeklyAggregate + DiscordIdentityWeeklyCount rows for every historical week
  * that precedes the earliest row already recorded for that project.
  *
- * Run with (no date args needed — automatically backfills all history up to now):
- *   pnpm backfill:discord:dev
+ * Run with:
+ *   pnpm backfill:discord:dev                                         # full history up to now
+ *   pnpm backfill:discord:dev -- --from 2026-05-16 --to 2026-06-01    # specific date range
  *   pnpm backfill:discord:prod
+ *   pnpm backfill:discord:prod -- --from 2024-05-16 --to 2026-06-01
  */
 
 import { db, IdentityProvider, SyncJobStatus, SyncJobType } from '@repo/db'
@@ -28,7 +30,8 @@ interface HistoricalMessage {
  */
 async function fetchHistoricalMessages(
   channelId: string,
-  beforeSnowflake: string
+  beforeSnowflake: string,
+  fromMs: number
 ): Promise<HistoricalMessage[]> {
   const messages: HistoricalMessage[] = []
   let cursor = beforeSnowflake
@@ -41,15 +44,16 @@ async function fetchHistoricalMessages(
     if (batch.length === 0) break
 
     const valid = batch
-      .filter((m) => !m.author.bot)
+      .filter((m) => !m.author.bot && new Date(m.timestamp).getTime() >= fromMs)
       .map((m) => ({ authorId: m.author.id, timestamp: new Date(m.timestamp) }))
 
     messages.push(...valid)
     logger.info(`  ${messages.length} messages fetched so far`)
 
-    if (batch.length < 100) break
-
     // Discord returns messages newest-first under before=; the last entry is the oldest.
+    const oldestInBatch = new Date(batch[batch.length - 1].timestamp).getTime()
+    if (oldestInBatch < fromMs || batch.length < 100) break
+
     cursor = batch[batch.length - 1].id
   }
 
@@ -126,17 +130,52 @@ function bucketByWeek(
   return buckets
 }
 
+function parseArgs(): { fromMs: number; toMs: number } {
+  const args = process.argv.slice(2)
+  let fromMs = 0
+  let toMs = Date.now()
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--from' && args[i + 1]) {
+      const parsed = new Date(args[++i]).getTime()
+      if (isNaN(parsed)) throw new Error(`Invalid --from date: ${args[i]}`)
+      // Snap to the Monday of the week containing the given date so the full week is included.
+      const [weekStart] = getCollectionWindow(new Date(parsed))
+      fromMs = weekStart.getTime()
+    } else if (args[i] === '--to' && args[i + 1]) {
+      const parsed = new Date(args[++i]).getTime()
+      if (isNaN(parsed)) throw new Error(`Invalid --to date: ${args[i]}`)
+      // Snap to the Monday of the following week so before= includes the full week containing --to.
+      const [weekStart] = getCollectionWindow(new Date(parsed))
+      toMs = weekStart.getTime() + 7 * 24 * 60 * 60 * 1000
+    }
+  }
+
+  if (fromMs > 0 && fromMs >= toMs) {
+    throw new Error(
+      `--from (${new Date(fromMs).toISOString()}) must be before --to (${new Date(toMs).toISOString()})`
+    )
+  }
+
+  return { fromMs, toMs }
+}
+
 async function main() {
   if (!process.env.DISCORD_BOT_TOKEN) {
     throw new Error('DISCORD_BOT_TOKEN is not set in environment variables')
   }
+
+  const { fromMs, toMs } = parseArgs()
 
   const projects = await db.project.findMany({
     where: { isActive: true },
     select: { id: true, name: true, channels: true, repositories: { select: { id: true } } },
   })
 
-  logger.info(`Starting Discord historical backfill for ${projects.length} active project(s)`)
+  logger.info(
+    `Starting Discord backfill for ${projects.length} active project(s) - ` +
+      `${fromMs > 0 ? new Date(fromMs).toISOString() : 'beginning'} to ${new Date(toMs).toISOString()}`
+  )
 
   for (const project of projects) {
     if (project.channels.length === 0) {
@@ -144,18 +183,10 @@ async function main() {
       continue
     }
 
-    const earliest = await db.discordWeeklyAggregate.findFirst({
-      where: { projectId: project.id },
-      orderBy: { weekStart: 'asc' },
-      select: { weekStart: true },
-    })
-
-    // Start from the earliest existing week (or now if no rows exist).
-    const cutoffMs = earliest ? earliest.weekStart.getTime() : Date.now()
-    const beforeSnowflake = timestampToSnowflake(cutoffMs)
+    const beforeSnowflake = timestampToSnowflake(toMs)
 
     logger.info(
-      `Project "${project.name}": collecting history before ${new Date(cutoffMs).toISOString()} across ${project.channels.length} channel(s)`
+      `Project "${project.name}": collecting history across ${project.channels.length} channel(s)`
     )
 
     const syncJob = await db.syncJob.create({
@@ -174,7 +205,11 @@ async function main() {
 
       for (const channel of project.channels) {
         logger.info(`  Channel "${channel.name}" (${channel.externalId})`)
-        const channelMessages = await fetchHistoricalMessages(channel.externalId, beforeSnowflake)
+        const channelMessages = await fetchHistoricalMessages(
+          channel.externalId,
+          beforeSnowflake,
+          fromMs
+        )
         logger.info(`  → ${channelMessages.length} historical messages`)
         allMessages.push(...channelMessages)
       }
@@ -211,7 +246,13 @@ async function main() {
         affectedWeeks.map(({ weekStart }) => weekStart.toISOString())
       )
       const historicalWeeks = await db.weeklyStats.findMany({
-        where: { projectId: project.id, weekStart: { lt: new Date(cutoffMs) } },
+        where: {
+          projectId: project.id,
+          weekStart: {
+            ...(fromMs > 0 && { gte: new Date(fromMs) }),
+            lt: new Date(toMs),
+          },
+        },
         select: { weekStart: true },
       })
 
