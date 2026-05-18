@@ -21,8 +21,8 @@ const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
     <div
       className="
         relative w-full 
-        xl:max-w-[300px] xl:aspect-[300/265]
-        max-w-[300px] sm:min-h-[265px]
+        xl:max-w-[420px] xl:aspect-[420/270]
+        max-w-[420px] sm:min-h-[270px]
         rounded-[clamp(18px,2.5vw,31px)]
         group overflow-visible font-sans
       "
@@ -49,31 +49,32 @@ const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
           rounded-[clamp(12px,2vw,25px)]
         "
       >
-        <div className="w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] xl:w-[74px] xl:h-[74px] rounded-[14px] xl:rounded-[20px] bg-[#d9d9d9] overflow-hidden shrink-0">
-          {imageUrl && (
-            <Image
-              src={imageUrl}
-              alt={name}
-              width={74}
-              height={74}
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
+        <div className="flex flex-row items-center">
+          <div className="w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] xl:w-[74px] xl:h-[74px] rounded-[14px] xl:rounded-[20px] bg-[#d9d9d9] overflow-hidden shrink-0">
+            {imageUrl && (
+              <Image
+                src={imageUrl}
+                alt={name}
+                width={74}
+                height={74}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
 
-        <h3
-          className="
-            mt-2 sm:mt-3 xl:mt-[clamp(10px,2vw,14px)]
+          <h3
+            className="
+            ml-8
             text-[16px] sm:text-[18px] xl:text-[clamp(18px,2.2vw,25.53px)]
             font-extrabold leading-tight
           "
-        >
-          {name}
-        </h3>
-
+          >
+            {name}
+          </h3>
+        </div>
         <p
           className="
-            mt-1 sm:mt-2 xl:mt-[clamp(6px,1.5vw,10px)]
+            mt-1 sm:mt-2 xl:mt-[25px]
             text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)]
             leading-snug text-wdcc-grey-light
             line-clamp-2 xl:line-clamp-1
