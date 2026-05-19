@@ -38,8 +38,21 @@ type ListedPR = {
   merged_at: string | null
   created_at: string
   closed_at: string | null
+  head: { ref: string }
 }
 type PRCommit = { sha: string; commit: { author: { date: string } | null } }
+
+// Returns all Monday week-starts in [fromDate, toDate).
+// fromDate is assumed to already be snapped to a Monday.
+function weeksInRange(fromDate: Date, toDate: Date): Date[] {
+  const weeks: Date[] = []
+  let current = new Date(fromDate)
+  while (current < toDate) {
+    weeks.push(new Date(current))
+    current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }
+  return weeks
+}
 
 function parseDateRange(): { fromDate: Date; toDate: Date } {
   const args = process.argv.slice(2)
@@ -76,9 +89,15 @@ function parseDateRange(): { fromDate: Date; toDate: Date } {
 }
 
 /**
- * Paginates all PRs (open, closed-unmerged, and merged) for a repo, filters for those
- * within the date range, upserts PRFact and each PR's CommitFact rows, and collects
- * affected week starts.
+ * Two-pass per-week backfill for a single repo, mirroring the weekly collection job:
+ *
+ * Pass 1 (mirrors ingestRepoMergedPRs): for each week, find PRs merged in that week,
+ *   upsert PRFact for each, then upsert all their commits to CommitFact.
+ *
+ * Pass 2 (mirrors ingestRepoCommits): for each week, scan all non-main branches with
+ *   since/until to capture every commit authored in that week — including commits on
+ *   branches whose PR hasn't been opened yet. Overlaps with Pass 1 are deduplicated
+ *   by the (repoId, sha) unique constraint on CommitFact.
  */
 async function backfillRepoPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
@@ -91,6 +110,7 @@ async function backfillRepoPRs(
   )
 
   // Use list-pulls endpoint (not search API) to avoid the 1000-result search cap.
+  // Only merged PRs are needed for Pass 1 (PRFact).
   const allPRs = (await withRateLimit(() =>
     octokit.paginate('GET /repos/{owner}/{repo}/pulls', {
       owner: repo.owner,
@@ -100,92 +120,91 @@ async function backfillRepoPRs(
     })
   )) as ListedPR[]
 
-  const prsInRange = allPRs.filter((pr) => {
-    if (pr.merged_at) {
-      const d = new Date(pr.merged_at)
-      return d >= fromDate && d <= toDate
-    } else if (pr.state === 'closed' && pr.closed_at) {
-      const d = new Date(pr.closed_at)
-      return d >= fromDate && d <= toDate
-    } else {
-      const d = new Date(pr.created_at)
-      return d >= fromDate && d <= toDate
-    }
-  })
-
-  const merged = prsInRange.filter((pr) => pr.merged_at).length
-  const closedUnmerged = prsInRange.filter((pr) => pr.state === 'closed' && !pr.merged_at).length
-  const open = prsInRange.filter((pr) => pr.state === 'open').length
-  logger.info(
-    `  ${prsInRange.length} PR(s) in range for ${repo.owner}/${repo.name} (${merged} merged, ${closedUnmerged} closed-unmerged, ${open} open)`
+  const mergedPRsInRange = allPRs.filter(
+    (pr) => pr.merged_at && new Date(pr.merged_at) >= fromDate && new Date(pr.merged_at) < toDate
   )
+
+  logger.info(`  ${mergedPRsInRange.length} merged PR(s) in range for ${repo.owner}/${repo.name}`)
+
+  // Fetch all non-main branches once — reused per week in Pass 2.
+  const allBranches = (
+    await withRateLimit(() =>
+      octokit.paginate('GET /repos/{owner}/{repo}/branches', {
+        owner: repo.owner,
+        repo: repo.name,
+        per_page: 100,
+      })
+    )
+  ).filter((b: { name: string }) => b.name !== 'main' && b.name !== 'master')
+
+  logger.info(`  ${allBranches.length} non-main branch(es) for Pass 2`)
 
   const weekStarts = new Set<string>()
   let prCount = 0
   let commitCount = 0
 
-  for (const pr of prsInRange) {
-    // Fetch full PR details to get additions/deletions (not included in list response).
-    const { data: fullPr } = (await withRateLimit(() =>
-      octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-        owner: repo.owner,
-        repo: repo.name,
-        pull_number: pr.number,
+  for (const weekStart of weeksInRange(fromDate, toDate)) {
+    const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    // ── Pass 1: PRs merged this week → PRFact + all their commits ──────────────
+    const mergedThisWeek = mergedPRsInRange.filter(
+      (pr) => new Date(pr.merged_at!) >= weekStart && new Date(pr.merged_at!) < weekEnd
+    )
+
+    for (const pr of mergedThisWeek) {
+      const { data: fullPr } = (await withRateLimit(() =>
+        octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: pr.number,
+        })
+      )) as { data: Awaited<ReturnType<Octokit['rest']['pulls']['get']>>['data'] }
+
+      const [authorIdentityId, mergedByIdentityId] = await Promise.all([
+        fullPr.user
+          ? resolveIdentity({ id: fullPr.user.id, login: fullPr.user.login }, repo)
+          : null,
+        fullPr.merged_by
+          ? resolveIdentity({ id: fullPr.merged_by.id, login: fullPr.merged_by.login }, repo)
+          : null,
+      ])
+
+      await db.pRFact.upsert({
+        where: { repoId_number: { repoId: repo.id, number: fullPr.number } },
+        create: {
+          repoId: repo.id,
+          number: fullPr.number,
+          authorIdentityId,
+          mergedByIdentityId,
+          title: fullPr.title,
+          body: fullPr.body ?? null,
+          url: fullPr.html_url,
+          labels: fullPr.labels.map((l: { name: string }) => l.name),
+          createdAt: new Date(fullPr.created_at),
+          mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
+          closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
+          linesAdded: fullPr.additions,
+          linesRemoved: fullPr.deletions,
+          ingestedAt: new Date(),
+        },
+        update: {
+          title: fullPr.title,
+          body: fullPr.body ?? null,
+          url: fullPr.html_url,
+          labels: fullPr.labels.map((l: { name: string }) => l.name),
+          authorIdentityId,
+          mergedByIdentityId,
+          mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
+          closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
+          linesAdded: fullPr.additions,
+          linesRemoved: fullPr.deletions,
+          ingestedAt: new Date(),
+        },
       })
-    )) as { data: Awaited<ReturnType<Octokit['rest']['pulls']['get']>>['data'] }
 
-    const [authorIdentityId, mergedByIdentityId] = await Promise.all([
-      fullPr.user ? resolveIdentity({ id: fullPr.user.id, login: fullPr.user.login }, repo) : null,
-      fullPr.merged_by
-        ? resolveIdentity({ id: fullPr.merged_by.id, login: fullPr.merged_by.login }, repo)
-        : null,
-    ])
+      prCount++
+      weekStarts.add(weekStart.toISOString())
 
-    await db.pRFact.upsert({
-      where: { repoId_number: { repoId: repo.id, number: fullPr.number } },
-      create: {
-        repoId: repo.id,
-        number: fullPr.number,
-        authorIdentityId,
-        mergedByIdentityId,
-        title: fullPr.title,
-        body: fullPr.body ?? null,
-        url: fullPr.html_url,
-        labels: fullPr.labels.map((l: { name: string }) => l.name),
-        createdAt: new Date(fullPr.created_at),
-        mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
-        closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
-        linesAdded: fullPr.additions,
-        linesRemoved: fullPr.deletions,
-        ingestedAt: new Date(),
-      },
-      update: {
-        title: fullPr.title,
-        body: fullPr.body ?? null,
-        url: fullPr.html_url,
-        labels: fullPr.labels.map((l: { name: string }) => l.name),
-        authorIdentityId,
-        mergedByIdentityId,
-        mergedAt: fullPr.merged_at ? new Date(fullPr.merged_at) : null,
-        closedAt: fullPr.closed_at ? new Date(fullPr.closed_at) : null,
-        linesAdded: fullPr.additions,
-        linesRemoved: fullPr.deletions,
-        ingestedAt: new Date(),
-      },
-    })
-
-    prCount++
-
-    const prRefDate = fullPr.merged_at
-      ? new Date(fullPr.merged_at)
-      : fullPr.closed_at
-        ? new Date(fullPr.closed_at)
-        : new Date(fullPr.created_at)
-    const [prWeekStart] = getCollectionWindow(prRefDate)
-    weekStarts.add(prWeekStart.toISOString())
-
-    // Fetch and upsert each commit from this PR.
-    try {
       const prCommits = (await withRateLimit(() =>
         octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
           owner: repo.owner,
@@ -196,31 +215,54 @@ async function backfillRepoPRs(
       )) as PRCommit[]
 
       for (const commit of prCommits) {
-        // Bucket this commit into the week it was authored — committedAt drives week attribution.
-        const authorDate = commit.commit.author?.date
-        if (authorDate) {
-          const [commitWeekStart] = getCollectionWindow(new Date(authorDate))
-          weekStarts.add(commitWeekStart.toISOString())
-        }
-
         try {
           await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
           commitCount++
+          if (commit.commit.author?.date) {
+            const [commitWeekStart] = getCollectionWindow(new Date(commit.commit.author.date))
+            weekStarts.add(commitWeekStart.toISOString())
+          }
+        } catch (err) {
+          logger.error(`    Failed to upsert commit ${commit.sha} from PR #${pr.number}: ${err}`)
+        }
+      }
+    }
+
+    // ── Pass 2: scan all branches for commits authored this week ───────────────
+    let pass2Count = 0
+    for (const branch of allBranches) {
+      const commits = (await withRateLimit(() =>
+        octokit.paginate('GET /repos/{owner}/{repo}/commits', {
+          owner: repo.owner,
+          repo: repo.name,
+          sha: branch.name,
+          since: weekStart.toISOString(),
+          until: weekEnd.toISOString(),
+          per_page: 100,
+        })
+      )) as { sha: string }[]
+
+      for (const commit of commits) {
+        try {
+          await upsertCommit(repo, octokit, commit.sha, branch.name)
+          commitCount++
+          pass2Count++
+          weekStarts.add(weekStart.toISOString())
         } catch (err) {
           logger.error(
-            `    Failed to upsert commit ${commit.sha} from PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+            `    Failed to upsert commit ${commit.sha} from branch ${branch.name}: ${err}`
           )
         }
       }
-    } catch (err) {
-      logger.error(
-        `    Failed to fetch commits for PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
-      )
     }
+
+    logger.info(
+      `  Week ${weekStart.toISOString().slice(0, 10)}: Pass 1 — ${mergedThisWeek.length} merged PR(s) | Pass 2 — ${pass2Count} commit(s) from branches`
+    )
   }
 
   logger.info(
-    `  → ${prCount} PRs (all states), ${commitCount} commits upserted for ${repo.owner}/${repo.name}`
+    `  → ${prCount} PRs upserted to PRFact, ${commitCount} commits upserted for ${repo.owner}/${repo.name}`
   )
 
   return { prCount, commitCount, weekStarts }
