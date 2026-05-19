@@ -46,16 +46,15 @@ async function validateGitHubExists(link: string) {
     const status = (err as { status?: number })?.status
 
     if (status === 404)
-      return Response.json({ error: 'GitHub repository not found' }, { status: 404 })
+      return Response.json({ error: `GitHub repository ${link} not found` }, { status: 404 })
     if (status === 403)
       return Response.json(
-        { error: 'GitHub repository not accessible (private or rate limited)' },
+        { error: `GitHub repository ${link} not accessible (private or rate limited)` },
         { status: 403 }
       )
     if (status === 401)
-      return Response.json({ error: 'Invalid GitHub token provided' }, { status: 401 })
-
-    return Response.json({ error: 'Failed to validate GitHub repository' }, { status: 500 })
+      return Response.json({ error: `Invalid GitHub token provided for ${link}` }, { status: 401 })
+    return Response.json({ error: `Failed to validate GitHub repository ${link}` }, { status: 500 })
   }
 }
 
@@ -118,40 +117,40 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // For now we only support linking one GitHub repo per project, so we take the first link provided
-    const githubLink = githubLinks[0]
-
-    if (!validateGitHubLinkFormat(githubLink))
-      return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
-
-    const githubError = await validateGitHubExists(githubLink)
-    if (githubError) return githubError
-
-    for (const discordSnowflakeId of discordSnowflakeIds) {
-      const discordError = await validateSnowflakeExists(discordSnowflakeId)
-      if (discordError) return discordError
-    }
-
-    const [existingProject, existingRepo] = await Promise.all([
-      db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
-      db.gitHubRepository.findFirst({
-        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
-      }),
-    ])
+    const existingProject = await db.project.findUnique({
+      where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') },
+    })
 
     if (existingProject) {
       return Response.json({ error: 'Project with this name already exists' }, { status: 409 })
-    } else if (existingRepo) {
-      return Response.json(
-        {
-          error:
-            'GitHub Repository with this owner and name has already been linked to another project',
-        },
-        { status: 409 }
-      )
     }
 
+    // github validation
+    for (const githubLink of githubLinks) {
+      if (!validateGitHubLinkFormat(githubLink))
+        return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
+
+      const githubError = await validateGitHubExists(githubLink)
+      if (githubError) return githubError
+
+      const existingRepo = await db.gitHubRepository.findFirst({
+        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
+      })
+      if (existingRepo) {
+        return Response.json(
+          {
+            error: `GitHub Repository ${githubLink} has already been linked to another project`,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    // discord validation
     for (const snowflakeId of discordSnowflakeIds) {
+      const discordError = await validateSnowflakeExists(snowflakeId)
+      if (discordError) return discordError
+
       const existingChannel = await db.discordChannel.findUnique({
         where: { externalId: snowflakeId },
       })
@@ -173,11 +172,11 @@ export async function POST(request: Request) {
           description: projectDescription || null,
           startedAt: parseDate(projectStartDate),
           repositories: {
-            create: {
+            create: githubLinks.map((githubLink) => ({
               owner: githubLink.split('/')[3],
               name: githubLink.split('/')[4],
               installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
-            },
+            })),
           },
           channels: {
             create: discordSnowflakeIds.map((discordSnowflakeId) => ({
