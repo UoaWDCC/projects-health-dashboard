@@ -50,7 +50,7 @@ const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
         "
       >
         <div className="flex flex-row items-center">
-          <div className="w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] xl:w-[74px] xl:h-[74px] rounded-[14px] xl:rounded-[20px] bg-[#d9d9d9] overflow-hidden shrink-0">
+          <div className="w-[74px] h-[74px] rounded-[20px] bg-[#d9d9d9] overflow-hidden shrink-0">
             {imageUrl && (
               <Image
                 src={imageUrl}
@@ -77,7 +77,7 @@ const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
             mt-1 sm:mt-2 xl:mt-[25px]
             text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)]
             leading-snug text-wdcc-grey-light
-            line-clamp-2 xl:line-clamp-1
+            line-clamp-2
             font-mono
           "
         >

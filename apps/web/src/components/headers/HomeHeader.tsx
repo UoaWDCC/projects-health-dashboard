@@ -9,7 +9,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   activeProjectCount,
 }: HomeHeaderProps): React.JSX.Element => {
   return (
-    <div className="px-5 sm:px-10 lg:px-20 pt-12 sm:pt-16 lg:pt-24 pb-10 sm:pb-12 lg:pb-16 relative w-full min-h-screen">
+    <div className="px-5 sm:px-10 lg:px-20 pt-12 sm:pt-16 lg:pt-24 pb-10 sm:pb-12 lg:pb-16 relative w-full">
       {/* Status pill */}
       {activeProjectCount > 0 && (
         <div className="backdrop-blur-xl rounded-full border-2 border-white font-mono px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60 hover:brightness-95 cursor-default transition-all duration-500 ease-in-out">
