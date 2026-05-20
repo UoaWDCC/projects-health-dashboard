@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { IdentityProvider } from '@repo/db'
+import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 
 type PersonIdentity = {
   id: string

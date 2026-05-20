@@ -5,11 +5,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
+import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 
 export default function CreateProjectPage() {
   const router = useRouter()
@@ -276,11 +272,8 @@ export default function CreateProjectPage() {
               {imagePreview ? (
                 <div className="flex items-center gap-3">
                   <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="text-left">
                     <p className="font-mono text-sm font-semibold text-wdcc-oshan">{imageName}</p>

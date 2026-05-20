@@ -4,6 +4,10 @@ import { useEffect, useState, use, FormEvent, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { IdentityProvider } from '@repo/db'
+import GradientDivider from '@/components/ui/GradientDivider'
+import AdminCard from '@/components/ui/AdminCard'
+import { inputClass, labelClass, PROVIDER_COLORS } from '@/lib/admin/layout'
+import ErrorMessage from '@/components/utils/ErrorMessage'
 
 type PersonIdentity = {
   id: string
@@ -36,20 +40,6 @@ type Person = {
   createdAt: string
   identities: PersonIdentity[]
   memberships: ProjectMember[]
-}
-
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
-
-const inputClass =
-  'font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light'
-const labelClass = 'font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold'
-
-const PROVIDER_COLORS: Record<string, { bg: string; text: string }> = {
-  GITHUB: { bg: 'bg-wdcc-oshan/10', text: 'text-wdcc-oshan' },
-  DISCORD: { bg: 'bg-wdcc-kelvin/10', text: 'text-wdcc-kelvin' },
 }
 
 export default function PersonPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -251,7 +241,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
         </Link>
 
         {/* ── Basic Details ── */}
-        <Card>
+        <AdminCard>
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <p className="font-extrabold text-wdcc-oshan uppercase tracking-widest text-lg mb-1">
@@ -370,10 +360,10 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
               </div>
             </div>
           )}
-        </Card>
+        </AdminCard>
 
         {/* ── Connected Identities ── */}
-        <Card>
+        <AdminCard>
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <p className="font-extrabold text-wdcc-oshan uppercase tracking-widest text-lg mb-1">
@@ -523,10 +513,10 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
               )
             })}
           </ul>
-        </Card>
+        </AdminCard>
 
         {/* ── Project Memberships ── */}
-        <Card>
+        <AdminCard>
           <div className="mb-6">
             <p className="font-extrabold text-wdcc-oshan uppercase tracking-widest text-lg mb-1">
               Project Memberships
@@ -634,55 +624,8 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
               </li>
             ))}
           </ul>
-        </Card>
+        </AdminCard>
       </div>
     </>
-  )
-}
-
-/* ─── Helpers ─── */
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <div className="flex items-center gap-2 bg-wdcc-kelvin/10 border border-wdcc-kelvin/20 rounded-xl px-4 py-3 font-mono text-xs text-wdcc-kelvin">
-      ✗ &nbsp;{message}
-    </div>
-  )
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="transition-all duration-300"
-      style={{
-        borderRadius: '24px',
-        border: '3px solid transparent',
-        background: BORDER_DEFAULT,
-        padding: '36px 40px',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = BORDER_HOVER
-        e.currentTarget.style.boxShadow =
-          '0 12px 32px rgba(227,51,163,0.12), 0 4px 12px rgba(7,124,241,0.08)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = BORDER_DEFAULT
-        e.currentTarget.style.boxShadow = 'none'
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function GradientDivider() {
-  return (
-    <div
-      className="h-px mb-6"
-      style={{
-        background:
-          'linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4))',
-      }}
-    />
   )
 }

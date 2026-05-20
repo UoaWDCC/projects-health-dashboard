@@ -14,6 +14,7 @@ import { use, useState, useEffect } from 'react'
 import { IdentityProvider } from '@repo/db'
 import Image from 'next/image'
 import Link from 'next/link'
+import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 
 type PersonIdentity = {
   id: string
@@ -27,11 +28,6 @@ type Person = {
   displayName: string
   identities: PersonIdentity[]
 }
-
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
 
 export default function CreateMemberPage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter()
@@ -226,12 +222,12 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
                 <div className="flex flex-col gap-1.5">
                   <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
-                    Discord username
+                    Discord username / ID
                   </label>
                   <input
                     type="text"
                     name="discordId"
-                    placeholder="e.g. janesmith"
+                    placeholder="e.g. janesmith or 123456789"
                     className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
                   />
                 </div>
