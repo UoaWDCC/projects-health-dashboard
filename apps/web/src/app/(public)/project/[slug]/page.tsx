@@ -19,7 +19,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     <>
       <TeamHeader project={project} />
       {mvp && mvpName && (
-        <div className="px-6 md:px-12 py-6 w-full flex justify-center">
+        <div className="px-6 md:px-12 py-6 w-full flex flex-col items-center gap-4">
+          <h2 className="text-2xl font-bold self-start">Weekly MVP</h2>
           <WeeklyMvp
             name={mvpName}
             avatarUrl={mvp.projectMember.person.imageUrl ?? undefined}
