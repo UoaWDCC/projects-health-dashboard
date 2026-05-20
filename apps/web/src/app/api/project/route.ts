@@ -106,14 +106,16 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const projectName = String(formData.get('projectName') ?? '').trim()
-    const githubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
-    const discordSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
-      .map(String)
-      .map((s) => s.trim())
+    const githubLinks = new Set(
+      (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
+    )
+    const discordSnowflakeIds = new Set(
+      (formData.getAll('discordSnowflakeIds') || []).map(String).map((s) => s.trim())
+    )
     const projectDescription = String(formData.get('projectDescription') ?? '').trim()
     const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
 
-    if (!projectName || githubLinks.length === 0 || discordSnowflakeIds.length === 0) {
+    if (!projectName || githubLinks.size === 0 || discordSnowflakeIds.size === 0) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -172,14 +174,14 @@ export async function POST(request: Request) {
           description: projectDescription || null,
           startedAt: parseDate(projectStartDate),
           repositories: {
-            create: githubLinks.map((githubLink) => ({
+            create: Array.from(githubLinks).map((githubLink) => ({
               owner: githubLink.split('/')[3],
               name: githubLink.split('/')[4],
               installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
             })),
           },
           channels: {
-            create: discordSnowflakeIds.map((discordSnowflakeId) => ({
+            create: Array.from(discordSnowflakeIds).map((discordSnowflakeId) => ({
               externalId: discordSnowflakeId,
               // placeholder value
               name: projectName + ' Discord Channel',
