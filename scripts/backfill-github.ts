@@ -124,7 +124,21 @@ async function backfillRepoPRs(
     (pr) => pr.merged_at && new Date(pr.merged_at) >= fromDate && new Date(pr.merged_at) < toDate
   )
 
-  logger.info(`  ${mergedPRsInRange.length} merged PR(s) in range for ${repo.owner}/${repo.name}`)
+  // Closed-unmerged PRs in range — needed for Pass 3.
+  // Their branch may have been deleted, so Pass 2 branch scanning can't reach them.
+  // We use the PR commits API instead, which preserves commits even after branch deletion.
+  const closedUnmergedPRsInRange = allPRs.filter(
+    (pr) =>
+      pr.state === 'closed' &&
+      !pr.merged_at &&
+      pr.closed_at &&
+      new Date(pr.closed_at) >= fromDate &&
+      new Date(pr.closed_at) < toDate
+  )
+
+  logger.info(
+    `  ${mergedPRsInRange.length} merged PR(s), ${closedUnmergedPRsInRange.length} closed-unmerged PR(s) in range for ${repo.owner}/${repo.name}`
+  )
 
   // Fetch all non-main branches once — reused per week in Pass 2.
   const allBranches = (
@@ -256,8 +270,47 @@ async function backfillRepoPRs(
       }
     }
 
+    // ── Pass 3: closed-unmerged PRs → commits authored this week ──────────────
+    // Branch may be deleted, so we use the PR commits API (not branch scanning).
+    // ingestRepoCommits does NOT cover this case — this is backfill-only coverage.
+    let pass3Count = 0
+    for (const pr of closedUnmergedPRsInRange) {
+      let prCommits: PRCommit[] = []
+      try {
+        prCommits = (await withRateLimit(() =>
+          octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+            owner: repo.owner,
+            repo: repo.name,
+            pull_number: pr.number,
+            per_page: 100,
+          })
+        )) as PRCommit[]
+      } catch (err) {
+        logger.error(`    Failed to fetch commits for closed PR #${pr.number}: ${err}`)
+        continue
+      }
+
+      for (const commit of prCommits) {
+        const authorDate = commit.commit.author?.date
+        if (!authorDate) continue
+        const d = new Date(authorDate)
+        if (d < weekStart || d >= weekEnd) continue
+
+        try {
+          await upsertCommit(repo, octokit, commit.sha, pr.head.ref)
+          commitCount++
+          pass3Count++
+          weekStarts.add(weekStart.toISOString())
+        } catch (err) {
+          logger.error(
+            `    Failed to upsert commit ${commit.sha} from closed PR #${pr.number}: ${err}`
+          )
+        }
+      }
+    }
+
     logger.info(
-      `  Week ${weekStart.toISOString().slice(0, 10)}: Pass 1 — ${mergedThisWeek.length} merged PR(s) | Pass 2 — ${pass2Count} commit(s) from branches`
+      `  Week ${weekStart.toISOString().slice(0, 10)}: Pass 1 — ${mergedThisWeek.length} merged PR(s) | Pass 2 — ${pass2Count} commit(s) from branches | Pass 3 — ${pass3Count} commit(s) from closed PRs`
     )
   }
 
