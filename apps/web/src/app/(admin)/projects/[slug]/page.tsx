@@ -33,11 +33,6 @@ type ProjectMember = {
   person: Person
 }
 
-const BORDER_DEFAULT =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,0.4), rgba(227,51,163,0.4), rgba(7,124,241,0.4)) border-box'
-const BORDER_HOVER =
-  'linear-gradient(white, white) padding-box, linear-gradient(to right, rgba(255,176,95,1), rgba(227,51,163,1), rgba(7,124,241,1)) border-box'
-
 const fetchMembers = async (slug: string): Promise<ProjectMember[]> => {
   try {
     const response = await fetch(`/api/project/${slug}/members`)
