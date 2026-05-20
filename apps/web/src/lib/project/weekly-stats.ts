@@ -1,5 +1,45 @@
 import { db } from '@repo/db'
 
+export async function getProjectWeeklyMvp(slug: string) {
+  const latest = await db.memberWeeklyContribution.findFirst({
+    orderBy: { weekStart: 'desc' },
+    select: { weekStart: true },
+  })
+  if (!latest) return null
+
+  const contributions = await db.memberWeeklyContribution.findMany({
+    where: {
+      weekStart: latest.weekStart,
+      projectMember: { project: { slug } },
+    },
+    select: {
+      linesAdded: true,
+      commits: true,
+      projectMember: {
+        select: {
+          displayName: true,
+          person: { select: { displayName: true, imageUrl: true } },
+        },
+      },
+    },
+  })
+
+  if (contributions.length === 0) return null
+
+  return contributions.reduce((mvp, c) => {
+    const displayName = c.projectMember.displayName ?? c.projectMember.person.displayName
+    const mvpName = mvp.projectMember.displayName ?? mvp.projectMember.person.displayName
+    if (
+      c.linesAdded > mvp.linesAdded ||
+      (c.linesAdded === mvp.linesAdded && c.commits > mvp.commits) ||
+      (c.linesAdded === mvp.linesAdded && c.commits === mvp.commits && displayName < mvpName)
+    ) {
+      return c
+    }
+    return mvp
+  })
+}
+
 export interface ProjectWeeklyStats {
   dates: string[]
   commits: number[]
