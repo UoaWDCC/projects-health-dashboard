@@ -6,27 +6,11 @@
  * into weekly buckets. After raw facts are loaded, WeeklyStats and MemberWeeklyContribution
  * are recomputed for every distinct week that the data spans.
  *
- * Approach:
- *   1. Fetch all PRs with only a `from` filter (no `to` — a PR merged in week X+2 may contain
- *      commits authored in week X).
- *   2. For each PR (merged, closed-unmerged, or open), fetch all its commits via the PR commits
- *      API. This works even for deleted branches. Filter commits into [fromDate, toDate) in memory.
- *   3. Fetch all non-main branches, get all commits since `fromDate` (one API call per branch,
- *      not one per week × branch). Filter into [fromDate, toDate) in memory.
- *   4. Recompute WeeklyStats for every distinct week touched by the ingested commits.
- *
- * PR date attribution:
- *   - Merged PRs:   PRFact upserted when merged_at ∈ [fromDate, toDate)
- *   - All PRs:      commits attributed by commit author date
- *
  * Run with:
  *   pnpm backfill:github:dev
  *   pnpm backfill:github:prod
  *   pnpm backfill:github:dev -- --from YYYY-MM-DD [--to YYYY-MM-DD]
  *   pnpm backfill:github:prod -- --from YYYY-MM-DD [--to YYYY-MM-DD]
- *
- * --from  Start date — snapped to Monday 00:00 UTC of the containing week. Required.
- * --to    End date   — snapped to Monday 00:00 UTC of the following week (exclusive). Defaults to today.
  */
 
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
@@ -103,12 +87,11 @@ async function backfillRepoPRs(
     })
   )) as ListedPR[]
 
-  // Apply only a `from` filter — no `to` filter — because a PR merged in week X+2
-  // may contain commits authored in week X.
+  // inlcuding all open PRs, merged PRs, and closed-unmerged PRs
   const relevantPRs = allPRs.filter((pr) => {
     if (pr.merged_at) return new Date(pr.merged_at) >= fromDate
     if (pr.state === 'closed' && pr.closed_at) return new Date(pr.closed_at) >= fromDate
-    return true // open PRs: always include; commits dated outside range are filtered below
+    return true // commits dated outside range are filtered below
   })
 
   logger.info(`  ${relevantPRs.length} relevant PR(s) for ${repo.owner}/${repo.name}`)
@@ -130,9 +113,8 @@ async function backfillRepoPRs(
   let prCount = 0
   let commitCount = 0
 
-  // ── Pass 1: All relevant PRs → PRFact (merged in range) + all their commits ──────────────
+  // ── Pass 1: All relevant PRs ──────────────
   // Using the PR commits API covers deleted branches (GitHub preserves commits after deletion).
-  // This replaces the old per-week Pass 1 (merged PRs) and Pass 3 (closed-unmerged PRs).
   for (const pr of relevantPRs) {
     const { data: fullPr } = (await withRateLimit(() =>
       octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
@@ -225,10 +207,9 @@ async function backfillRepoPRs(
     }
   }
 
-  // ── Pass 2: All branches → one API call per branch (not one per week × branch) ─────────────
+  // ── Pass 2: All branches ─────────────
   // Fetch all commits since fromDate; filter to [fromDate, toDate) in memory.
   // No `until` filter — a branch may be created after toDate but contain earlier commits.
-  // Overlaps with Pass 1 are deduplicated by the (repoId, sha) unique constraint.
   for (const branch of allBranches) {
     const commits = (await withRateLimit(() =>
       octokit.paginate('GET /repos/{owner}/{repo}/commits', {
