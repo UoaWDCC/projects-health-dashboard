@@ -1,4 +1,4 @@
-import { db } from '@repo/db'
+import { db, Prisma } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 
 // API route for getting all members of a project
@@ -69,6 +69,80 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       targetDisplayName = existingPerson.displayName
     }
 
+    // Resolve GitHub username → numeric ID
+    let githubNumericId: string | null = null
+    if (githubId) {
+      try {
+        const githubRes = await fetch(`https://api.github.com/users/${githubId}`, {
+          headers: { 'User-Agent': 'projects-health-dashboard' },
+        })
+        if (!githubRes.ok) {
+          return Response.json(
+            {
+              error: `GitHub user "${githubId}" not found. Please check the username and try again.`,
+            },
+            { status: 400 }
+          )
+        }
+        const githubData = await githubRes.json()
+        if (!githubData?.id) {
+          return Response.json(
+            { error: `Could not resolve GitHub numeric ID for user "${githubId}".` },
+            { status: 400 }
+          )
+        }
+        githubNumericId = String(githubData.id)
+      } catch {
+        return Response.json(
+          { error: `Failed to resolve GitHub user "${githubId}". Please try again later.` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Resolve Discord username → snowflake via guild member search
+    let discordSnowflake: string | null = null
+    if (discordId) {
+      const guildId = process.env.DISCORD_GUILD_ID
+      if (!guildId) {
+        return Response.json(
+          { error: 'DISCORD_GUILD_ID is not configured on the server.' },
+          { status: 500 }
+        )
+      }
+      try {
+        const discordRes = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(discordId)}&limit=10`,
+          { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+        )
+        if (!discordRes.ok) {
+          return Response.json(
+            { error: `Failed to search Discord guild members. Check the bot token and guild ID.` },
+            { status: 400 }
+          )
+        }
+        const members = await discordRes.json()
+        const match = members.find(
+          (m: { user: { username: string; id: string } }) =>
+            m.user.username.toLowerCase() === discordId.toLowerCase()
+        )
+        if (!match) {
+          return Response.json(
+            {
+              error: `Discord user "${discordId}" not found in the server. They must be a member of the Discord server.`,
+            },
+            { status: 400 }
+          )
+        }
+        discordSnowflake = String(match.user.id)
+      } catch {
+        return Response.json(
+          { error: `Failed to resolve Discord user "${discordId}". Please try again later.` },
+          { status: 400 }
+        )
+      }
+    }
+
     const newMember = await db.$transaction(async (tx) => {
       // Scenario 2: Create a brand new person (No personId provided)
       if (!targetPersonId) {
@@ -78,11 +152,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           externalId: string
           username?: string
         }[] = []
-        if (discordId) {
-          identitiesToCreate.push({ provider: 'DISCORD', externalId: discordId })
+        if (discordId && discordSnowflake) {
+          identitiesToCreate.push({
+            provider: 'DISCORD',
+            externalId: discordSnowflake,
+            username: discordId,
+          })
         }
-        if (githubId) {
-          identitiesToCreate.push({ provider: 'GITHUB', externalId: githubId, username: githubId })
+        if (githubId && githubNumericId) {
+          identitiesToCreate.push({
+            provider: 'GITHUB',
+            externalId: githubNumericId,
+            username: githubId,
+          })
         }
 
         const newPerson = await tx.person.create({
@@ -149,6 +231,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     return Response.json(newMember, { status: 201 })
   } catch (error) {
     console.error('Error adding member:', error)
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return Response.json(
+        {
+          error:
+            'This GitHub or Discord account is already linked to another person. Select them from the existing people list instead.',
+        },
+        { status: 409 }
+      )
+    }
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to add member'
     const status =
