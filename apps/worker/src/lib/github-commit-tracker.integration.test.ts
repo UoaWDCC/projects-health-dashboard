@@ -42,12 +42,24 @@ function makeCommitData(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function setupOctokit(paginateResponses: unknown[][], commitResponses: unknown[]) {
+function setupOctokit(
+  paginateResponses: unknown[][],
+  commitResponses: unknown[],
+  defaultBranch = 'main'
+) {
   const mockPaginate = vi.fn()
   const mockRequest = vi.fn()
 
   paginateResponses.forEach((res) => mockPaginate.mockResolvedValueOnce(res))
-  commitResponses.forEach((res) => mockRequest.mockResolvedValueOnce({ data: res }))
+
+  let commitIdx = 0
+  mockRequest.mockImplementation((route: string) => {
+    if (route === 'GET /repos/{owner}/{repo}') {
+      return Promise.resolve({ data: { default_branch: defaultBranch } })
+    }
+    const res = commitResponses[commitIdx++]
+    return Promise.resolve({ data: res })
+  })
 
   const mockOctokit = {
     paginate: mockPaginate,
@@ -162,15 +174,20 @@ describe('github-commit-tracker (integration)', () => {
   })
 
   describe('ingestRepoCommits', () => {
-    it('fetches commits only from non-main/master branches', async () => {
+    it('fetches commits only from non-default branches via the compare endpoint', async () => {
       const repo = await seedRepo()
       const identity = await seedIdentity(111, 'dev1')
       vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
 
       const { mockPaginate } = setupOctokit(
         [
-          [{ name: 'main' }, { name: 'master' }, { name: 'feature-branch' }],
-          [{ sha: 'feature-commit-1' }],
+          [{ name: 'main' }, { name: 'feature-branch' }],
+          [
+            {
+              sha: 'feature-commit-1',
+              commit: { author: { date: '2026-05-05T10:00:00Z' } },
+            },
+          ],
         ],
         [
           makeCommitData({
@@ -185,8 +202,8 @@ describe('github-commit-tracker (integration)', () => {
 
       expect(mockPaginate).toHaveBeenCalledTimes(2)
       const paginateCalls = mockPaginate.mock.calls
-      expect(paginateCalls[1][0]).toBe('GET /repos/{owner}/{repo}/commits')
-      expect(paginateCalls[1][1]).toMatchObject({ sha: 'feature-branch' })
+      expect(paginateCalls[1][0]).toBe('GET /repos/{owner}/{repo}/compare/{basehead}')
+      expect(paginateCalls[1][1]).toMatchObject({ basehead: 'main...feature-branch' })
 
       const savedCommit = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'feature-commit-1' } },
@@ -200,8 +217,20 @@ describe('github-commit-tracker (integration)', () => {
       const identity = await seedIdentity(333, 'newdev')
       vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
 
-      const { mockPaginate } = setupOctokit(
-        [[{ name: 'feature' }], [{ sha: 'new-commit' }]],
+      setupOctokit(
+        [
+          [{ name: 'feature' }],
+          [
+            {
+              sha: 'new-commit',
+              commit: { author: { date: '2026-05-07T10:00:00Z' } },
+            },
+            {
+              sha: 'old-commit',
+              commit: { author: { date: '2026-01-01T10:00:00Z' } },
+            },
+          ],
+        ],
         [
           makeCommitData({
             sha: 'new-commit',
@@ -213,13 +242,6 @@ describe('github-commit-tracker (integration)', () => {
 
       const totalCommits = await ingestRepoCommits(repo, weekStart, weekEnd)
 
-      expect(mockPaginate).toHaveBeenCalledWith(
-        'GET /repos/{owner}/{repo}/commits',
-        expect.objectContaining({
-          since: weekStart.toISOString(),
-          until: weekEnd.toISOString(),
-        })
-      )
       expect(totalCommits).toBe(1)
 
       const savedCommit = await db.commitFact.findUnique({
@@ -227,6 +249,11 @@ describe('github-commit-tracker (integration)', () => {
       })
       expect(savedCommit).not.toBeNull()
       expect(savedCommit!.authorIdentityId).toBe(identity.id)
+
+      const skippedCommit = await db.commitFact.findUnique({
+        where: { repoId_sha: { repoId: repo.id, sha: 'old-commit' } },
+      })
+      expect(skippedCommit).toBeNull()
     })
 
     it('handles repos with no commits in the window', async () => {
