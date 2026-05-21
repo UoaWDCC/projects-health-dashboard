@@ -109,13 +109,30 @@ export async function POST(request: Request) {
     const githubLinks = new Set(
       (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
     )
-    const discordSnowflakeIds = new Set(
-      (formData.getAll('discordSnowflakeIds') || []).map(String).map((s) => s.trim())
-    )
+    const rawSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
+      .map(String)
+      .map((s) => s.trim())
+    const rawChannelNames = (formData.getAll('discordChannelNames') || [])
+      .map(String)
+      .map((s) => s.trim())
+
+    if (rawSnowflakeIds.length !== rawChannelNames.length) {
+      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
+    const discordChannels = new Map<string, string>()
+    for (let i = 0; i < rawSnowflakeIds.length; i++) {
+      const id = rawSnowflakeIds[i]
+      const name = rawChannelNames[i]
+      if (!id || !name) continue
+      if (!discordChannels.has(id)) discordChannels.set(id, name)
+    }
+
     const projectDescription = String(formData.get('projectDescription') ?? '').trim()
     const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
 
-    if (!projectName || githubLinks.size === 0 || discordSnowflakeIds.size === 0) {
+    if (!projectName || githubLinks.size === 0 || discordChannels.size === 0) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -149,7 +166,7 @@ export async function POST(request: Request) {
     }
 
     // discord validation
-    for (const snowflakeId of discordSnowflakeIds) {
+    for (const snowflakeId of discordChannels.keys()) {
       const discordError = await validateSnowflakeExists(snowflakeId)
       if (discordError) return discordError
 
@@ -181,10 +198,9 @@ export async function POST(request: Request) {
             })),
           },
           channels: {
-            create: Array.from(discordSnowflakeIds).map((discordSnowflakeId) => ({
-              externalId: discordSnowflakeId,
-              // placeholder value
-              name: projectName + ' Discord Channel',
+            create: Array.from(discordChannels, ([externalId, name]) => ({
+              externalId,
+              name,
             })),
           },
         },
