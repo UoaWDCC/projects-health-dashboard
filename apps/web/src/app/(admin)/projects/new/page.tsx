@@ -272,14 +272,6 @@ export default function CreateProjectPage() {
                 </button>
               </div>
 
-              {/* Hidden inputs for first/required channel pair (server still reads single channel) */}
-              <input
-                type="hidden"
-                name="discordSnowflakeId"
-                value={channels[0]?.snowflakeId ?? ''}
-              />
-              <input type="hidden" name="discordChannelName" value={channels[0]?.name ?? ''} />
-
               {channels.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
                   {channels.map((c, i) => (
