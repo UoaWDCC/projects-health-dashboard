@@ -1,5 +1,6 @@
 import { db, Prisma } from '@repo/db'
 import { hasRole } from '@/lib/auth'
+import { addIdentitySchema } from '@/lib/schemas/admin'
 
 export async function POST(
   request: Request,
@@ -13,15 +14,13 @@ export async function POST(
     const { personId } = await params
     const body = await request.json()
 
-    const { provider, username } = body
-
-    if (!provider || !username) {
-      return Response.json({ error: 'Provider and username are required' }, { status: 400 })
+    const parsed = addIdentitySchema.safeParse(body)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
     }
 
-    if (provider !== 'GITHUB' && provider !== 'DISCORD') {
-      return Response.json({ error: 'Invalid provider' }, { status: 400 })
-    }
+    const { provider, externalId, username } = parsed.data
 
     const trimmed = String(username).trim()
     let resolvedExternalId: string = trimmed
@@ -99,8 +98,8 @@ export async function POST(
       data: {
         personId,
         provider,
-        externalId: resolvedExternalId,
-        username: resolvedUsername,
+        externalId,
+        ...(username ? { username } : {}),
       },
     })
 

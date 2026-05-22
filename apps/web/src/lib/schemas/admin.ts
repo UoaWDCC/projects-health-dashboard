@@ -13,7 +13,7 @@ export const githubRepoUrl = z
 export const discordSnowflake = z
   .string()
   .min(1, 'Snowflake ID is required')
-  .regex(/^\d{17,19}$/, 'Must be a 17–19 digit snowflake ID')
+  .regex(/^\d{17,19}$/, 'Must be a 17-19 digit snowflake ID')
 
 // --- Project ---
 
@@ -23,8 +23,7 @@ export const createProjectSchema = z.object({
   projectStartDate: z
     .string()
     .regex(/^\d{4}-\d{2}$/, 'Must be in YYYY-MM format')
-    .or(z.literal(''))
-    .optional(),
+    .or(z.literal('')),
   githubLinks: z.array(githubRepoUrl).min(1, 'At least one repository is required'),
   discordSnowflakeIds: z.array(discordSnowflake).min(1, 'At least one Discord channel is required'),
 })
@@ -52,7 +51,7 @@ export const addMemberSchema = z
   })
 
 export const editMembershipSchema = z.object({
-  displayName: z.string().nullable().optional(),
+  displayName: z.string().trim().nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -78,8 +77,8 @@ export const addIdentitySchema = z.discriminatedUnion('provider', [
 ])
 
 export const editIdentitySchema = z.object({
-  externalId: z.string().min(1, 'External ID cannot be empty').optional(),
-  username: z.string().nullable().optional(),
+  externalId: z.string().trim().min(1, 'External ID cannot be empty').optional(),
+  username: z.string().trim().nullable().optional(),
 })
 
 // --- Roles ---

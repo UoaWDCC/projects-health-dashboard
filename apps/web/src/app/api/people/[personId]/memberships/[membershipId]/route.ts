@@ -1,5 +1,6 @@
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
+import { editMembershipSchema } from '@/lib/schemas/admin'
 
 export async function PATCH(
   request: Request,
@@ -25,15 +26,19 @@ export async function PATCH(
       )
     }
 
-    const { displayName, isActive } = body
+    const parsed = editMembershipSchema.safeParse(body)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    const { displayName, isActive } = parsed.data
 
     const updatedMembership = await db.projectMember.update({
       where: { id: membershipId },
       data: {
-        ...(displayName !== undefined && {
-          displayName: displayName ? String(displayName).trim() : null,
-        }),
-        ...(isActive !== undefined && { isActive: Boolean(isActive) }),
+        ...(displayName !== undefined && { displayName: displayName || null }),
+        ...(isActive !== undefined && { isActive }),
       },
     })
 

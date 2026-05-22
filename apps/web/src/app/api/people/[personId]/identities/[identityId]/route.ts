@@ -5,6 +5,7 @@ import {
   resolveDiscordIdentity,
   IdentityResolutionError,
 } from '@/lib/identity/resolve'
+import { editIdentitySchema } from '@/lib/schemas/admin'
 
 export async function PATCH(
   request: Request,
@@ -29,25 +30,31 @@ export async function PATCH(
       )
     }
 
-    const { username } = body
+  const parsed = editIdentitySchema.safeParse(body)
+  if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+    return Response.json({ error: message }, { status: 400 })
+  }
 
-    let resolvedExternalId: string | undefined
-    let resolvedUsername: string | undefined
+  const { username } = parsed.data
 
-    if (username !== undefined) {
-      const trimmed = username ? String(username).trim() : null
-      if (identity.provider === 'GITHUB' && trimmed) {
-        const resolved = await resolveGithubIdentity(trimmed)
-        resolvedExternalId = resolved.externalId
-        resolvedUsername = resolved.username
-      } else if (identity.provider === 'DISCORD' && trimmed) {
-        const resolved = await resolveDiscordIdentity(trimmed)
-        resolvedExternalId = resolved.externalId
-        resolvedUsername = resolved.username
-      } else {
-        resolvedUsername = trimmed ?? undefined
-      }
+  let resolvedExternalId: string | undefined
+  let resolvedUsername: string | undefined
+
+  if (username !== undefined) {
+    const trimmed = username ? String(username).trim() : null
+    if (identity.provider === 'GITHUB' && trimmed) {
+      const resolved = await resolveGithubIdentity(trimmed)
+      resolvedExternalId = resolved.externalId
+      resolvedUsername = resolved.username
+    } else if (identity.provider === 'DISCORD' && trimmed) {
+      const resolved = await resolveDiscordIdentity(trimmed)
+      resolvedExternalId = resolved.externalId
+      resolvedUsername = resolved.username
+    } else {
+      resolvedUsername = trimmed ?? undefined
     }
+  }
 
     const updatedIdentity = await db.personIdentity.update({
       where: { id: identityId },
