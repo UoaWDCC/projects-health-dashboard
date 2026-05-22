@@ -87,7 +87,7 @@ async function backfillRepoPRs(
     })
   )) as ListedPR[]
 
-  // inlcuding all open PRs, merged PRs, and closed-unmerged PRs
+  // including all open PRs, merged PRs, and closed-unmerged PRs
   const relevantPRs = allPRs.filter((pr) => {
     if (pr.merged_at) return new Date(pr.merged_at) >= fromDate
     if (pr.state === 'closed' && pr.closed_at) return new Date(pr.closed_at) >= fromDate
