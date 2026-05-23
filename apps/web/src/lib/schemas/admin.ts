@@ -30,7 +30,7 @@ export const createProjectSchema = z.object({
 
 // --- Member ---
 
-const optionalUrl = z.union([z.url('Must be a valid URL'), z.literal('')]).optional()
+const optionalUrl = z.union([z.url({ error: 'Must be a valid URL' }), z.literal('')]).optional()
 
 export const addMemberSchema = z
   .object({
@@ -59,7 +59,7 @@ export const editMembershipSchema = z.object({
 
 export const updatePersonSchema = z.object({
   displayName: z.string().min(1, 'Display name cannot be empty').optional(),
-  imageUrl: z.union([z.url('Must be a valid URL'), z.literal(''), z.null()]).optional(),
+  imageUrl: z.union([z.url({ error: 'Must be a valid URL' }), z.literal(''), z.null()]).optional(),
   forceCascade: z.boolean().optional(),
 })
 
@@ -85,10 +85,7 @@ export const editIdentitySchema = z.object({
 
 export const rolesSchema = z
   .object({
-    email: z
-      .string()
-      .min(1, 'Email is required')
-      .refine((val) => z.email().safeParse(val).success, 'Invalid email address'),
+    email: z.email('Invalid email address'),
     adminRole: z.boolean().optional(),
     execRole: z.boolean().optional(),
   })
