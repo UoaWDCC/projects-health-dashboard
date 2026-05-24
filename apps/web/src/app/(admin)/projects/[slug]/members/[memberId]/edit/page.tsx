@@ -27,16 +27,14 @@ export default function EditMemberPage({
   const [success, setSuccess] = useState(false)
   const [confirmUnlink, setConfirmUnlink] = useState(false)
 
-  // TODO: Implement new API route to fetch single member/membership
   useEffect(() => {
-    fetch(`/api/project/${slug}/members`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: ProjectMember[]) => {
-        const found = data.find((m) => m.id === memberId)
-        if (found) {
-          setMembership(found)
-          setDisplayName(found.displayName ?? '')
-          setIsActive(found.isActive)
+    fetch(`/api/projects/${slug}/members/${memberId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: ProjectMember | null) => {
+        if (data) {
+          setMembership(data)
+          setDisplayName(data.displayName ?? '')
+          setIsActive(data.isActive)
         }
         setLoading(false)
       })
