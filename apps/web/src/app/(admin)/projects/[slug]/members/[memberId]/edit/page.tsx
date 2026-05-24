@@ -63,18 +63,20 @@ export default function EditMemberPage({
     setTimeout(() => router.push(`/projects/${slug}`), 1200)
   }
 
-  // TO BE IMPLEMENTED
   const handleUnlink = async () => {
     setError(null)
-    // const res = await fetch(`/api/people/${membership?.personId}/memberships/${memberId}`, {
-    //   method: 'DELETE',
-    // })
-    // if (!res.ok) {
-    //   const data = await res.json().catch(() => ({}))
-    //   setError(data?.error ?? 'Failed to unlink member')
-    //   setConfirmUnlink(false)
-    //   return
-    // }
+
+    const res = await fetch(`/api/people/${membership?.personId}/memberships/${memberId}`, {
+      method: 'DELETE',
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data?.error ?? 'Failed to unlink member')
+      setConfirmUnlink(false)
+      return
+    }
+
     router.push(`/projects/${slug}`)
   }
 
@@ -294,8 +296,8 @@ export default function EditMemberPage({
               <p className="font-mono text-[11px] text-wdcc-grey-light mt-1">
                 Removes{' '}
                 <span className="text-wdcc-oshan">{membership.displayName ?? memberId}</span> from{' '}
-                <span className="text-wdcc-oshan">{slug}</span>. Their person record and identities
-                are preserved.
+                <span className="text-wdcc-oshan">{slug}</span>. If this is their only project,
+                their person record and identities will also be deleted.
               </p>
             </div>
 
