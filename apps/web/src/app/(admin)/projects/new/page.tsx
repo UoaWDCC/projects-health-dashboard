@@ -12,8 +12,9 @@ export default function CreateProjectPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [repos, setRepos] = useState<string[]>([])
   const [repoInput, setRepoInput] = useState('')
-  const [channels, setChannels] = useState<string[]>([])
-  const [channelInput, setChannelInput] = useState('')
+  const [channels, setChannels] = useState<{ snowflakeId: string; name: string }[]>([])
+  const [channelIdInput, setChannelIdInput] = useState('')
+  const [channelNameInput, setChannelNameInput] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageName, setImageName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -27,9 +28,12 @@ export default function CreateProjectPage() {
   }
 
   const addChannel = () => {
-    if (channelInput.trim()) {
-      setChannels((prev) => [...prev, channelInput.trim()])
-      setChannelInput('')
+    const snowflakeId = channelIdInput.trim()
+    const name = channelNameInput.trim()
+    if (snowflakeId && name) {
+      setChannels((prev) => [...prev, { snowflakeId, name }])
+      setChannelIdInput('')
+      setChannelNameInput('')
     }
   }
 
@@ -48,7 +52,10 @@ export default function CreateProjectPage() {
 
     const formData = new FormData(event.currentTarget)
     repos.forEach((r) => formData.append('githubLinks', r))
-    channels.forEach((c) => formData.append('discordSnowflakeIds', c))
+    channels.forEach((c) => {
+      formData.append('discordSnowflakeIds', c.snowflakeId)
+      formData.append('discordChannelNames', c.name)
+    })
 
     const response = await fetch('/api/project', { method: 'POST', body: formData })
 
@@ -216,34 +223,54 @@ export default function CreateProjectPage() {
               Discord Channels
             </SectionLabel>
 
-            <div className="flex flex-col gap-2">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
-                Snowflake ID <span className="text-wdcc-kelvin">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={channelInput}
-                    onChange={(e) => setChannelInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addChannel())}
-                    placeholder="e.g. 1234567890123456789"
-                    className="w-full font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
-                  />
-                  <p className="font-mono text-[11px] text-wdcc-grey-light mt-1">
-                    Right-click a channel in Discord → Copy Channel ID
-                  </p>
+            <div className="flex flex-col gap-3">
+              <p className="font-mono text-[11px] text-wdcc-grey-light">
+                Each channel needs both a Snowflake ID and a name — click{' '}
+                <span className="text-wdcc-kelvin font-semibold">Add Channel</span> to save the
+                pair.
+              </p>
+
+              <div className="rounded-2xl border-[1.5px] border-dashed border-wdcc-kelvin/40 bg-wdcc-kelvin/5 p-4 flex flex-col gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
+                      Snowflake ID <span className="text-wdcc-kelvin">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={channelIdInput}
+                      onChange={(e) => setChannelIdInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addChannel())}
+                      placeholder="e.g. 1234567890123456789"
+                      className="w-full font-mono text-sm text-wdcc-oshan bg-white border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
+                    />
+                    <p className="font-mono text-[11px] text-wdcc-grey-light">
+                      Right-click a channel in Discord → Copy Channel ID
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
+                      Channel Name <span className="text-wdcc-kelvin">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={channelNameInput}
+                      onChange={(e) => setChannelNameInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addChannel())}
+                      placeholder="e.g. general"
+                      className="w-full font-mono text-sm text-wdcc-oshan bg-white border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
+                    />
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={addChannel}
-                  className="font-mono text-xs text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 transition-all self-start mt-0 py-2.5"
+                  disabled={!channelIdInput.trim() || !channelNameInput.trim()}
+                  className="self-end font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 disabled:opacity-40 disabled:cursor-not-allowed border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
                 >
-                  Add
+                  + Add Channel
                 </button>
               </div>
-              {/* Hidden input for first/required discord ID */}
-              <input type="hidden" name="discordSnowflakeId" value={channels[0] ?? ''} />
 
               {channels.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
@@ -253,7 +280,7 @@ export default function CreateProjectPage() {
                       color="pink"
                       onRemove={() => setChannels((prev) => prev.filter((_, j) => j !== i))}
                     >
-                      {c}
+                      #{c.name} · {c.snowflakeId}
                     </Chip>
                   ))}
                 </div>
