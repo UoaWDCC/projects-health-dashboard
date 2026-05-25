@@ -90,6 +90,12 @@ These tables are written by the worker and read by the web app. The web app does
 
 `sentimentScore` is denormalized from `WeeklySummary` into `WeeklyStats` so that health score and sentiment can be graphed together without a join.
 
+`WeeklyStats` also carries several fields that are not visible in the table above:
+
+- **Cumulative totals** (`commitsCumulative`, `prsMergedCumulative`, `discordMessagesCumulative`, `linesAddedCumulative`, `linesRemovedCumulative`) — running totals from project start, written alongside the `*Avg4w` rolling-average fields each week. Divide by weeks elapsed for a lifetime average.
+- **`algorithmVersion`** — a string written whenever health/velocity scores are computed. Used to detect rows that were scored with old weights so they can be recomputed on demand without a full re-ingestion.
+- **`mvpMemberId` / `mvpMember`** — FK to the `ProjectMember` with the highest lines-changed for that week. Denormalized so the leaderboard can be served without an extra join.
+
 ### Layer 7 — Live / Ops
 
 `LiveCommit` is a ring-buffer capped at 10 rows. Fed by the GitHub webhook, not the weekly cron. The oldest row is deleted whenever a new one would push the count above 10.
@@ -98,7 +104,7 @@ These tables are written by the worker and read by the web app. The web app does
 
 ## Weekly time windows
 
-All `weekStart` fields store **Monday 00:00 UTC**. This is the convention used across every table that has a weekly time dimension. The cron fires on Sunday, so the data it writes refers to the Monday–Sunday week just completed.
+All `weekStart` fields store **Monday 00:00 UTC**. This is the convention used across every table that has a weekly time dimension. The cron fires on Monday at 00:00 UTC and processes the _previous_ Monday–Sunday week — so the `weekStart` it writes is seven days in the past relative to the fire time.
 
 ## Connection strings
 
