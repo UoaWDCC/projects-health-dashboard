@@ -49,6 +49,10 @@ RUN chown -R nextjs:nodejs apps/web/.next
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
+COPY --from=builder --chown=nextjs:nodejs \
+  /app/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma \
+  ./node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma
+
 USER nextjs
 
 EXPOSE 3000
