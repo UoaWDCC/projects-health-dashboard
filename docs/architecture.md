@@ -68,7 +68,7 @@ graph TD
 
 ## Weekly data pipeline
 
-The worker fires one cron job every Monday at 00:00 UTC. The three jobs always run in this order:
+The worker fires one cron job every Monday at 00:00 UTC and processes the previous Monday–Sunday week. A `Project` can have multiple `GitHubRepository` records; the GitHub job loops over all repos per project. The three jobs always run in this order:
 
 ```mermaid
 sequenceDiagram
@@ -81,7 +81,7 @@ sequenceDiagram
     Cron->>GitHub Job: start
     Cron->>Discord Job: start (parallel)
 
-    GitHub Job->>DB: write CommitFact, PRFact
+    GitHub Job->>DB: write CommitFact, PRFact (per repo — one project may have many)
     Discord Job->>DB: write DiscordWeeklyAggregate, DiscordIdentityWeeklyCount
 
     GitHub Job-->>LLM Job: done signal
