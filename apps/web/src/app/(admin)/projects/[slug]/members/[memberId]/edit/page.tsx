@@ -28,22 +28,30 @@ export default function EditMemberPage({
   const [confirmUnlink, setConfirmUnlink] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/projects/${slug}/members/${memberId}`)
-      .then((res) => (res.ok ? res.json() : null))
+    fetch(`/api/project/${slug}/members/${memberId}`)
+      .then((res) => {
+        if (!res.ok) {
+          setError('Failed to load membership')
+          return null
+        }
+
+        return res.json()
+      })
       .then((data: ProjectMember | null) => {
         if (data) {
           setMembership(data)
           setDisplayName(data.displayName ?? '')
           setIsActive(data.isActive)
         }
-        setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => setError('Failed to load membership'))
+      .finally(() => setLoading(false))
   }, [slug, memberId])
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
+
     const res = await fetch(`/api/people/${membership?.personId}/memberships/${memberId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -52,11 +60,13 @@ export default function EditMemberPage({
         isActive,
       }),
     })
+
     if (!res.ok) {
       const data = await res.json()
       setError(data?.error ?? 'Failed to update membership')
       return
     }
+
     setSuccess(true)
     setTimeout(() => router.push(`/projects/${slug}`), 1200)
   }
