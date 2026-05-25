@@ -1,3 +1,4 @@
+import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
@@ -5,6 +6,10 @@ const nextConfig: NextConfig = {
     useCache: true,
   },
   output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '../../'),
+  outputFileTracingIncludes: {
+    '/**': ['../../node_modules/.pnpm/@prisma+client*/**/*.node'],
+  },
   transpilePackages: ['@repo/db'],
   images: {
     remotePatterns: [
