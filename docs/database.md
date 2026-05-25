@@ -84,9 +84,9 @@ These tables are written by the worker and read by the web app. The web app does
 | Model                      | Written by            | Contains                                                                                                                                                                                                  |
 | -------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WeeklyStats`              | GitHub job            | Raw counts; 4-week rolling averages; health/velocity/sentiment scores; cumulative totals from project start; `algorithmVersion` for detecting stale scores; `mvpMember` (highest lines-changed that week) |
-| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member, per-project, per-week counts                                                                                                                                                                  |
-| `WeeklySummary`            | LLM job               | Narrative summary + sentiment score per project-week                                                                                                                                                      |
-| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview, one row per week                                                                                                                                                        |
+| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member; per-project; per-week counts                                                                                                                                                                  |
+| `WeeklySummary`            | LLM job               | Narrative summary; sentiment score per project-week                                                                                                                                                       |
+| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview; one row per week                                                                                                                                                        |
 
 `sentimentScore` is denormalized from `WeeklySummary` into `WeeklyStats` so that health score and sentiment can be graphed together without a join.
 
