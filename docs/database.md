@@ -81,20 +81,14 @@ Discord messages are never stored. The worker fetches them, aggregates counts in
 
 These tables are written by the worker and read by the web app. The web app does not read raw facts directly.
 
-| Model                      | Written by            | Contains                                                                |
-| -------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| `WeeklyStats`              | GitHub job            | Raw counts + 4-week rolling averages + health/velocity/sentiment scores |
-| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member, per-project, per-week counts                                |
-| `WeeklySummary`            | LLM job               | Narrative summary + sentiment score per project-week                    |
-| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview, one row per week                      |
+| Model                      | Written by            | Contains                                                                                                                                                                                                  |
+| -------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WeeklyStats`              | GitHub job            | Raw counts; 4-week rolling averages; health/velocity/sentiment scores; cumulative totals from project start; `algorithmVersion` for detecting stale scores; `mvpMember` (highest lines-changed that week) |
+| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member, per-project, per-week counts                                                                                                                                                                  |
+| `WeeklySummary`            | LLM job               | Narrative summary + sentiment score per project-week                                                                                                                                                      |
+| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview, one row per week                                                                                                                                                        |
 
 `sentimentScore` is denormalized from `WeeklySummary` into `WeeklyStats` so that health score and sentiment can be graphed together without a join.
-
-`WeeklyStats` also carries several fields that are not visible in the table above:
-
-- **Cumulative totals** (`commitsCumulative`, `prsMergedCumulative`, `discordMessagesCumulative`, `linesAddedCumulative`, `linesRemovedCumulative`) — running totals from project start, written alongside the `*Avg4w` rolling-average fields each week. Divide by weeks elapsed for a lifetime average.
-- **`algorithmVersion`** — a string written whenever health/velocity scores are computed. Used to detect rows that were scored with old weights so they can be recomputed on demand without a full re-ingestion.
-- **`mvpMemberId` / `mvpMember`** — FK to the `ProjectMember` with the highest lines-changed for that week. Denormalized so the leaderboard can be served without an extra join.
 
 ### Layer 7 — Live / Ops
 
