@@ -66,19 +66,21 @@ export async function DELETE(
       )
     }
 
-    await db.projectMember.delete({
-      where: { id: membershipId },
-    })
-
-    const remainingMemberships = await db.projectMember.count({
-      where: { personId },
-    })
-
-    if (remainingMemberships === 0) {
-      await db.person.delete({
-        where: { id: personId },
+    await db.$transaction(async (tx) => {
+      await tx.projectMember.delete({
+        where: { id: membershipId },
       })
-    }
+
+      const remainingMemberships = await tx.projectMember.count({
+        where: { personId },
+      })
+
+      if (remainingMemberships === 0) {
+        await tx.person.delete({
+          where: { id: personId },
+        })
+      }
+    })
 
     return new Response(null, { status: 204 })
   } catch (error) {
