@@ -46,7 +46,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# No public folder — this project has none
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 RUN mkdir -p apps/web/.next
 RUN chown -R nextjs:nodejs apps/web/.next
