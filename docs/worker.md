@@ -118,6 +118,29 @@ apps/worker/src/
     └── *.ts          # logger, date utilities, GitHub auth and ingestion helpers
 ```
 
+## Backfill scripts
+
+The weekly cron only captures the previous week. If a project was added after the cron was running, or if weeks were missed due to an outage, use the backfill scripts to populate historical data.
+
+| Script                        | What it backfills                                                 |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `scripts/backfill-github.ts`  | `CommitFact`, `PRFact`, `WeeklyStats`, `MemberWeeklyContribution` |
+| `scripts/backfill-discord.ts` | `DiscordWeeklyAggregate`, `DiscordIdentityWeeklyCount`            |
+
+```bash
+# GitHub backfill (--from is required)
+pnpm backfill:github:dev -- --from YYYY-MM-DD [--to YYYY-MM-DD]
+pnpm backfill:github:prod -- --from YYYY-MM-DD [--to YYYY-MM-DD]
+
+# Discord backfill (--from is optional; omit for full history)
+pnpm backfill:discord:dev
+pnpm backfill:discord:dev -- --from YYYY-MM-DD --to YYYY-MM-DD
+pnpm backfill:discord:prod
+pnpm backfill:discord:prod -- --from YYYY-MM-DD --to YYYY-MM-DD
+```
+
+Both scripts are idempotent (upsert semantics) and safe to re-run. See [docs/backfill-github.md](./backfill-github.md) and [docs/backfill-discord.md](./backfill-discord.md) for full details.
+
 ## Environment variables used by the worker
 
 | Variable                 | Purpose                                                  |
