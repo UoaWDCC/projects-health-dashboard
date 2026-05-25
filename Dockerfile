@@ -1,5 +1,5 @@
 FROM node:18-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable pnpm
 
 # Install dependencies
