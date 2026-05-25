@@ -122,10 +122,10 @@ apps/worker/src/
 
 The weekly cron only captures the previous week. If a project was added after the cron was running, or if weeks were missed due to an outage, use the backfill scripts to populate historical data.
 
-| Script                        | What it backfills                                                 |
-| ----------------------------- | ----------------------------------------------------------------- |
-| `scripts/backfill-github.ts`  | `CommitFact`, `PRFact`, `WeeklyStats`, `MemberWeeklyContribution` |
-| `scripts/backfill-discord.ts` | `DiscordWeeklyAggregate`, `DiscordIdentityWeeklyCount`            |
+| Script                        | What it backfills                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `scripts/backfill-github.ts`  | `CommitFact`, `PRFact`, `WeeklyStats`, `MemberWeeklyContribution`, `UnmatchedIdentity` |
+| `scripts/backfill-discord.ts` | `DiscordWeeklyAggregate`, `DiscordIdentityWeeklyCount`, `WeeklyStats`                  |
 
 ```bash
 # GitHub backfill (--from is required)
