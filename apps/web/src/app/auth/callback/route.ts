@@ -1,3 +1,4 @@
+import { resolvePublicOrigin } from '@/lib/auth-utils/origin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -5,7 +6,8 @@ import type { NextRequest } from 'next/server'
 // OAuth callback handler
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
+  const origin = resolvePublicOrigin(request.headers, request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
   const providerError = searchParams.get('error') ?? searchParams.get('error_code')
