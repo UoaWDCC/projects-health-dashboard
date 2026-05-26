@@ -41,6 +41,11 @@ async function getApp() {
   return appPromise
 }
 
+export async function getAppOctokit() {
+  const app = await getApp()
+  return app.octokit
+}
+
 export async function getInstallationOctokit(installationId: string | number) {
   const normalizedInstallationId = Number(installationId)
 

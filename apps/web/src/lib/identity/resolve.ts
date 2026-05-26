@@ -1,4 +1,4 @@
-import { getInstallationOctokit } from '@repo/github'
+import { getAppOctokit } from '@repo/github'
 
 export type ResolvedIdentity = {
   externalId: string
@@ -16,12 +16,7 @@ export class IdentityResolutionError extends Error {
 }
 
 export async function resolveGithubIdentity(username: string): Promise<ResolvedIdentity> {
-  const installationId = process.env.GITHUB_APP_INSTALLATION_ID
-  if (!installationId) {
-    throw new IdentityResolutionError('GitHub App Installation ID is not configured', 500)
-  }
-
-  const octokit = await getInstallationOctokit(installationId)
+  const octokit = await getAppOctokit()
 
   try {
     const { data } = await octokit.request('GET /users/{username}', { username })
