@@ -2,6 +2,7 @@ import { hasRole } from '@/lib/auth'
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
+import { uploadImage } from '@/lib/storage'
 
 /**
  * TODO: Add authentication and authorization to ensure only admins can access these routes
@@ -131,15 +132,15 @@ export async function POST(request: Request) {
 
     const projectDescription = String(formData.get('projectDescription') ?? '').trim()
     const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
+    const imageFile = formData.get('image')
 
     if (!projectName || githubLinks.size === 0 || discordChannels.size === 0) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const existingProject = await db.project.findUnique({
-      where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') },
-    })
+    const slug = projectName.toLowerCase().replace(/\s+/g, '-')
 
+    const existingProject = await db.project.findUnique({ where: { slug } })
     if (existingProject) {
       return Response.json({ error: 'Project with this name already exists' }, { status: 409 })
     }
@@ -183,13 +184,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Upload image before DB insert so a failed upload doesn't leave an orphaned project
+    let imageUrl: string | null = null
+    if (imageFile instanceof File && imageFile.size > 0) {
+      imageUrl = await uploadImage('project-images', slug, imageFile)
+    }
+
     const newProject = await db.$transaction(async (tx) => {
       return await tx.project.create({
         data: {
           name: projectName,
-          slug: projectName.toLowerCase().replace(/\s+/g, '-'),
+          slug,
           description: projectDescription || null,
           startedAt: parseDate(projectStartDate),
+          imageUrl,
           repositories: {
             create: Array.from(githubLinks).map((githubLink) => ({
               owner: githubLink.split('/')[3],

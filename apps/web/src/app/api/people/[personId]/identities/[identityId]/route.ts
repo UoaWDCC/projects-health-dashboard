@@ -1,5 +1,10 @@
-import { db } from '@repo/db'
+import { db, Prisma } from '@repo/db'
 import { hasRole } from '@/lib/auth'
+import {
+  resolveGithubIdentity,
+  resolveDiscordIdentity,
+  IdentityResolutionError,
+} from '@/lib/identity/resolve'
 
 export async function PATCH(
   request: Request,
@@ -13,31 +18,57 @@ export async function PATCH(
     const { personId, identityId } = await params
     const body = await request.json()
 
-    // Ensure the identity belongs to the person before modifying
     const identity = await db.personIdentity.findUnique({
       where: { id: identityId },
     })
 
-    if (!identity || identity.personId !== personId) {
+    if (identity?.personId !== personId) {
       return Response.json(
         { error: 'Identity not found or does not belong to this person' },
         { status: 404 }
       )
     }
 
-    const { externalId, username } = body
+    const { username } = body
+
+    let resolvedExternalId: string | undefined
+    let resolvedUsername: string | undefined
+
+    if (username !== undefined) {
+      const trimmed = username ? String(username).trim() : null
+      if (identity.provider === 'GITHUB' && trimmed) {
+        const resolved = await resolveGithubIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
+      } else if (identity.provider === 'DISCORD' && trimmed) {
+        const resolved = await resolveDiscordIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
+      } else {
+        resolvedUsername = trimmed ?? undefined
+      }
+    }
 
     const updatedIdentity = await db.personIdentity.update({
       where: { id: identityId },
       data: {
-        ...(externalId !== undefined && { externalId: String(externalId).trim() }),
-        ...(username !== undefined && { username: username ? String(username).trim() : null }),
+        ...(resolvedExternalId !== undefined && { externalId: resolvedExternalId }),
+        ...(resolvedUsername !== undefined && { username: resolvedUsername }),
       },
     })
 
     return Response.json(updatedIdentity, { status: 200 })
   } catch (error) {
     console.error('Error updating identity:', error)
+    if (error instanceof IdentityResolutionError) {
+      return Response.json({ error: error.message }, { status: error.status })
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return Response.json(
+        { error: 'This account is already linked to another person.' },
+        { status: 409 }
+      )
+    }
     return Response.json({ error: 'Failed to update identity' }, { status: 500 })
   }
 }
@@ -53,12 +84,11 @@ export async function DELETE(
   try {
     const { personId, identityId } = await params
 
-    // Ensure the identity belongs to the person before deleting
     const identity = await db.personIdentity.findUnique({
       where: { id: identityId },
     })
 
-    if (!identity || identity.personId !== personId) {
+    if (identity?.personId !== personId) {
       return Response.json(
         { error: 'Identity not found or does not belong to this person' },
         { status: 404 }

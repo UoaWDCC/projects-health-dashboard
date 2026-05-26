@@ -299,11 +299,8 @@ export default function CreateProjectPage() {
               {imagePreview ? (
                 <div className="flex items-center gap-3">
                   <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="text-left">
                     <p className="font-mono text-sm font-semibold text-wdcc-oshan">{imageName}</p>
