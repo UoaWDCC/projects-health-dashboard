@@ -31,14 +31,14 @@ export default function LiveCommitRow({
           )}
           {!authorUsername && (
             <Link
-              href={`/projects/${projectSlug}`}
+              href={`/project/${projectSlug}`}
               className={`font-sans text-wdcc-grey text-[clamp(0.625rem,2.5vw,1.1rem)] font-semibold place-self-center whitespace-nowrap shrink-0 hover:underline`}
             >
               {authorName}
             </Link>
           )}
           <Link
-            href={`/projects/${projectSlug}`}
+            href={`/project/${projectSlug}`}
             className={`font-mono font-medium text-wdcc-blue text-[clamp(0.5rem,2vw,1rem)] bg-olive-200 hover:bg-wdcc-amber hover:text-white transition-colors duration-200 rounded-lg px-3 h-fit place-self-center truncate`}
           >
             {repoName}
