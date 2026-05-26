@@ -45,6 +45,7 @@ graph TD
     subgraph Supabase
         DB[(PostgreSQL)]
         SUPAAUTH[Auth service]
+        EDGE[Edge Function<br/>github-webhook]
     end
 
     CRON --> GH_JOB
@@ -58,7 +59,8 @@ graph TD
     LLM_JOB --> OAI
     LLM_JOB --> PRISMA
 
-    WEBHOOK --> NEXTJS
+    WEBHOOK --> EDGE
+    EDGE --> DB
     NEXTJS --> PRISMA
     NEXTJS --> AUTH
     AUTH --> SUPAAUTH
@@ -96,16 +98,16 @@ The LLM job's dependency on both collection jobs is enforced in code via `Promis
 
 ## Live commit feed (separate from the cron)
 
-`LiveCommit` is a ring-buffer of the 10 most recent commits. It is fed by a GitHub webhook hitting the Next.js app — not the weekly cron. This keeps the live activity carousel on the dashboard up to date without waiting for Sunday.
+`LiveCommit` is a ring-buffer of the 10 most recent commits. It is fed by a GitHub webhook handled by a Supabase Edge Function — not the weekly cron. This keeps the live activity carousel on the dashboard up to date without waiting for Sunday.
 
 ```mermaid
 sequenceDiagram
     participant GitHub
-    participant Next.js webhook handler
+    participant Supabase Edge Function
     participant DB
 
-    GitHub->>Next.js webhook handler: push event
-    Next.js webhook handler->>DB: insert LiveCommit
+    GitHub->>Supabase Edge Function: push event
+    Supabase Edge Function->>DB: insert LiveCommit
     DB->>DB: delete oldest row if count > 10
 ```
 
