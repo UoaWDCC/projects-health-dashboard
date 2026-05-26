@@ -1,3 +1,4 @@
+import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
@@ -5,13 +6,13 @@ const nextConfig: NextConfig = {
     useCache: true,
   },
   output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '../../'),
+  outputFileTracingIncludes: {
+    '/**': ['../../node_modules/.pnpm/@prisma+client*/**/*.node'],
+  },
   transpilePackages: ['@repo/db'],
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'ui-avatars.com',
-      },
       {
         protocol: 'https',
         hostname: 'github.com',
@@ -23,6 +24,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
       },
     ],
   },

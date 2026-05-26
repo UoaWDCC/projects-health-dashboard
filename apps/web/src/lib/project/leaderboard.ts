@@ -39,6 +39,7 @@ export const LEADERBOARD_THEMES = {
 export interface LeaderboardEntry {
   rank: number
   projectId: string
+  projectSlug: string
   projectName: string
   thumbnailUrl: string | undefined
   statValue: number

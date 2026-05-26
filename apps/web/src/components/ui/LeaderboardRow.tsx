@@ -11,7 +11,7 @@ interface LeaderboardRowProps {
 }
 
 export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
-  const { rank, projectName, thumbnailUrl, statValue } = entry
+  const { rank, projectSlug, projectName, thumbnailUrl, statValue } = entry
   const { fillColor, borderColor } = theme
   const isFirstPlace = rank === 1
 
@@ -21,7 +21,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
 
   return (
     <Link
-      href="/"
+      href={projectSlug ? `/project/${projectSlug}` : '/'}
       className="flex flex-row items-center gap-4 px-5 w-full transition-[background-color] duration-150 ease hover:opacity-80"
       style={{
         maxWidth: '415px',

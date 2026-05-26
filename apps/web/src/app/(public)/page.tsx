@@ -1,10 +1,10 @@
-import WeeklyMvp from '@/components/ui/WeeklyMvp'
 import ProjectCard from '@/components/ui/ProjectCard'
 import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
+import RevealOnScroll from '@/components/ui/RevealOnScroll'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
-import LineGraph from '@/components/ui/LineGraph'
+import { hasRole } from '@/lib/auth'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -16,50 +16,48 @@ import LineGraph from '@/components/ui/LineGraph'
 
 export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
+  const isAdmin = await hasRole('ADMIN')
+  const projectGridItems = isAdmin ? [...projects, null] : projects
+  const teamCount = projects.length
 
   return (
     <>
-      <div
-        className="fixed inset-0 -z-10"
-        style={{ background: 'linear-gradient(to bottom, #077CF1 -2000px, #FFFFFF 100%)' }}
-      />
+      <div className="absolute min-h-[150vh] inset-0 -z-10 bg-gradient-to-b from-[#B6D8FB] to-white" />
       <div>
         <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
+        <RevealOnScroll>
+          <div className="flex flex-col max-w-[1296px] mx-auto items-center mt-20">
+            {/* GRID HEADER */}
+            <div className="w-full pl-[9px] flex flex-row items-baseline gap-6">
+              <h1 className="text-wdcc-oshan font-extrabold tracking-tight !leading-none m-0 text-[2.25rem]">
+                Active Projects
+              </h1>
+              <span className=" text-wdcc-grey/50 text-xl font-medium whitespace-nowrap">
+                {teamCount}&nbsp;&nbsp;team{teamCount !== 1 ? 's' : ''}
+              </span>
+            </div>
 
-        <div className="ml-10">
-          <WeeklyMvp
-            name="John Smith"
-            avatarUrl="https://github.com/johnsmith.png"
-            linesCommitted={2046}
-          />
-        </div>
+            {/* PROJECTS GRID */}
+            <div className="grid grid-cols-3 w-full mt-8">
+              {projectGridItems.map((project) => (
+                <div className="mx-auto" key={project?.id ?? 'add-new-project'}>
+                  {project ? (
+                    <Link href={`/project/${project.slug}`}>
+                      <ProjectCard project={project} />
+                    </Link>
+                  ) : (
+                    <></>
+                  )}
+                </div>
+              ))}
+            </div>
 
-        <div className="grid grid-cols-2 gap-6 ml-4 mt-6">
-          {projects.map((project) => (
-            <Link href={`/project/${project.slug}`} key={project.id}>
-              <ProjectCard project={project} />
-            </Link>
-          ))}
-        </div>
-
-        <div className="my-10">
-          <LiveCommitFeed />
-          <div className="mx-4 mt-6 max-w-2xl">
-            <LineGraph
-              title="Weekly Commits"
-              dates={[
-                '2026-04-28',
-                '2026-05-05',
-                '2026-05-12',
-                '2026-05-19',
-                '2026-05-26',
-                '2026-06-02',
-                '2026-06-09',
-              ]}
-              dataPoints={[100, 160, 220, 195, 260, 330, 370]}
-            />
+            {/* LIVE COMMIT FEED */}
+            <div className="my-10 w-full">
+              <LiveCommitFeed />
+            </div>
           </div>
-        </div>
+        </RevealOnScroll>
       </div>
     </>
   )

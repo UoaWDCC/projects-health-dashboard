@@ -12,11 +12,8 @@ interface WeeklyMvpProps {
 export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvpProps) {
   const [imgError, setImgError] = useState(false)
 
-  // Use a generated avatar with the user's initials if no avatarUrl is provided or if the image failed to load
-  const imgSrc =
-    avatarUrl && !imgError
-      ? avatarUrl
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+  // Fall back to a local default avatar — no third-party requests, no privacy concerns
+  const imgSrc = avatarUrl && !imgError ? avatarUrl : '/default-avatar.svg'
 
   return (
     <div className="w-full max-w-[1284px] flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]">

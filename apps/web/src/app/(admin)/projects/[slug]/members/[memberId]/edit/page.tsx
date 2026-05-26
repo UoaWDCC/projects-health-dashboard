@@ -27,25 +27,31 @@ export default function EditMemberPage({
   const [success, setSuccess] = useState(false)
   const [confirmUnlink, setConfirmUnlink] = useState(false)
 
-  // TODO: Implement new API route to fetch single member/membership
   useEffect(() => {
-    fetch(`/api/project/${slug}/members`)
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: ProjectMember[]) => {
-        const found = data.find((m) => m.id === memberId)
-        if (found) {
-          setMembership(found)
-          setDisplayName(found.displayName ?? '')
-          setIsActive(found.isActive)
+    fetch(`/api/project/${slug}/members/${memberId}`)
+      .then((res) => {
+        if (!res.ok) {
+          setError('Failed to load membership')
+          return null
         }
-        setLoading(false)
+
+        return res.json()
       })
-      .catch(() => setLoading(false))
+      .then((data: ProjectMember | null) => {
+        if (data) {
+          setMembership(data)
+          setDisplayName(data.displayName ?? '')
+          setIsActive(data.isActive)
+        }
+      })
+      .catch(() => setError('Failed to load membership'))
+      .finally(() => setLoading(false))
   }, [slug, memberId])
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
+
     const res = await fetch(`/api/people/${membership?.personId}/memberships/${memberId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -54,26 +60,31 @@ export default function EditMemberPage({
         isActive,
       }),
     })
+
     if (!res.ok) {
       const data = await res.json()
       setError(data?.error ?? 'Failed to update membership')
       return
     }
+
     setSuccess(true)
     setTimeout(() => router.push(`/projects/${slug}`), 1200)
   }
 
   const handleUnlink = async () => {
     setError(null)
+
     const res = await fetch(`/api/people/${membership?.personId}/memberships/${memberId}`, {
       method: 'DELETE',
     })
+
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       setError(data?.error ?? 'Failed to unlink member')
       setConfirmUnlink(false)
       return
     }
+
     router.push(`/projects/${slug}`)
   }
 
@@ -293,8 +304,8 @@ export default function EditMemberPage({
               <p className="font-mono text-[11px] text-wdcc-grey-light mt-1">
                 Removes{' '}
                 <span className="text-wdcc-oshan">{membership.displayName ?? memberId}</span> from{' '}
-                <span className="text-wdcc-oshan">{slug}</span>. Their person record and identities
-                are preserved.
+                <span className="text-wdcc-oshan">{slug}</span>. If this is their only project,
+                their person record and identities will also be deleted.
               </p>
             </div>
 
