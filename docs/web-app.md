@@ -19,11 +19,14 @@ The app uses Next.js App Router (the `app/` directory). Routes are organised usi
 ```
 apps/web/src/app/
 ├── layout.tsx           # Root layout (applies to all routes)
-└── (public)/            # Unauthenticated views
-    └── page.tsx         # Public dashboard — currently a placeholder
+├── (public)/            # Unauthenticated views (dashboard, leaderboard, project pages, sign-in)
+├── (admin)/             # Admin-only views (admin dashboard, project config, roles, people)
+├── (exec)/              # Exec-only views (exec dashboard)
+├── api/                 # Route handlers (webhooks, etc.)
+└── auth/                # Supabase auth callback
 ```
 
-Route groups allow different layouts for authenticated vs. unauthenticated pages without changing their URLs. As protected views are added, they will live in a separate group (e.g. `(dashboard)/`) with a layout that enforces authentication.
+Route groups allow different layouts for authenticated vs. unauthenticated pages without changing their URLs.
 
 ## Authentication
 

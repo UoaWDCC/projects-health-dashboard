@@ -81,12 +81,12 @@ Discord messages are never stored. The worker fetches them, aggregates counts in
 
 These tables are written by the worker and read by the web app. The web app does not read raw facts directly.
 
-| Model                      | Written by            | Contains                                                                |
-| -------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| `WeeklyStats`              | GitHub job            | Raw counts + 4-week rolling averages + health/velocity/sentiment scores |
-| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member, per-project, per-week counts                                |
-| `WeeklySummary`            | LLM job               | Narrative summary + sentiment score per project-week                    |
-| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview, one row per week                      |
+| Model                      | Written by            | Contains                                                                                                                                                                                                  |
+| -------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WeeklyStats`              | GitHub job            | Raw counts; 4-week rolling averages; health/velocity/sentiment scores; cumulative totals from project start; `algorithmVersion` for detecting stale scores; `mvpMember` (highest lines-changed that week) |
+| `MemberWeeklyContribution` | GitHub + Discord jobs | Per-member; per-project; per-week counts                                                                                                                                                                  |
+| `WeeklySummary`            | LLM job               | Narrative summary; sentiment score per project-week                                                                                                                                                       |
+| `GlobalWeeklySummary`      | LLM job               | Cross-project executive overview; one row per week                                                                                                                                                        |
 
 `sentimentScore` is denormalized from `WeeklySummary` into `WeeklyStats` so that health score and sentiment can be graphed together without a join.
 
@@ -98,7 +98,7 @@ These tables are written by the worker and read by the web app. The web app does
 
 ## Weekly time windows
 
-All `weekStart` fields store **Monday 00:00 UTC**. This is the convention used across every table that has a weekly time dimension. The cron fires on Sunday, so the data it writes refers to the Monday–Sunday week just completed.
+All `weekStart` fields store **Monday 00:00 UTC**. This is the convention used across every table that has a weekly time dimension. The cron fires on Monday at 00:00 UTC and processes the _previous_ Monday–Sunday week — so the `weekStart` it writes is seven days in the past relative to the fire time.
 
 ## Connection strings
 

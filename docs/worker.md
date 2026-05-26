@@ -15,11 +15,11 @@ In production it runs as a Docker container on Fly.io alongside the web app.
 
 ## Job structure
 
-The cron fires every **Sunday at 00:00 UTC** (`0 0 * * 0`). Three jobs run each week:
+The cron fires every **Monday at 00:00 UTC** (`0 0 * * 1`). Three jobs run each week:
 
 ```mermaid
 flowchart TD
-    CRON["Cron fires<br/>Sunday 00:00 UTC"]
+    CRON["Cron fires<br/>Monday 00:00 UTC"]
     GH["GitHub Job<br/>github.ts"]
     DC["Discord Job<br/>discord.ts"]
     LLM["LLM Job<br/>llm.ts"]
@@ -62,11 +62,11 @@ flowchart TD
 - Writes `GlobalWeeklySummary` (cross-project executive overview)
 - Denormalizes `sentimentScore` from `WeeklySummary` back into `WeeklyStats` so it can be graphed alongside health scores
 
-> **Current status:** all three jobs are stubbed — they exist as empty functions that throw `'Not implemented'`. The schema is ready to receive data but nothing is ingested yet.
+> **Current status:** the GitHub and Discord jobs are fully implemented and running. The LLM job (`jobs/llm.ts`) is not yet implemented — it throws `'Not implemented'` and its import and call in `index.ts` are commented out.
 
 ## Running the jobs manually
 
-The cron fires on Sundays only. During development, trigger a job run directly:
+The cron fires on Mondays only. During development, trigger a job run directly:
 
 ```typescript
 // apps/worker/src/index.ts — call the job functions directly for ad-hoc testing
@@ -109,14 +109,37 @@ This gives visibility into which projects succeeded and which failed without nee
 
 ```
 apps/worker/src/
-├── index.ts          # Cron entry point — registers the Sunday job
+├── index.ts          # Entry point — runs the weekly ingestion pipeline
 ├── jobs/
 │   ├── github.ts     # GitHub ingestion
 │   ├── discord.ts    # Discord ingestion
 │   └── llm.ts        # LLM analysis
 └── lib/
-    └── logger.ts     # Timestamp logger
+    └── *.ts          # logger, date utilities, GitHub auth and ingestion helpers
 ```
+
+## Backfill scripts
+
+The weekly cron only captures the previous week. If a project was added after the cron was running, or if weeks were missed due to an outage, use the backfill scripts to populate historical data.
+
+| Script                        | What it backfills                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `scripts/backfill-github.ts`  | `CommitFact`, `PRFact`, `WeeklyStats`, `MemberWeeklyContribution`, `UnmatchedIdentity` |
+| `scripts/backfill-discord.ts` | `DiscordWeeklyAggregate`, `DiscordIdentityWeeklyCount`, `WeeklyStats`                  |
+
+```bash
+# GitHub backfill (--from is required)
+pnpm backfill:github:dev -- --from YYYY-MM-DD [--to YYYY-MM-DD]
+pnpm backfill:github:prod -- --from YYYY-MM-DD [--to YYYY-MM-DD]
+
+# Discord backfill (--from is optional; omit for full history)
+pnpm backfill:discord:dev
+pnpm backfill:discord:dev -- --from YYYY-MM-DD --to YYYY-MM-DD
+pnpm backfill:discord:prod
+pnpm backfill:discord:prod -- --from YYYY-MM-DD --to YYYY-MM-DD
+```
+
+Both scripts are idempotent (upsert semantics) and safe to re-run. See [docs/backfill-github.md](./backfill-github.md) and [docs/backfill-discord.md](./backfill-discord.md) for full details.
 
 ## Environment variables used by the worker
 
