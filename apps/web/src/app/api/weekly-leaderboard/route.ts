@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 interface LeaderboardEntry {
   rank: number
   projectId: string
+  projectSlug: string
   projectName: string
   thumbnailUrl: string | undefined
   statValue: number
@@ -76,6 +77,7 @@ export async function GET() {
       },
       select: {
         id: true,
+        slug: true,
         name: true,
         imageUrl: true,
       },
@@ -91,6 +93,7 @@ export async function GET() {
         return {
           rank: index + 1,
           projectId: entry.projectId,
+          projectSlug: project?.slug || '',
           projectName: project?.name || 'Unknown Project',
           thumbnailUrl: project?.imageUrl || undefined,
           statValue: entry.value,
