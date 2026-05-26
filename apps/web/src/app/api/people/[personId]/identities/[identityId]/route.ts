@@ -1,5 +1,10 @@
 import { db, Prisma } from '@repo/db'
 import { hasRole } from '@/lib/auth'
+import {
+  resolveGithubIdentity,
+  resolveDiscordIdentity,
+  IdentityResolutionError,
+} from '@/lib/identity/resolve'
 
 export async function PATCH(
   request: Request,
@@ -13,12 +18,11 @@ export async function PATCH(
     const { personId, identityId } = await params
     const body = await request.json()
 
-    // Ensure the identity belongs to the person before modifying
     const identity = await db.personIdentity.findUnique({
       where: { id: identityId },
     })
 
-    if (!identity || identity.personId !== personId) {
+    if (identity?.personId !== personId) {
       return Response.json(
         { error: 'Identity not found or does not belong to this person' },
         { status: 404 }
@@ -33,75 +37,13 @@ export async function PATCH(
     if (username !== undefined) {
       const trimmed = username ? String(username).trim() : null
       if (identity.provider === 'GITHUB' && trimmed) {
-        try {
-          const githubRes = await fetch(`https://api.github.com/users/${trimmed}`, {
-            headers: { 'User-Agent': 'projects-health-dashboard' },
-          })
-          if (!githubRes.ok) {
-            return Response.json(
-              {
-                error: `GitHub user "${trimmed}" not found. Please check the username and try again.`,
-              },
-              { status: 400 }
-            )
-          }
-          const githubData = await githubRes.json()
-          if (!githubData?.id) {
-            return Response.json(
-              { error: `Could not resolve GitHub numeric ID for user "${trimmed}".` },
-              { status: 400 }
-            )
-          }
-          resolvedExternalId = String(githubData.id)
-          resolvedUsername = trimmed
-        } catch {
-          return Response.json(
-            { error: `Failed to resolve GitHub user "${trimmed}". Please try again later.` },
-            { status: 400 }
-          )
-        }
+        const resolved = await resolveGithubIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
       } else if (identity.provider === 'DISCORD' && trimmed) {
-        const guildId = process.env.DISCORD_GUILD_ID
-        if (!guildId) {
-          return Response.json(
-            { error: 'DISCORD_GUILD_ID is not configured on the server.' },
-            { status: 500 }
-          )
-        }
-        try {
-          const discordRes = await fetch(
-            `https://discord.com/api/v10/guilds/${guildId}/members/search?query=${encodeURIComponent(trimmed)}&limit=10`,
-            { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
-          )
-          if (!discordRes.ok) {
-            return Response.json(
-              {
-                error: `Failed to search Discord guild members. Check the bot token and guild ID.`,
-              },
-              { status: 400 }
-            )
-          }
-          const members = await discordRes.json()
-          const match = members.find(
-            (m: { user: { username: string; id: string } }) =>
-              m.user.username.toLowerCase() === trimmed.toLowerCase()
-          )
-          if (!match) {
-            return Response.json(
-              {
-                error: `Discord user "${trimmed}" not found in the server. They must be a member of the Discord server.`,
-              },
-              { status: 400 }
-            )
-          }
-          resolvedExternalId = String(match.user.id)
-          resolvedUsername = trimmed
-        } catch {
-          return Response.json(
-            { error: `Failed to resolve Discord user "${trimmed}". Please try again later.` },
-            { status: 400 }
-          )
-        }
+        const resolved = await resolveDiscordIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
       } else {
         resolvedUsername = trimmed ?? undefined
       }
@@ -118,6 +60,9 @@ export async function PATCH(
     return Response.json(updatedIdentity, { status: 200 })
   } catch (error) {
     console.error('Error updating identity:', error)
+    if (error instanceof IdentityResolutionError) {
+      return Response.json({ error: error.message }, { status: error.status })
+    }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return Response.json(
         { error: 'This account is already linked to another person.' },
@@ -139,12 +84,11 @@ export async function DELETE(
   try {
     const { personId, identityId } = await params
 
-    // Ensure the identity belongs to the person before deleting
     const identity = await db.personIdentity.findUnique({
       where: { id: identityId },
     })
 
-    if (!identity || identity.personId !== personId) {
+    if (identity?.personId !== personId) {
       return Response.json(
         { error: 'Identity not found or does not belong to this person' },
         { status: 404 }
