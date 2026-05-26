@@ -11,9 +11,14 @@ interface LeaderboardEntry {
 
 export async function GET() {
   try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const weekStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const latest = await db.weeklyStats.findFirst({
+      orderBy: { weekStart: 'desc' },
+      select: { weekStart: true },
+    })
+
+    if (!latest) {
+      return NextResponse.json({ 'lines-of-code': [], merges: [], commits: [] })
+    }
 
     const weeklyStats = await db.weeklyStats.findMany({
       select: {
@@ -23,13 +28,8 @@ export async function GET() {
         prsMerged: true,
         commits: true,
       },
-      where: {
-        weekStart: {
-          gte: weekStart,
-        },
-      },
+      where: { weekStart: latest.weekStart },
     })
-    console.log('Weekly stats:', weeklyStats)
 
     const linesOfCodeMap: Record<string, number> = {}
     weeklyStats.forEach((entry) => {
