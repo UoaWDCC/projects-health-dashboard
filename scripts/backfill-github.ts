@@ -96,7 +96,14 @@ async function backfillRepoPRs(
 
   logger.info(`  ${relevantPRs.length} relevant PR(s) for ${repo.owner}/${repo.name}`)
 
-  // Fetch all non-main branches once.
+  const { data: repoData } = await withRateLimit(() =>
+    octokit.request('GET /repos/{owner}/{repo}', {
+      owner: repo.owner,
+      repo: repo.name,
+    })
+  )
+  const defaultBranch = repoData.default_branch
+
   const allBranches = (
     await withRateLimit(() =>
       octokit.paginate('GET /repos/{owner}/{repo}/branches', {
@@ -105,9 +112,9 @@ async function backfillRepoPRs(
         per_page: 100,
       })
     )
-  ).filter((b: { name: string }) => b.name !== 'main' && b.name !== 'master')
+  ).filter((b: { name: string }) => b.name !== defaultBranch)
 
-  logger.info(`  ${allBranches.length} non-main branch(es)`)
+  logger.info(`  ${allBranches.length} non-default branch(es)`)
 
   const weekStarts = new Set<string>()
   let prCount = 0
@@ -208,24 +215,36 @@ async function backfillRepoPRs(
   }
 
   // ── Pass 2: All branches ─────────────
-  // Fetch all commits since fromDate; filter to [fromDate, toDate) in memory.
-  // No `until` filter — a branch may be created after toDate but contain earlier commits.
+  // Compare endpoint returns commits reachable from the branch but NOT from the default branch,
+  // so commits inherited from the default branch (e.g. via merge or rebase) are excluded.
+  // Filter to [fromDate, toDate) in memory.
+  type CompareCommit = { sha: string; commit: { author?: { date?: string } | null } }
   for (const branch of allBranches) {
-    const commits = (await withRateLimit(() =>
-      octokit.paginate('GET /repos/{owner}/{repo}/commits', {
-        owner: repo.owner,
-        repo: repo.name,
-        sha: branch.name,
-        since: fromDate.toISOString(),
-        per_page: 100,
-      })
-    )) as PRCommit[]
+    const basehead = `${defaultBranch}...${branch.name}`
+    const commits = await withRateLimit<CompareCommit[]>(() =>
+      octokit.paginate(
+        'GET /repos/{owner}/{repo}/compare/{basehead}',
+        {
+          owner: repo.owner,
+          repo: repo.name,
+          basehead,
+          per_page: 100,
+        },
+        (response: { data: { commits: CompareCommit[] } }) => response.data.commits
+      )
+    )
+
+    if (commits.length >= 250) {
+      logger.warn(
+        `Compare endpoint returned ${commits.length} commits for ${repo.owner}/${repo.name} ${basehead} — may be truncated at GitHub's 250-commit cap.`
+      )
+    }
 
     for (const commit of commits) {
       const authorDate = commit.commit.author?.date
       if (!authorDate) continue
       const d = new Date(authorDate)
-      if (d >= toDate) continue
+      if (d < fromDate || d >= toDate) continue
 
       try {
         await upsertCommit(repo, octokit, commit.sha, branch.name)
