@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
 import { z } from 'zod'
-import { createProjectSchema, githubRepoUrl, discordSnowflake } from '@/lib/schemas/admin'
+import { createProjectSchema, githubRepoUrl } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
 
 export default function CreateProjectPage() {
@@ -45,6 +45,7 @@ export default function CreateProjectPage() {
       setChannelIdInput('')
       setChannelNameInput('')
       setFieldErrors((prev) => ({ ...prev, discordSnowflakeIds: '' }))
+    }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
