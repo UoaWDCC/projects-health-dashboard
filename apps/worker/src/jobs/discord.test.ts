@@ -18,6 +18,10 @@ function mockMessagesResponse(messages: unknown[]) {
   }
 }
 
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
 describe('runDiscordIngestion - WeeklyStats.discordMessages', () => {
   it('upserts WeeklyStats.discordMessages with the fetched message count', async () => {
     const weekStart = new Date('2026-05-04T00:00:00Z')
