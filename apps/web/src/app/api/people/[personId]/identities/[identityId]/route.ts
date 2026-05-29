@@ -30,31 +30,31 @@ export async function PATCH(
       )
     }
 
-  const parsed = editIdentitySchema.safeParse(body)
-  if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? 'Invalid request'
-    return Response.json({ error: message }, { status: 400 })
-  }
-
-  const { username } = parsed.data
-
-  let resolvedExternalId: string | undefined
-  let resolvedUsername: string | undefined
-
-  if (username !== undefined) {
-    const trimmed = username ? String(username).trim() : null
-    if (identity.provider === 'GITHUB' && trimmed) {
-      const resolved = await resolveGithubIdentity(trimmed)
-      resolvedExternalId = resolved.externalId
-      resolvedUsername = resolved.username
-    } else if (identity.provider === 'DISCORD' && trimmed) {
-      const resolved = await resolveDiscordIdentity(trimmed)
-      resolvedExternalId = resolved.externalId
-      resolvedUsername = resolved.username
-    } else {
-      resolvedUsername = trimmed ?? undefined
+    const parsed = editIdentitySchema.safeParse(body)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
     }
-  }
+
+    const { username } = parsed.data
+
+    let resolvedExternalId: string | undefined
+    let resolvedUsername: string | undefined
+
+    if (username !== undefined) {
+      const trimmed = username ? String(username).trim() : null
+      if (identity.provider === 'GITHUB' && trimmed) {
+        const resolved = await resolveGithubIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
+      } else if (identity.provider === 'DISCORD' && trimmed) {
+        const resolved = await resolveDiscordIdentity(trimmed)
+        resolvedExternalId = resolved.externalId
+        resolvedUsername = resolved.username
+      } else {
+        resolvedUsername = trimmed ?? undefined
+      }
+    }
 
     const updatedIdentity = await db.personIdentity.update({
       where: { id: identityId },
