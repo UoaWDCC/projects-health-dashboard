@@ -37,7 +37,7 @@ jobs:
             -p 5433:5432 \
             postgres:17.6
 
-          until psql -h localhost -p 5433 -U postgres -c '\q' 2>/dev/null; do
+          until PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -c '\q' 2>/dev/null; do
             echo "Waiting for shadow DB..."
             sleep 1
           done
