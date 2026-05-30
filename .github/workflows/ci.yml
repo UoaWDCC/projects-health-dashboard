@@ -15,6 +15,8 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -22,7 +24,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          docker pull postgres:17.6 &
+          pnpm install
+          wait
 
       - name: Start shadow DB
         run: |
@@ -38,7 +43,6 @@ jobs:
             echo "Waiting for shadow DB..."
             sleep 1
           done
-          sleep 2
 
       - name: Prisma-native drift check
         env:
@@ -46,11 +50,10 @@ jobs:
           SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/shadow
         run: |
           set +e
-          pnpm --filter @repo/db exec prisma migrate diff \
+          DIFF_OUTPUT=$(pnpm --filter @repo/db exec prisma migrate diff \
             --from-url "$DIRECT_URL" \
             --to-migrations prisma/migrations \
-            --shadow-database-url "$SHADOW_DATABASE_URL" \
-            --exit-code > /dev/null 2>&1
+            --shadow-database-url "$SHADOW_DATABASE_URL" 2>&1)
           PRISMA_EXIT=$?
           set -e
 
@@ -67,10 +70,7 @@ jobs:
             echo "────────────────────────────────────────────────────────────────"
             echo "Diff:"
             echo "────────────────────────────────────────────────────────────────"
-            pnpm --filter @repo/db exec prisma migrate diff \
-              --from-url "$DIRECT_URL" \
-              --to-migrations prisma/migrations \
-              --shadow-database-url "$SHADOW_DATABASE_URL"
+            echo "$DIFF_OUTPUT"
             echo ""
             exit 1
           else
