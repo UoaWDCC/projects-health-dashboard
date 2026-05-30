@@ -37,7 +37,7 @@ jobs:
             -p 5433:5432 \
             postgres:17.6
 
-          until pg_isready -h localhost -p 5433 -U postgres; do
+          until psql -h localhost -p 5433 -U postgres -c '\q' 2>/dev/null; do
             echo "Waiting for shadow DB..."
             sleep 1
           done
@@ -51,7 +51,8 @@ jobs:
           DIFF_OUTPUT=$(pnpm --filter @repo/db exec prisma migrate diff \
             --from-url "$DIRECT_URL" \
             --to-migrations prisma/migrations \
-            --shadow-database-url "$SHADOW_DATABASE_URL" 2>&1)
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code 2>&1)
           PRISMA_EXIT=$?
           set -e
 

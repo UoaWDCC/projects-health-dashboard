@@ -3,17 +3,14 @@ import { db } from '@repo/db'
 import { mockFetch } from '../test-config/vitest.setup'
 import { runDiscordIngestion, requestMessages, timestampToSnowflake } from './discord'
 
-function mockMessagesResponse(
-  messages: unknown[],
-  options: { remaining?: number; resetAfter?: number } = {}
-) {
+function mockMessagesResponse(messages: unknown[]) {
   return {
     ok: true,
     status: 200,
     headers: {
       get: (h: string) => {
-        if (h === 'X-RateLimit-Remaining') return String(options.remaining ?? 5)
-        if (h === 'X-RateLimit-Reset-After') return String(options.resetAfter ?? 0)
+        if (h === 'X-RateLimit-Remaining') return '5'
+        if (h === 'X-RateLimit-Reset-After') return '0'
         return null
       },
     },
