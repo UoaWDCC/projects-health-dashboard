@@ -6,6 +6,7 @@ import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
 import { upsertCommit } from './github-commit-tracker'
+import { getCollectionWindow } from './date-utils'
 
 export async function ingestRepoMergedPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
@@ -123,7 +124,7 @@ export async function ingestClosedBranchCommits(
   repo: { id: string; owner: string; name: string; installationId: string },
   weekEnd: Date
 ): Promise<number> {
-  const twoWeeksAgo = new Date(weekEnd.getTime() - 14 * 24 * 60 * 60 * 1000)
+  const [twoWeeksAgo] = getCollectionWindow(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))
   const since = twoWeeksAgo.toISOString().slice(0, 10)
   const until = weekEnd.toISOString().slice(0, 10)
 
