@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useCallback, useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { IdentityProvider } from '@repo/db'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
+import CSVUploader from '@/components/ui/CSVUploader'
 
 type PersonIdentity = {
   id: string
@@ -53,14 +54,19 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
   const { slug } = use(params)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCsvUploader, setShowCsvUploader] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    fetchMembers(slug).then((data) => {
-      setMembers(data)
-      setLoading(false)
-    })
+  const refreshMembers = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchMembers(slug)
+    setMembers(data)
+    setLoading(false)
   }, [slug])
+
+  useEffect(() => {
+    refreshMembers()
+  }, [refreshMembers])
 
   return (
     <>
@@ -105,14 +111,24 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
               {loading ? '—' : members.length} member{members.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <button
-            onClick={() => router.push(`/projects/${slug}/members/new`)}
-            className="flex items-center gap-2 bg-wdcc-oshan text-white font-mono text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-wdcc-oshan/80 transition-colors duration-150"
-          >
-            <span className="text-base leading-none">+</span>
-            Add member
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCsvUploader((prev) => !prev)}
+              className="flex items-center gap-2 bg-wdcc-oshan text-white font-mono text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-wdcc-oshan/80 transition-colors duration-150"
+            >
+              {showCsvUploader ? 'Hide CSV uploader' : 'Add members via CSV'}
+            </button>
+            <button
+              onClick={() => router.push(`/projects/${slug}/members/new`)}
+              className="flex items-center gap-2 bg-wdcc-oshan text-white font-mono text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-wdcc-oshan/80 transition-colors duration-150"
+            >
+              <span className="text-base leading-none">+</span>
+              Add member
+            </button>
+          </div>
         </div>
+
+        {showCsvUploader && <CSVUploader slug={slug} onComplete={refreshMembers} />}
 
         {/* Members grid */}
         {loading ? (

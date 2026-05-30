@@ -189,6 +189,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       targetDisplayName = existingPerson.displayName
     }
 
+    // for looking up existing identities when adding through CSV with no personID
+    if (githubId || discordId) {
+      const existingIdentity = await db.personIdentity.findFirst({
+        where: {
+          OR: [
+            { provider: 'GITHUB' as const, username: githubId },
+            { provider: 'DISCORD' as const, username: discordId },
+          ],
+        },
+      })
+      if (existingIdentity) {
+        targetPersonId = existingIdentity.personId
+      }
+    }
+
     const { githubExternalId, githubUsername, discordSnowflake, discordUsername } =
       await resolveIdentities(githubId, discordId)
 
