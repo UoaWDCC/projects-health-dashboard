@@ -1,7 +1,7 @@
 import { db } from '@repo/db'
 import { logger } from '../lib/logger'
 import { ingestRepoCommits } from '../lib/github-commit-tracker'
-import { ingestRepoMergedPRs } from '../lib/github-PR-tracker'
+import { ingestRepoMergedPRs, ingestClosedBranchCommits } from '../lib/github-PR-tracker'
 import { computeWeeklyGitHubMetrics } from '../lib/github-weekly-stats'
 
 export async function runGitHubIngestion(weekStart: Date, weekEnd: Date): Promise<void> {
@@ -36,6 +36,15 @@ export async function runGitHubIngestion(weekStart: Date, weekEnd: Date): Promis
           totalProcessed += commitCount
         } catch (err) {
           logger.error(`Failed to ingest commits for ${repo.owner}/${repo.name}: ${err}`)
+        }
+
+        try {
+          const closedCount = await ingestClosedBranchCommits(repo, weekEnd)
+          totalProcessed += closedCount
+        } catch (err) {
+          logger.error(
+            `Failed to ingest closed branch commits for ${repo.owner}/${repo.name}: ${err}`
+          )
         }
       }
 
