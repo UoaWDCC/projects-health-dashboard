@@ -36,10 +36,10 @@ type ProjectMember = {
 const fetchMembers = async (slug: string): Promise<ProjectMember[]> => {
   try {
     const response = await fetch(`/api/project/${slug}/members`)
-    if (!response.ok) throw new Error('Failed to fetch members')
+    if (!response.ok) throw new Error(response.statusText)
     return await response.json()
   } catch (error) {
-    console.error('Error fetching members:', error)
+    console.error(error)
     return []
   }
 }
@@ -123,7 +123,7 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
           <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {members.map((member) => (
               <li key={member.id}>
-                <Link href={`/people/${member.personId}`} className="block">
+                <Link href={`/projects/${slug}/members/${member.id}/edit`} className="block">
                   <div
                     className="font-sans transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1"
                     style={{
