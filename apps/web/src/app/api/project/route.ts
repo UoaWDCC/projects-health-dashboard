@@ -2,6 +2,7 @@ import { hasRole } from '@/lib/auth'
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
+import { uploadImage } from '@/lib/storage'
 
 /**
  * TODO: Add authentication and authorization to ensure only admins can access these routes
@@ -44,16 +45,15 @@ async function validateGitHubExists(link: string) {
     const status = (err as { status?: number })?.status
 
     if (status === 404)
-      return Response.json({ error: 'GitHub repository not found' }, { status: 404 })
+      return Response.json({ error: `GitHub repository ${link} not found` }, { status: 404 })
     if (status === 403)
       return Response.json(
-        { error: 'GitHub repository not accessible (private or rate limited)' },
+        { error: `GitHub repository ${link} not accessible (private or rate limited)` },
         { status: 403 }
       )
     if (status === 401)
-      return Response.json({ error: 'Invalid GitHub token provided' }, { status: 401 })
-
-    return Response.json({ error: 'Failed to validate GitHub repository' }, { status: 500 })
+      return Response.json({ error: `Invalid GitHub token provided for ${link}` }, { status: 401 })
+    return Response.json({ error: `Failed to validate GitHub repository ${link}` }, { status: 500 })
   }
 }
 
@@ -104,51 +104,70 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const projectName = String(formData.get('projectName') ?? '').trim()
-    const githubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
-    const discordSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
+    const githubLinks = new Set(
+      (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
+    )
+    const rawSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
       .map(String)
       .map((s) => s.trim())
-    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
-    const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
+    const rawChannelNames = (formData.getAll('discordChannelNames') || [])
+      .map(String)
+      .map((s) => s.trim())
 
-    if (!projectName || githubLinks.length === 0 || discordSnowflakeIds.length === 0) {
+    if (rawSnowflakeIds.length !== rawChannelNames.length) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // For now we only support linking one GitHub repo per project, so we take the first link provided
-    const githubLink = githubLinks[0]
-
-    if (!validateGitHubLinkFormat(githubLink))
-      return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
-
-    const githubError = await validateGitHubExists(githubLink)
-    if (githubError) return githubError
-
-    for (const discordSnowflakeId of discordSnowflakeIds) {
-      const discordError = await validateSnowflakeExists(discordSnowflakeId)
-      if (discordError) return discordError
+    // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
+    const discordChannels = new Map<string, string>()
+    for (let i = 0; i < rawSnowflakeIds.length; i++) {
+      const id = rawSnowflakeIds[i]
+      const name = rawChannelNames[i]
+      if (!id || !name) continue
+      if (!discordChannels.has(id)) discordChannels.set(id, name)
     }
 
-    const [existingProject, existingRepo] = await Promise.all([
-      db.project.findUnique({ where: { slug: projectName.toLowerCase().replace(/\s+/g, '-') } }),
-      db.gitHubRepository.findFirst({
-        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
-      }),
-    ])
+    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
+    const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
+    const imageFile = formData.get('image')
 
+    if (!projectName || githubLinks.size === 0 || discordChannels.size === 0) {
+      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const slug = projectName.toLowerCase().replace(/\s+/g, '-')
+
+    const existingProject = await db.project.findUnique({ where: { slug } })
     if (existingProject) {
       return Response.json({ error: 'Project with this name already exists' }, { status: 409 })
-    } else if (existingRepo) {
-      return Response.json(
-        {
-          error:
-            'GitHub Repository with this owner and name has already been linked to another project',
-        },
-        { status: 409 }
-      )
     }
 
-    for (const snowflakeId of discordSnowflakeIds) {
+    // github validation
+    for (const githubLink of githubLinks) {
+      if (!validateGitHubLinkFormat(githubLink))
+        return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
+
+      const githubError = await validateGitHubExists(githubLink)
+      if (githubError) return githubError
+
+      const existingRepo = await db.gitHubRepository.findFirst({
+        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
+      })
+      if (existingRepo) {
+        return Response.json(
+          {
+            error: `GitHub Repository ${githubLink} has already been linked to another project`,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    // discord validation
+    for (const snowflakeId of discordChannels.keys()) {
+      const discordError = await validateSnowflakeExists(snowflakeId)
+      if (discordError) return discordError
+
       const existingChannel = await db.discordChannel.findUnique({
         where: { externalId: snowflakeId },
       })
@@ -162,25 +181,31 @@ export async function POST(request: Request) {
       }
     }
 
+    // Upload image before DB insert so a failed upload doesn't leave an orphaned project
+    let imageUrl: string | null = null
+    if (imageFile instanceof File && imageFile.size > 0) {
+      imageUrl = await uploadImage('project-images', slug, imageFile)
+    }
+
     const newProject = await db.$transaction(async (tx) => {
       return await tx.project.create({
         data: {
           name: projectName,
-          slug: projectName.toLowerCase().replace(/\s+/g, '-'),
+          slug,
           description: projectDescription || null,
           startedAt: parseDate(projectStartDate),
+          imageUrl,
           repositories: {
-            create: {
+            create: Array.from(githubLinks).map((githubLink) => ({
               owner: githubLink.split('/')[3],
               name: githubLink.split('/')[4],
               installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
-            },
+            })),
           },
           channels: {
-            create: discordSnowflakeIds.map((discordSnowflakeId) => ({
-              externalId: discordSnowflakeId,
-              // placeholder value
-              name: projectName + ' Discord Channel',
+            create: Array.from(discordChannels, ([externalId, name]) => ({
+              externalId,
+              name,
             })),
           },
         },

@@ -4,5 +4,5 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['cjs'],
   outDir: 'dist',
-  noExternal: ['@repo/db'],
+  noExternal: ['@repo/db', '@repo/github'],
 })

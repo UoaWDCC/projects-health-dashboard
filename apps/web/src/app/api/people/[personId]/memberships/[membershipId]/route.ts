@@ -43,3 +43,48 @@ export async function PATCH(
     return Response.json({ error: 'Failed to update membership' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  _: Request,
+  { params }: { params: Promise<{ personId: string; membershipId: string }> }
+) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  try {
+    const { personId, membershipId } = await params
+
+    const membership = await db.projectMember.findUnique({
+      where: { id: membershipId },
+    })
+
+    if (!membership || membership.personId !== personId) {
+      return Response.json(
+        { error: 'Membership not found or does not belong to this person' },
+        { status: 404 }
+      )
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.projectMember.delete({
+        where: { id: membershipId },
+      })
+
+      const remainingMemberships = await tx.projectMember.count({
+        where: { personId },
+      })
+
+      if (remainingMemberships === 0) {
+        await tx.person.delete({
+          where: { id: personId },
+        })
+      }
+    })
+
+    return new Response(null, { status: 204 })
+  } catch (error) {
+    console.error('Error deleting membership:', error)
+    return Response.json({ error: 'Failed to delete membership' }, { status: 500 })
+  }
+}
