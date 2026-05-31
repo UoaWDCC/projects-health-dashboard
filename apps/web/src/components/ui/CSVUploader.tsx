@@ -67,7 +67,7 @@ export default function CSVUploader({
               body: fd,
             })
 
-            if (!result.ok && result.status !== 409) {
+            if (!result.ok) {
               const errorData = await result.json()
               errors.push(`Error adding row ${member.rowNumber}: ${errorData.error}`)
             }
@@ -77,6 +77,7 @@ export default function CSVUploader({
           }
         }
 
+        // After all rows in CSV are checked, update UI based on success/errors
         setIsUploading(false)
         if (errors.length === 0) {
           setIsSuccess(true)

@@ -17,6 +17,7 @@ import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib
 import { z } from 'zod'
 import { addMemberSchema } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
+import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 type PersonIdentity = {
   id: string
@@ -93,6 +94,13 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       } catch {
         setError(text)
       }
+      return
+    }
+
+    const result = (await response.json()) as AddProjectMemberResponse
+    if (result.outcome === 'already_member') {
+      setError(result.message)
+      setSuccess(false)
       return
     }
 
