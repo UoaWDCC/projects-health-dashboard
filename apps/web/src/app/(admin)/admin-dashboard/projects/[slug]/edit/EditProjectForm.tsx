@@ -42,6 +42,35 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
     }
   }
 
+  const handleRemoveRepo = async (repoUrl: string, index: number) => {
+    try {
+      const parts = repoUrl.split('/')
+      const owner = parts[3]
+      const name = parts[4]
+
+      if (owner && name) {
+        const response = await fetch(
+          `/api/project/check-repo?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(name)}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          if (data.hasData) {
+            const confirmed = window.confirm(
+              `Warning: There is commit and/or PR history associated with ${owner}/${name} in this project.\n\nDo you want to proceed?`
+            )
+            if (!confirmed) {
+              return
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore validation errors and allow removal fallback
+    }
+
+    setRepos((prev) => prev.filter((_, j) => j !== index))
+  }
+
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
@@ -200,11 +229,7 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
               {repos.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
                   {repos.map((r, i) => (
-                    <Chip
-                      key={i}
-                      color="blue"
-                      onRemove={() => setRepos((prev) => prev.filter((_, j) => j !== i))}
-                    >
+                    <Chip key={i} color="blue" onRemove={() => handleRemoveRepo(r, i)}>
                       {r.replace('https://github.com/', '')}
                     </Chip>
                   ))}
