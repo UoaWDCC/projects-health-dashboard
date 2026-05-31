@@ -43,11 +43,9 @@ async function getApp() {
 
 export async function getInstallationOctokit(installationId: string | number) {
   const normalizedInstallationId = Number(installationId)
-
   if (!Number.isInteger(normalizedInstallationId) || normalizedInstallationId <= 0) {
     throw new Error(`Invalid GitHub installation ID: ${installationId}`)
   }
-
   const app = await getApp()
   return app.getInstallationOctokit(normalizedInstallationId)
 }

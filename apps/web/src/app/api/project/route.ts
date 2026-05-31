@@ -33,13 +33,11 @@ async function validateGitHubExists(link: string) {
     )
   }
   const octokit = await getInstallationOctokit(installationId)
-
   try {
     await octokit.request('GET /repos/{owner}/{repo}', {
       owner: link.split('/')[3],
       repo: link.split('/')[4],
     })
-
     return null
   } catch (err: unknown) {
     console.error('GitHub validation error:', err)
@@ -103,7 +101,6 @@ export async function POST(request: Request) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
-
   try {
     const formData = await request.formData()
     const projectName = String(formData.get('projectName') ?? '').trim()
@@ -219,5 +216,133 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching projects:', error)
     return Response.json({ error: 'Failed to fetch projects' }, { status: 500 })
+  }
+}
+
+// API route for editing project details
+export async function PATCH(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  try {
+    const formData = await request.formData()
+    const projectId = String(formData.get('projectId') ?? '').trim()
+    const projectName = String(formData.get('projectName') ?? '').trim()
+    const githubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
+    const discordSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
+      .map(String)
+      .map((s) => s.trim())
+    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
+
+    if (
+      !projectId ||
+      !projectName ||
+      githubLinks.length === 0 ||
+      discordSnowflakeIds.length === 0
+    ) {
+      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // For now we only support linking one GitHub repo per project, so we take the first link provided
+    const githubLink = githubLinks[0]
+
+    if (!validateGitHubLinkFormat(githubLink))
+      return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
+
+    const githubError = await validateGitHubExists(githubLink)
+    if (githubError) return githubError
+
+    for (const discordSnowflakeId of discordSnowflakeIds) {
+      const discordError = await validateSnowflakeExists(discordSnowflakeId)
+      if (discordError) return discordError
+    }
+
+    const existingProject = await db.project.findUnique({ where: { id: projectId } })
+    if (!existingProject) {
+      return Response.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    const newRepoOwner = githubLink.split('/')[3]
+    const newRepoName = githubLink.split('/')[4]
+
+    const existingRepo = await db.gitHubRepository.findFirst({
+      where: { owner: newRepoOwner, name: newRepoName, projectId: { not: projectId } },
+    })
+
+    if (existingRepo) {
+      return Response.json(
+        {
+          error:
+            'GitHub Repository with this owner and name has already been linked to another project',
+        },
+        { status: 409 }
+      )
+    }
+
+    for (const snowflakeId of discordSnowflakeIds) {
+      const existingChannel = await db.discordChannel.findUnique({
+        where: { externalId: snowflakeId },
+      })
+      if (existingChannel && existingChannel.projectId !== projectId) {
+        return Response.json(
+          {
+            error: `Discord Channel with Snowflake ID ${snowflakeId} has already been linked to another project`,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    const updatedProject = await db.$transaction(async (tx) => {
+      // Update basic project details
+      await tx.project.update({
+        where: { id: projectId },
+        data: {
+          name: projectName,
+          description: projectDescription || null,
+        },
+      })
+
+      // Replace GitHub repositories
+      await tx.gitHubRepository.deleteMany({ where: { projectId } })
+      await tx.gitHubRepository.create({
+        data: {
+          projectId,
+          owner: newRepoOwner,
+          name: newRepoName,
+          installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
+        },
+      })
+
+      // Replace Discord channels
+      await tx.discordChannel.deleteMany({ where: { projectId } })
+      if (discordSnowflakeIds.length > 0) {
+        await tx.discordChannel.createMany({
+          data: discordSnowflakeIds.map((id) => ({
+            projectId,
+            externalId: id,
+            name: projectName + ' Discord Channel',
+          })),
+        })
+      }
+
+      return await tx.project.findUnique({
+        where: { id: projectId },
+        include: {
+          repositories: true,
+          channels: true,
+        },
+      })
+    })
+
+    revalidateTag('projects')
+
+    return Response.json(updatedProject, { status: 200 })
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Failed to update project' },
+      { status: 500 }
+    )
   }
 }
