@@ -195,8 +195,9 @@ export default function EditMemberPage({
 
   const handleUpdateMembership = async (e: FormEvent) => {
     e.preventDefault()
+    if (!person) return
     setMembershipError(null)
-    const res = await fetch(`/api/project/${slug}/members/${memberId}`, {
+    const res = await fetch(`/api/people/${person.id}/memberships/${memberId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -215,8 +216,11 @@ export default function EditMemberPage({
   }
 
   const handleUnlink = async () => {
+    if (!person) return
     setUnlinkError(null)
-    const res = await fetch(`/api/project/${slug}/members/${memberId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/people/${person.id}/memberships/${memberId}`, {
+      method: 'DELETE',
+    })
     if (res.ok) {
       router.push(`/projects/${slug}`)
     } else {
