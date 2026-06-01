@@ -1,15 +1,7 @@
 import { db, Role } from '@repo/db'
 import { createClient } from '@/lib/supabase/server'
 import { hasRole } from '@/lib/auth'
-
-/**
- * TODO: Add authentication and authorization to ensure only admins can access these routes
- */
-
-function isValidEmail(email: string) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return regex.test(email)
-}
+import { rolesSchema } from '@/lib/schemas/admin'
 
 // API route for adding new admin and/or execs
 export async function POST(request: Request) {
@@ -19,20 +11,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const email = String(body.email).trim()
-    const addAdmin = Boolean(body.adminRole ?? '')
-    const addExec = Boolean(body.execRole ?? '')
 
-    if (!isValidEmail(email)) {
-      return Response.json({ error: 'Invalid email address' }, { status: 400 })
+    const parsed = rolesSchema.safeParse({
+      email: String(body.email ?? '').trim(),
+      adminRole: Boolean(body.adminRole),
+      execRole: Boolean(body.execRole),
+    })
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
     }
 
-    if (!addAdmin && !addExec) {
-      return Response.json(
-        { error: 'Missing required fields, add at least one role' },
-        { status: 400 }
-      )
-    }
+    const { email, adminRole: addAdmin, execRole: addExec } = parsed.data
     const profile = await db.profile.findUnique({ where: { email } })
 
     if (!profile) {
@@ -83,20 +73,18 @@ export async function DELETE(request: Request) {
 
   try {
     const body = await request.json()
-    const email = String(body.email).trim()
-    const removeAdmin = Boolean(body.adminRole)
-    const removeExec = Boolean(body.execRole)
 
-    if (!isValidEmail(email)) {
-      return Response.json({ error: 'Invalid email address' }, { status: 400 })
+    const parsed = rolesSchema.safeParse({
+      email: String(body.email ?? '').trim(),
+      adminRole: Boolean(body.adminRole),
+      execRole: Boolean(body.execRole),
+    })
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
     }
 
-    if (!removeAdmin && !removeExec) {
-      return Response.json(
-        { error: 'Missing required fields, remove at least one role' },
-        { status: 400 }
-      )
-    }
+    const { email, adminRole: removeAdmin, execRole: removeExec } = parsed.data
 
     const supabase = await createClient()
     const {

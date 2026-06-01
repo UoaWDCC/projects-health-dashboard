@@ -5,6 +5,7 @@ import {
   resolveDiscordIdentity,
   IdentityResolutionError,
 } from '@/lib/identity/resolve'
+import { addMemberSchema } from '@/lib/schemas/admin'
 
 // API route for getting all members of a project
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -141,11 +142,6 @@ async function linkPersonToProject(
   })
 }
 
-function getFormString(formData: FormData, key: string): string {
-  const value = formData.get(key)
-  return typeof value === 'string' ? value.trim() : ''
-}
-
 function errorToStatus(message: string): number {
   if (message === 'This person is already an active member of this project!') return 409
   if (message === 'Project not found') return 404
@@ -162,11 +158,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const { slug } = await params
     const formData = await request.formData()
 
-    let targetPersonId = getFormString(formData, 'personId')
-    let targetDisplayName = getFormString(formData, 'displayName')
-    const discordId = getFormString(formData, 'discordId')
-    const githubId = getFormString(formData, 'githubId')
-    const imageUrl = getFormString(formData, 'imageUrl')
+    const rawData = {
+      personId: String(formData.get('personId') ?? '').trim() || undefined,
+      displayName: String(formData.get('displayName') ?? '').trim() || undefined,
+      discordId: String(formData.get('discordId') ?? '').trim() || undefined,
+      githubId: String(formData.get('githubId') ?? '').trim() || undefined,
+      imageUrl: String(formData.get('imageUrl') ?? '').trim() || undefined,
+    }
+
+    const parsed = addMemberSchema.safeParse(rawData)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    let targetPersonId = parsed.data.personId ?? ''
+    let targetDisplayName = parsed.data.displayName ?? ''
+    const discordId = parsed.data.discordId ?? ''
+    const githubId = parsed.data.githubId ?? ''
+    const imageUrl = parsed.data.imageUrl ?? ''
 
     if (targetPersonId) {
       const existingPerson = await db.person.findUnique({ where: { id: targetPersonId } })
@@ -177,8 +187,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         )
       }
       targetDisplayName = existingPerson.displayName
-    } else if (!targetDisplayName) {
-      return Response.json({ error: 'Display name is required for a new person' }, { status: 400 })
     }
 
     const { githubExternalId, githubUsername, discordSnowflake, discordUsername } =

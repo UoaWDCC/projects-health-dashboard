@@ -1,19 +1,9 @@
 import { hasRole } from '@/lib/auth'
+import { createProjectSchema } from '@/lib/schemas/admin'
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
 import { uploadImage } from '@/lib/storage'
-
-/**
- * TODO: Add authentication and authorization to ensure only admins can access these routes
- * Add error validation for checking if the project name is unique and if the Discord link is valid.
- */
-
-function validateGitHubLinkFormat(link: string) {
-  // expected GitHub Link - https://github.com/owner/reponame
-  const regex = /^https:\/\/github\.com\/[^\/]+\/[^\/]+$/
-  return regex.test(link)
-}
 
 function parseDate(input: string): Date | null {
   // expected input format - YYYY-MM
@@ -106,10 +96,8 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData()
-    const projectName = String(formData.get('projectName') ?? '').trim()
-    const githubLinks = new Set(
-      (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
-    )
+
+    const rawGithubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
     const rawSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
       .map(String)
       .map((s) => s.trim())
@@ -121,6 +109,21 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const parsed = createProjectSchema.safeParse({
+      projectName: String(formData.get('projectName') ?? '').trim(),
+      projectDescription: String(formData.get('projectDescription') ?? '').trim(),
+      projectStartDate: String(formData.get('projectStartDate') ?? '').trim(),
+      githubLinks: [...new Set(rawGithubLinks)],
+      discordSnowflakeIds: [...new Set(rawSnowflakeIds)],
+    })
+
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    const { projectName, projectDescription, projectStartDate, githubLinks } = parsed.data
+
     // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
     const discordChannels = new Map<string, string>()
     for (let i = 0; i < rawSnowflakeIds.length; i++) {
@@ -130,15 +133,8 @@ export async function POST(request: Request) {
       if (!discordChannels.has(id)) discordChannels.set(id, name)
     }
 
-    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
-    const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
-    const imageFile = formData.get('image')
-
-    if (!projectName || githubLinks.size === 0 || discordChannels.size === 0) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
     const slug = projectName.toLowerCase().replace(/\s+/g, '-')
+    const imageFile = formData.get('image')
 
     const existingProject = await db.project.findUnique({ where: { slug } })
     if (existingProject) {
@@ -147,9 +143,6 @@ export async function POST(request: Request) {
 
     // github validation
     for (const githubLink of githubLinks) {
-      if (!validateGitHubLinkFormat(githubLink))
-        return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
-
       const githubError = await validateGitHubExists(githubLink)
       if (githubError) return githubError
 

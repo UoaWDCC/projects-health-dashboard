@@ -5,6 +5,7 @@ import {
   resolveDiscordIdentity,
   IdentityResolutionError,
 } from '@/lib/identity/resolve'
+import { editIdentitySchema } from '@/lib/schemas/admin'
 
 export async function PATCH(
   request: Request,
@@ -29,7 +30,13 @@ export async function PATCH(
       )
     }
 
-    const { username } = body
+    const parsed = editIdentitySchema.safeParse(body)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    const { username } = parsed.data
 
     let resolvedExternalId: string | undefined
     let resolvedUsername: string | undefined
