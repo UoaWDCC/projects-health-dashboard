@@ -16,7 +16,7 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
   const imgSrc = avatarUrl && !imgError ? avatarUrl : '/default-avatar.svg'
 
   return (
-    <div className="w-full max-w-[1284px] flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]">
+    <div className="w-full flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]">
       {/* Wrap the images in a relative container so the crown can be positioned relative to the avatar */}
       <div className="relative w-32 h-32 mt-5 md:w-[175px] md:h-[175px] mx-auto md:mx-10 mb-6 md:my-auto shrink-0">
         {/* Main Avatar Image */}

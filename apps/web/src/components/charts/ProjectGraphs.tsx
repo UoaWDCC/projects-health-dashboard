@@ -1,10 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LineGraph from '@/components/ui/LineGraph'
+import LineGraph from '@/components/charts/LineGraph'
 import type { ProjectWeeklyStats } from '@/lib/project/weekly-stats'
 
-export default function ProjectGraphs({ slug }: { slug: string }) {
+export default function ProjectGraphs({
+  slug,
+  isRowView = false,
+}: {
+  slug: string
+  isRowView?: boolean
+}) {
   const [stats, setStats] = useState<ProjectWeeklyStats | null>(null)
 
   useEffect(() => {
@@ -17,7 +23,9 @@ export default function ProjectGraphs({ slug }: { slug: string }) {
   const dates = stats?.dates ?? []
 
   return (
-    <div className="grid grid-cols-2 gap-6 mx-4 mt-6">
+    <div
+      className={`grid gap-6 mx-4 mt-6 w-full transition-all duration-500 ease-in-out ${isRowView ? 'grid-cols-1' : 'grid-cols-2'}`}
+    >
       <LineGraph title="Weekly Commits" dates={dates} dataPoints={stats?.commits ?? []} />
       <LineGraph title="Weekly PRs" dates={dates} dataPoints={stats?.prs ?? []} />
       <LineGraph
