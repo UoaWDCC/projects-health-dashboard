@@ -20,7 +20,7 @@ export async function POST(
       return Response.json({ error: message }, { status: 400 })
     }
 
-    const { provider, externalId, username } = parsed.data
+    const { provider, username } = parsed.data
 
     const trimmed = String(username).trim()
     let resolvedExternalId: string = trimmed
@@ -98,8 +98,8 @@ export async function POST(
       data: {
         personId,
         provider,
-        externalId,
-        ...(username ? { username } : {}),
+        externalId: resolvedExternalId,
+        username: resolvedUsername,
       },
     })
 

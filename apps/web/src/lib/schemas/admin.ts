@@ -63,18 +63,10 @@ export const updatePersonSchema = z.object({
   forceCascade: z.boolean().optional(),
 })
 
-export const addIdentitySchema = z.discriminatedUnion('provider', [
-  z.object({
-    provider: z.literal('DISCORD'),
-    externalId: discordSnowflake,
-    username: z.string().optional(),
-  }),
-  z.object({
-    provider: z.literal('GITHUB'),
-    externalId: z.string().min(1, 'External ID is required'),
-    username: z.string().optional(),
-  }),
-])
+export const addIdentitySchema = z.object({
+  provider: z.enum(['DISCORD', 'GITHUB']),
+  username: z.string().min(1, 'Username is required'),
+})
 
 export const editIdentitySchema = z.object({
   externalId: z.string().trim().min(1, 'External ID cannot be empty').optional(),

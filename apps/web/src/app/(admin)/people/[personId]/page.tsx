@@ -10,7 +10,7 @@ import { inputClass, inputErrorClass, labelClass, PROVIDER_COLORS } from '@/lib/
 import ErrorMessage from '@/components/utils/ErrorMessage'
 import FieldError from '@/components/utils/FieldError'
 import { z } from 'zod'
-import { updatePersonSchema } from '@/lib/schemas/admin'
+import { updatePersonSchema, addIdentitySchema } from '@/lib/schemas/admin'
 
 type PersonIdentity = {
   id: string
@@ -61,6 +61,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
   const [newIdentityProvider, setNewIdentityProvider] = useState<IdentityProvider>('DISCORD')
   const [newIdentityUsername, setNewIdentityUsername] = useState('')
   const [addIdentityError, setAddIdentityError] = useState<string | null>(null)
+  const [addIdentityFieldErrors, setAddIdentityFieldErrors] = useState<Record<string, string>>({})
 
   const [editPersonFieldErrors, setEditPersonFieldErrors] = useState<Record<string, string>>({})
 
@@ -141,6 +142,17 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
   const handleAddIdentity = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setAddIdentityError(null)
+
+    const validation = addIdentitySchema.safeParse({
+      provider: newIdentityProvider,
+      username: newIdentityUsername,
+    })
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setAddIdentityFieldErrors({ username: errors.username?.[0] ?? '' })
+      return
+    }
+    setAddIdentityFieldErrors({})
 
     const res = await fetch(`/api/people/${personId}/identities`, {
       method: 'POST',
@@ -438,11 +450,14 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   </label>
                   <input
                     value={newIdentityUsername}
-                    onChange={(e) => setNewIdentityUsername(e.target.value)}
+                    onChange={(e) => {
+                      setNewIdentityUsername(e.target.value)
+                      setAddIdentityFieldErrors((p) => ({ ...p, username: '' }))
+                    }}
                     placeholder="e.g. janesmith"
-                    required
-                    className={inputClass}
+                    className={addIdentityFieldErrors.username ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={addIdentityFieldErrors.username} />
                 </div>
               </div>
               {addIdentityError && <ErrorMessage message={addIdentityError} />}
