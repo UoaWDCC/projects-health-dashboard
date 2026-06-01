@@ -1,9 +1,9 @@
 import TeamHeader from '@/components/headers/TeamHeader'
-import ProjectGraphs from './ProjectGraphs'
 import WeeklyMvp from '@/components/ui/WeeklyMvp'
 import { getProjectHeaderData } from '@/lib/project/projects'
 import { getProjectWeeklyMvp } from '@/lib/project/weekly-stats'
 import { notFound } from 'next/navigation'
+import GraphViewToggle from '@/components/charts/GraphViewToggle'
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const slug = (await params).slug
@@ -35,11 +35,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        <div className="w-full flex flex-col items-center gap-5">
-          <h2 className="text-4xl font-extrabold self-start">Progress indicators</h2>
-
-          <ProjectGraphs slug={slug} />
-        </div>
+        <GraphViewToggle slug={slug} />
       </div>
     </>
   )
