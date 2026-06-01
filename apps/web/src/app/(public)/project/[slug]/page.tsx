@@ -21,17 +21,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   return (
     <>
       <TeamHeader project={project} />
-      {mvp && mvpName && (
-        <div className="px-6 md:px-12 py-6 w-full flex flex-col items-center gap-4">
-          <h2 className="text-2xl font-bold self-start">Weekly MVP</h2>
-          <WeeklyMvp
-            name={mvpName}
-            avatarUrl={mvp.projectMember.person.imageUrl ?? undefined}
-            linesCommitted={mvp.linesAdded}
-          />
+
+      <div className="px-5 sm:px-10 lg:px-20 py-20 w-full flex flex-col items-center gap-20">
+        {mvp && mvpName && (
+          <div className="w-full flex flex-col items-center gap-10">
+            <h2 className="text-4xl font-extrabold self-start">Weekly MVP</h2>
+
+            <WeeklyMvp
+              name={mvpName}
+              avatarUrl={mvp.projectMember.person.imageUrl ?? undefined}
+              linesCommitted={mvp.linesAdded}
+            />
+          </div>
+        )}
+
+        <div className="w-full flex flex-col items-center gap-5">
+          <h2 className="text-4xl font-extrabold self-start">Progress indicators</h2>
+
+          <ProjectGraphs slug={slug} />
         </div>
-      )}
-      <ProjectGraphs slug={slug} />
+      </div>
     </>
   )
 }
