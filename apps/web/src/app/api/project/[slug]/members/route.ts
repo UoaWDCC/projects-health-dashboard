@@ -6,6 +6,7 @@ import {
   IdentityResolutionError,
 } from '@/lib/identity/resolve'
 import { addMemberSchema } from '@/lib/schemas/admin'
+import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 // API route for getting all members of a project
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -113,7 +114,7 @@ async function linkPersonToProject(
   slug: string,
   personId: string,
   displayName: string
-) {
+): Promise<AddProjectMemberResponse> {
   const project = await tx.project.findUnique({
     where: { slug },
     select: { id: true },
@@ -127,23 +128,39 @@ async function linkPersonToProject(
 
   if (existingMember) {
     if (existingMember.isActive) {
-      throw new Error('This person is already an active member of this project!')
+      return {
+        outcome: 'already_member',
+        message: 'This person is already an active member of this project',
+      }
     }
-    return tx.projectMember.update({
+    const member = await tx.projectMember.update({
       where: { id: existingMember.id },
       data: { isActive: true, displayName },
       include: { person: true },
     })
+    return { outcome: 'member_linked', member }
   }
 
-  return tx.projectMember.create({
+  const member = await tx.projectMember.create({
     data: { projectId: project.id, personId, displayName, isActive: true },
     include: { person: true },
+  })
+  return { outcome: 'member_linked', member }
+}
+
+function getFormString(formData: FormData, key: string): string {
+  const value = formData.get(key)
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function findExistingIdentity(provider: 'DISCORD' | 'GITHUB', username: string) {
+  return db.personIdentity.findFirst({
+    where: { provider, username: { equals: username, mode: 'insensitive' } },
+    select: { personId: true },
   })
 }
 
 function errorToStatus(message: string): number {
-  if (message === 'This person is already an active member of this project!') return 409
   if (message === 'Project not found') return 404
   return 500
 }
@@ -187,12 +204,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         )
       }
       targetDisplayName = existingPerson.displayName
+    } else if (!targetDisplayName) {
+      return Response.json({ error: 'Display name is required for a new person' }, { status: 400 })
+    } else {
+      // for looking up existing identities when adding through CSV with no personId
+      const [existingGithubIdentity, existingDiscordIdentity] = await Promise.all([
+        githubId ? findExistingIdentity('GITHUB', githubId) : null,
+        discordId ? findExistingIdentity('DISCORD', discordId) : null,
+      ])
+
+      if (
+        existingGithubIdentity &&
+        existingDiscordIdentity &&
+        existingGithubIdentity.personId !== existingDiscordIdentity.personId
+      ) {
+        return Response.json(
+          {
+            error: 'The provided GitHub and Discord accounts belong to different existing people.',
+          },
+          { status: 409 }
+        )
+      }
+
+      if (existingGithubIdentity) {
+        targetPersonId = existingGithubIdentity.personId
+      } else if (existingDiscordIdentity) {
+        targetPersonId = existingDiscordIdentity.personId
+      }
     }
 
     const { githubExternalId, githubUsername, discordSnowflake, discordUsername } =
       await resolveIdentities(githubId, discordId)
 
-    const newMember = await db.$transaction(async (tx) => {
+    const newMemberResult = await db.$transaction(async (tx) => {
       if (!targetPersonId) {
         targetPersonId = await createPersonWithIdentities(tx, {
           displayName: targetDisplayName,
@@ -207,7 +251,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       return linkPersonToProject(tx, slug, targetPersonId, targetDisplayName)
     })
 
-    return Response.json(newMember, { status: 201 })
+    return Response.json(newMemberResult, {
+      status: newMemberResult.outcome === 'already_member' ? 200 : 201,
+    })
   } catch (error) {
     console.error('Error adding member:', error)
 

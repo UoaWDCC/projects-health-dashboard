@@ -58,6 +58,9 @@ importers:
       octokit:
         specifier: ^5.0.5
         version: 5.0.5
+      papaparse:
+        specifier: 5.5.3
+        version: 5.5.3
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -86,6 +89,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.15
+      '@types/papaparse':
+        specifier: 5.5.2
+        version: 5.5.2
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
@@ -2230,6 +2236,12 @@ packages:
     resolution:
       {
         integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==,
+      }
+
+  '@types/papaparse@5.5.2':
+    resolution:
+      {
+        integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==,
       }
 
   '@types/pg@8.20.0':
@@ -5530,6 +5542,12 @@ packages:
         integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==,
       }
 
+  papaparse@5.5.3:
+    resolution:
+      {
+        integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==,
+      }
+
   parent-module@1.0.1:
     resolution:
       {
@@ -8260,6 +8278,10 @@ snapshots:
     dependencies:
       undici-types: 7.18.2
 
+  '@types/papaparse@5.5.2':
+    dependencies:
+      '@types/node': 25.5.0
+
   '@types/pg@8.20.0':
     dependencies:
       '@types/node': 25.5.0
@@ -10469,6 +10491,8 @@ snapshots:
       p-limit: 3.1.0
 
   package-json-from-dist@1.0.1: {}
+
+  papaparse@5.5.3: {}
 
   parent-module@1.0.1:
     dependencies:
