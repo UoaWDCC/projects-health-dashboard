@@ -130,7 +130,6 @@ async function linkPersonToProject(
     if (existingMember.isActive) {
       return {
         outcome: 'already_member',
-        skipped: true,
         message: 'This person is already an active member of this project',
       }
     }

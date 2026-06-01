@@ -22,7 +22,6 @@ export type ProjectMemberLinkedResponse = {
 
 export type ProjectMemberAlreadyExistsResponse = {
   outcome: 'already_member'
-  skipped: true
   message: string
 }
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Papa from 'papaparse'
+import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 interface Member {
   name: string
@@ -19,6 +20,7 @@ export default function CSVUploader({
   onComplete: () => void | Promise<void>
 }) {
   const [error, setError] = useState<string>('')
+  const [skippedInfo, setSkippedInfo] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const csvInputRef = useRef<HTMLInputElement>(null)
@@ -26,6 +28,7 @@ export default function CSVUploader({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError('')
+    setSkippedInfo('')
     setIsSuccess(false)
 
     // only takes first file since its for uploading a single team list
@@ -53,6 +56,7 @@ export default function CSVUploader({
         }))
 
         const errors: string[] = []
+        const skippedRows: string[] = []
 
         for (const member of memberRows) {
           const fd = new FormData()
@@ -70,6 +74,12 @@ export default function CSVUploader({
             if (!result.ok) {
               const errorData = await result.json()
               errors.push(`Error adding row ${member.rowNumber}: ${errorData.error}`)
+              continue
+            }
+
+            const data = (await result.json()) as AddProjectMemberResponse
+            if (data.outcome === 'already_member') {
+              skippedRows.push(`Row ${member.rowNumber}: ${member.name}`)
             }
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err)
@@ -79,6 +89,15 @@ export default function CSVUploader({
 
         // After all rows in CSV are checked, update UI based on success/errors
         setIsUploading(false)
+        const skippedSummary =
+          skippedRows.length > 0
+            ? `Skipped rows since members are already on the project:\n${skippedRows.join('\n')}`
+            : ''
+
+        if (skippedSummary) {
+          setSkippedInfo(skippedSummary)
+        }
+
         if (errors.length === 0) {
           setIsSuccess(true)
           setTimeout(() => {
@@ -143,6 +162,11 @@ export default function CSVUploader({
       )}
       {isSuccess && (
         <div className="mt-3 mb-4 font-mono text-xs text-green-600">Upload complete!</div>
+      )}
+      {skippedInfo && (
+        <div className="text-wdcc-blue mb-4 whitespace-pre-wrap font-mono text-xs">
+          {skippedInfo}
+        </div>
       )}
       {error && <div className="text-red-500 mb-4 whitespace-pre-wrap">{error}</div>}
     </div>
