@@ -12,6 +12,52 @@ describe('GitHub Utils', () => {
       vi.useRealTimers()
     })
 
+    describe('clamps wait duration to a floor of 10s', () => {
+      it('when reset time is in the past (primary rate limit)', async () => {
+        const resetTime = Math.floor(Date.now() / 1000) - 5
+        const mockFn = vi.fn()
+
+        mockFn.mockRejectedValueOnce({
+          status: 429,
+          response: {
+            headers: {
+              'x-ratelimit-remaining': '0',
+              'x-ratelimit-reset': resetTime.toString(),
+            },
+          },
+        })
+        mockFn.mockResolvedValueOnce('success')
+
+        const waitSpy = vi.spyOn(global, 'setTimeout')
+        const resultPromise = withRateLimit(mockFn, 3)
+        await vi.runAllTimersAsync()
+        await resultPromise
+
+        expect(waitSpy).toHaveBeenCalledWith(expect.any(Function), 10_000)
+      })
+
+      it('when retry-after is below 10 (secondary rate limit)', async () => {
+        const mockFn = vi.fn()
+
+        mockFn.mockRejectedValueOnce({
+          status: 403,
+          response: {
+            headers: {
+              'retry-after': '5',
+            },
+          },
+        })
+        mockFn.mockResolvedValueOnce('success')
+
+        const waitSpy = vi.spyOn(global, 'setTimeout')
+        const resultPromise = withRateLimit(mockFn, 3)
+        await vi.runAllTimersAsync()
+        await resultPromise
+
+        expect(waitSpy).toHaveBeenCalledWith(expect.any(Function), 10_000)
+      })
+    })
+
     it('retries on primary rate limit (429) and waits the correct duration before retrying', async () => {
       const resetTime = Math.floor(Date.now() / 1000) + 30
       const mockFn = vi.fn()
@@ -36,9 +82,6 @@ describe('GitHub Utils', () => {
       expect(result).toBe('success')
       expect(mockFn).toHaveBeenCalledTimes(2)
       expect(waitSpy).toHaveBeenCalledWith(expect.any(Function), 30_000)
-
-      const waitDuration = waitSpy.mock.calls[0][1] as number
-      expect(waitDuration).toBeGreaterThanOrEqual(10_000)
     })
 
     it('retries on secondary rate limit (403 with retry-after)', async () => {
@@ -63,9 +106,6 @@ describe('GitHub Utils', () => {
       expect(result).toBe('success')
       expect(mockFn).toHaveBeenCalledTimes(2)
       expect(waitSpy).toHaveBeenCalledWith(expect.any(Function), 30_000)
-
-      const waitDuration = waitSpy.mock.calls[0][1] as number
-      expect(waitDuration).toBeGreaterThanOrEqual(10_000)
     })
 
     it('falls back to 60s wait when rate-limit error has no timing header', async () => {
@@ -114,9 +154,6 @@ describe('GitHub Utils', () => {
       expect(result).toBe('success')
       expect(mockFn).toHaveBeenCalledTimes(2)
       expect(waitSpy).toHaveBeenCalledWith(expect.any(Function), 30_000)
-
-      const waitDuration = waitSpy.mock.calls[0][1] as number
-      expect(waitDuration).toBeGreaterThanOrEqual(10_000)
     })
 
     it('throws immediately without retrying on non-rate-limit errors (500)', async () => {
