@@ -254,31 +254,58 @@ export async function PATCH(request: Request) {
     const formData = await request.formData()
     const projectId = String(formData.get('projectId') ?? '').trim()
     const projectName = String(formData.get('projectName') ?? '').trim()
-    const githubLinks = (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
-    const discordSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
+    const githubLinks = new Set(
+      (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
+    )
+    const rawSnowflakeIds = (formData.getAll('discordSnowflakeIds') || [])
       .map(String)
       .map((s) => s.trim())
-    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
+    const rawChannelNames = (formData.getAll('discordChannelNames') || [])
+      .map(String)
+      .map((s) => s.trim())
 
-    if (
-      !projectId ||
-      !projectName ||
-      githubLinks.length === 0 ||
-      discordSnowflakeIds.length === 0
-    ) {
+    if (rawSnowflakeIds.length !== rawChannelNames.length) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // For now we only support linking one GitHub repo per project, so we take the first link provided
-    const githubLink = githubLinks[0]
+    // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
+    const discordChannels = new Map<string, string>()
+    for (let i = 0; i < rawSnowflakeIds.length; i++) {
+      const id = rawSnowflakeIds[i]
+      const name = rawChannelNames[i]
+      if (!id || !name) continue
+      if (!discordChannels.has(id)) discordChannels.set(id, name)
+    }
 
-    if (!validateGitHubLinkFormat(githubLink))
-      return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
+    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
 
-    const githubError = await validateGitHubExists(githubLink)
-    if (githubError) return githubError
+    if (!projectId || !projectName || githubLinks.size === 0 || discordChannels.size === 0) {
+      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
 
-    for (const discordSnowflakeId of discordSnowflakeIds) {
+    for (const githubLink of githubLinks) {
+      if (!validateGitHubLinkFormat(githubLink))
+        return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
+      const githubError = await validateGitHubExists(githubLink)
+      if (githubError) return githubError
+
+      const owner = githubLink.split('/')[3]
+      const name = githubLink.split('/')[4]
+
+      const existingRepo = await db.gitHubRepository.findFirst({
+        where: { owner, name, projectId: { not: projectId } },
+      })
+      if (existingRepo) {
+        return Response.json(
+          {
+            error: `GitHub Repository ${githubLink} has already been linked to another project`,
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    for (const discordSnowflakeId of discordChannels.keys()) {
       const discordError = await validateSnowflakeExists(discordSnowflakeId)
       if (discordError) return discordError
     }
@@ -288,24 +315,7 @@ export async function PATCH(request: Request) {
       return Response.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    const newRepoOwner = githubLink.split('/')[3]
-    const newRepoName = githubLink.split('/')[4]
-
-    const existingRepo = await db.gitHubRepository.findFirst({
-      where: { owner: newRepoOwner, name: newRepoName, projectId: { not: projectId } },
-    })
-
-    if (existingRepo) {
-      return Response.json(
-        {
-          error:
-            'GitHub Repository with this owner and name has already been linked to another project',
-        },
-        { status: 409 }
-      )
-    }
-
-    for (const snowflakeId of discordSnowflakeIds) {
+    for (const snowflakeId of discordChannels.keys()) {
       const existingChannel = await db.discordChannel.findUnique({
         where: { externalId: snowflakeId },
       })
@@ -329,25 +339,94 @@ export async function PATCH(request: Request) {
         },
       })
 
-      // Replace GitHub repositories
-      await tx.gitHubRepository.deleteMany({ where: { projectId } })
-      await tx.gitHubRepository.create({
-        data: {
-          projectId,
-          owner: newRepoOwner,
-          name: newRepoName,
-          installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
-        },
+      // 1. Soft delete / reactivate / create GitHub repositories
+      const currentRepos = await tx.gitHubRepository.findMany({
+        where: { projectId },
+      })
+      const newRepoPairs = Array.from(githubLinks).map((link) => ({
+        owner: link.split('/')[3],
+        name: link.split('/')[4],
+      }))
+
+      const reposToSoftDelete = currentRepos.filter(
+        (cr) => !newRepoPairs.some((nr) => nr.owner === cr.owner && nr.name === cr.name)
+      )
+      if (reposToSoftDelete.length > 0) {
+        await tx.gitHubRepository.updateMany({
+          where: {
+            id: { in: reposToSoftDelete.map((r) => r.id) },
+          },
+          data: { isActive: false },
+        })
+      }
+
+      const reposToReactivate = currentRepos.filter((cr) =>
+        newRepoPairs.some((nr) => nr.owner === cr.owner && nr.name === cr.name)
+      )
+      if (reposToReactivate.length > 0) {
+        await tx.gitHubRepository.updateMany({
+          where: {
+            id: { in: reposToReactivate.map((r) => r.id) },
+          },
+          data: { isActive: true },
+        })
+      }
+
+      const reposToCreate = newRepoPairs.filter(
+        (nr) => !currentRepos.some((cr) => cr.owner === nr.owner && cr.name === nr.name)
+      )
+      for (const nr of reposToCreate) {
+        await tx.gitHubRepository.create({
+          data: {
+            projectId,
+            owner: nr.owner,
+            name: nr.name,
+            installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
+            isActive: true,
+          },
+        })
+      }
+
+      // 2. Soft delete / reactivate / create Discord channels
+      const currentChannels = await tx.discordChannel.findMany({
+        where: { projectId },
       })
 
-      // Replace Discord channels
-      await tx.discordChannel.deleteMany({ where: { projectId } })
-      if (discordSnowflakeIds.length > 0) {
+      const channelsToSoftDelete = currentChannels.filter(
+        (cc) => !discordChannels.has(cc.externalId)
+      )
+      if (channelsToSoftDelete.length > 0) {
+        await tx.discordChannel.updateMany({
+          where: {
+            id: { in: channelsToSoftDelete.map((c) => c.id) },
+          },
+          data: { isActive: false },
+        })
+      }
+
+      const channelsToReactivate = currentChannels.filter((cc) =>
+        discordChannels.has(cc.externalId)
+      )
+      for (const cc of channelsToReactivate) {
+        await tx.discordChannel.update({
+          where: { id: cc.id },
+          data: {
+            isActive: true,
+            name: discordChannels.get(cc.externalId) || cc.name,
+          },
+        })
+      }
+
+      const channelsToCreate = Array.from(discordChannels.entries()).filter(
+        ([id]) => !currentChannels.some((cc) => cc.externalId === id)
+      )
+      if (channelsToCreate.length > 0) {
         await tx.discordChannel.createMany({
-          data: discordSnowflakeIds.map((id) => ({
+          data: channelsToCreate.map(([id, name]) => ({
             projectId,
             externalId: id,
-            name: projectName + ' Discord Channel',
+            name,
+            isActive: true,
           })),
         })
       }

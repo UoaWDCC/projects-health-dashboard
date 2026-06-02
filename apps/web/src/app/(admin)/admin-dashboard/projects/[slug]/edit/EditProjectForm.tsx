@@ -76,12 +76,10 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
     setError(null)
 
     const formData = new FormData(event.currentTarget)
-    // Add projectId
+
     formData.append('projectId', project.id)
 
-    // The hidden inputs in the JSX handle the first item. We append the rest manually if any,
-    // or just append all of them to be safe (and remove the hidden inputs).
-    // It's cleaner to remove the hidden inputs and just append all here:
+    // Create the lists of GitHub repos and Discord channels.
     repos.forEach((r) => formData.append('githubLinks', r))
     channels.forEach((c) => formData.append('discordSnowflakeIds', c))
 
