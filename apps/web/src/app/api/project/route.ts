@@ -339,7 +339,7 @@ export async function PATCH(request: Request) {
         },
       })
 
-      // 1. Soft delete / reactivate / create GitHub repositories
+      // Soft delete, reactivate, or create new repos
       const currentRepos = await tx.gitHubRepository.findMany({
         where: { projectId },
       })
@@ -387,7 +387,7 @@ export async function PATCH(request: Request) {
         })
       }
 
-      // 2. Soft delete / reactivate / create Discord channels
+      // Soft delete, reactivate, or create Discord channels
       const currentChannels = await tx.discordChannel.findMany({
         where: { projectId },
       })
