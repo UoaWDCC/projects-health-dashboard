@@ -3,6 +3,9 @@
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 import Image from 'next/image'
 import { useState } from 'react'
+import { z } from 'zod'
+import { rolesSchema } from '@/lib/schemas/admin'
+import FieldError from '@/components/utils/FieldError'
 
 type Status = { ok: boolean; message: string } | null
 
@@ -99,6 +102,36 @@ function RoleCard({
 }) {
   const isBlue = accentColor === 'blue'
   const checkboxAccent = isBlue ? 'accent-[#077CF1]' : 'accent-[#E333A3]'
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+
+    const validation = rolesSchema.safeParse({
+      email: String(fd.get('email') ?? '').trim(),
+      adminRole: fd.get('adminRole') === 'on',
+      execRole: fd.get('execRole') === 'on',
+    })
+
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setFieldErrors({
+        email: errors.email?.[0] ?? '',
+        role: errors.adminRole?.[0] ?? '',
+      })
+      return
+    }
+
+    setFieldErrors({})
+    onSubmit(fd)
+  }
+
+  const inputBase =
+    'font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] rounded-xl px-3.5 py-2.5 outline-none focus:bg-white focus:ring-2 transition-all placeholder:text-wdcc-grey-light w-full'
+  const emailClass = fieldErrors.email
+    ? `${inputBase} border-wdcc-kelvin focus:border-wdcc-kelvin focus:ring-wdcc-kelvin/10`
+    : `${inputBase} border-wdcc-purple focus:border-wdcc-blue focus:ring-wdcc-blue/10`
 
   return (
     <div
@@ -125,7 +158,7 @@ function RoleCard({
           <div className="h-px mt-3" />
         </div>
 
-        <form action={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
           {/* Email */}
           <div className="flex flex-col gap-1.5">
             <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
@@ -134,10 +167,11 @@ function RoleCard({
             <input
               type="email"
               name="email"
-              required
               placeholder="user@example.com"
-              className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
+              onChange={() => setFieldErrors((p) => ({ ...p, email: '' }))}
+              className={emailClass}
             />
+            <FieldError message={fieldErrors.email} />
           </div>
 
           {/* Roles */}
@@ -150,6 +184,7 @@ function RoleCard({
                 <input
                   type="checkbox"
                   name="adminRole"
+                  onChange={() => setFieldErrors((p) => ({ ...p, role: '' }))}
                   className={`w-4 h-4 rounded ${checkboxAccent}`}
                 />
                 <span className="font-mono text-sm text-wdcc-grey">Admin</span>
@@ -158,11 +193,13 @@ function RoleCard({
                 <input
                   type="checkbox"
                   name="execRole"
+                  onChange={() => setFieldErrors((p) => ({ ...p, role: '' }))}
                   className={`w-4 h-4 rounded ${checkboxAccent}`}
                 />
                 <span className="font-mono text-sm text-wdcc-grey">Exec</span>
               </label>
             </div>
+            <FieldError message={fieldErrors.role} />
           </div>
 
           {/* Status */}

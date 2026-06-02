@@ -1,5 +1,6 @@
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
+import { updatePersonSchema } from '@/lib/schemas/admin'
 
 export async function GET(request: Request, { params }: { params: Promise<{ personId: string }> }) {
   if (!(await hasRole('ADMIN'))) {
@@ -40,7 +41,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ pers
     const { personId } = await params
     const body = await request.json()
 
-    const { displayName, imageUrl, forceCascade } = body
+    const parsed = updatePersonSchema.safeParse(body)
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    const { displayName, imageUrl, forceCascade } = parsed.data
 
     const oldPerson = await db.person.findUnique({
       where: { id: personId },

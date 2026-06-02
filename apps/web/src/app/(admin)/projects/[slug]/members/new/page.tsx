@@ -8,13 +8,16 @@
 
 'use client'
 
-import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { use, useState, useEffect } from 'react'
 import { IdentityProvider } from '@repo/db'
 import Image from 'next/image'
 import Link from 'next/link'
-import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
+import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
+import { z } from 'zod'
+import { addMemberSchema } from '@/lib/schemas/admin'
+import FieldError from '@/components/utils/FieldError'
+import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 type PersonIdentity = {
   id: string
@@ -35,6 +38,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
   const [existingPeople, setExistingPeople] = useState<Person[]>([])
   const [selectedPersonId, setSelectedPersonId] = useState<string>('NEW')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -45,12 +49,35 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       .catch((e) => console.error('Failed to fetch people', e))
   }, [])
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
     const formData = new FormData(event.currentTarget)
 
-    if (selectedPersonId !== 'NEW') {
+    const isNew = selectedPersonId === 'NEW'
+
+    const rawData = isNew
+      ? {
+          displayName: String(formData.get('displayName') ?? '').trim() || undefined,
+          discordId: String(formData.get('discordId') ?? '').trim() || undefined,
+          githubId: String(formData.get('githubId') ?? '').trim() || undefined,
+          imageUrl: String(formData.get('imageUrl') ?? '').trim() || undefined,
+        }
+      : { personId: selectedPersonId }
+
+    const validation = addMemberSchema.safeParse(rawData)
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setFieldErrors({
+        displayName: errors.displayName?.[0] ?? '',
+        imageUrl: errors.imageUrl?.[0] ?? '',
+      })
+      return
+    }
+
+    setFieldErrors({})
+
+    if (!isNew) {
       formData.append('personId', selectedPersonId)
     }
 
@@ -67,6 +94,13 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       } catch {
         setError(text)
       }
+      return
+    }
+
+    const result = (await response.json()) as AddProjectMemberResponse
+    if (result.outcome === 'already_member') {
+      setError(result.message)
+      setSuccess(false)
       return
     }
 
@@ -153,9 +187,12 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
               </label>
               <select
                 value={selectedPersonId}
-                onChange={(e) => setSelectedPersonId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedPersonId(e.target.value)
+                  setFieldErrors({})
+                }}
                 name="personIdSelector"
-                className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all"
+                className={inputClass}
               >
                 <option value="NEW">— Create new person —</option>
                 {existingPeople.map((person) => (
@@ -214,10 +251,10 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                   <input
                     type="text"
                     name="displayName"
-                    required
                     placeholder="e.g. Jane Smith"
-                    className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
+                    className={fieldErrors.displayName ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={fieldErrors.displayName} />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -228,7 +265,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                     type="text"
                     name="discordId"
                     placeholder="e.g. janesmith or 123456789"
-                    className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
+                    className={inputClass}
                   />
                 </div>
 
@@ -240,7 +277,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                     type="text"
                     name="githubId"
                     placeholder="e.g. janesmith"
-                    className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
+                    className={inputClass}
                   />
                 </div>
 
@@ -249,11 +286,12 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                     Profile photo URL
                   </label>
                   <input
-                    type="text"
+                    type="url"
                     name="imageUrl"
                     placeholder="https://..."
-                    className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
+                    className={fieldErrors.imageUrl ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={fieldErrors.imageUrl} />
                 </div>
               </div>
             )}

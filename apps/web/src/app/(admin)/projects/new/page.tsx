@@ -1,11 +1,13 @@
 'use client'
 
-import type { FormEvent } from 'react'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
+import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
+import { z } from 'zod'
+import { createProjectSchema, githubRepoUrl } from '@/lib/schemas/admin'
+import FieldError from '@/components/utils/FieldError'
 
 export default function CreateProjectPage() {
   const router = useRouter()
@@ -15,16 +17,24 @@ export default function CreateProjectPage() {
   const [channels, setChannels] = useState<{ snowflakeId: string; name: string }[]>([])
   const [channelIdInput, setChannelIdInput] = useState('')
   const [channelNameInput, setChannelNameInput] = useState('')
+  const [repoInputError, setRepoInputError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageName, setImageName] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const addRepo = () => {
-    if (repoInput.trim()) {
-      setRepos((prev) => [...prev, repoInput.trim()])
-      setRepoInput('')
+    const trimmed = repoInput.trim()
+    const result = githubRepoUrl.safeParse(trimmed)
+    if (!result.success) {
+      setRepoInputError(result.error.issues[0]?.message ?? 'Invalid URL')
+      return
     }
+    setRepoInputError(null)
+    setRepos((prev) => [...prev, trimmed])
+    setRepoInput('')
+    setFieldErrors((prev) => ({ ...prev, githubLinks: '' }))
   }
 
   const addChannel = () => {
@@ -34,6 +44,7 @@ export default function CreateProjectPage() {
       setChannels((prev) => [...prev, { snowflakeId, name }])
       setChannelIdInput('')
       setChannelNameInput('')
+      setFieldErrors((prev) => ({ ...prev, discordSnowflakeIds: '' }))
     }
   }
 
@@ -46,11 +57,34 @@ export default function CreateProjectPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
 
     const formData = new FormData(event.currentTarget)
+    const projectName = String(formData.get('projectName') ?? '').trim()
+    const projectDescription = String(formData.get('projectDescription') ?? '').trim()
+    const projectStartDate = String(formData.get('projectStartDate') ?? '').trim()
+
+    const validation = createProjectSchema.safeParse({
+      projectName,
+      projectDescription,
+      projectStartDate,
+      githubLinks: repos,
+      discordSnowflakeIds: channels.map((c) => c.snowflakeId),
+    })
+
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setFieldErrors({
+        projectName: errors.projectName?.[0] ?? '',
+        githubLinks: errors.githubLinks?.[0] ?? '',
+        discordSnowflakeIds: errors.discordSnowflakeIds?.[0] ?? '',
+      })
+      return
+    }
+
+    setFieldErrors({})
     repos.forEach((r) => formData.append('githubLinks', r))
     channels.forEach((c) => {
       formData.append('discordSnowflakeIds', c.snowflakeId)
@@ -147,21 +181,17 @@ export default function CreateProjectPage() {
                 <input
                   type="text"
                   name="projectName"
-                  required
                   placeholder="e.g. WDCC Website 2025"
-                  className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
+                  className={fieldErrors.projectName ? inputErrorClass : inputClass}
                 />
+                <FieldError message={fieldErrors.projectName} />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
                   Start Date
                 </label>
-                <input
-                  type="month"
-                  name="projectStartDate"
-                  className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all"
-                />
+                <input type="month" name="projectStartDate" className={inputClass} />
               </div>
 
               <div className="flex flex-col gap-1.5 md:col-span-2">
@@ -172,36 +202,45 @@ export default function CreateProjectPage() {
                   name="projectDescription"
                   rows={3}
                   placeholder="A brief overview of what this project does and who it's for..."
-                  className="font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light resize-y"
+                  className={`${inputClass} resize-y`}
                 />
               </div>
             </div>
 
             {/* Repositories */}
             <SectionLabel color="blue" icon="repo">
-              Repositories
+              Repositories <span className="text-wdcc-kelvin">*</span>
             </SectionLabel>
 
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={repoInput}
-                  onChange={(e) => setRepoInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRepo())}
-                  placeholder="https://github.com/owner/repo"
-                  className="flex-1 font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light"
-                />
+                <div className="flex-1 flex flex-col gap-0">
+                  <input
+                    type="url"
+                    value={repoInput}
+                    onChange={(e) => {
+                      setRepoInput(e.target.value)
+                      setRepoInputError(null)
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRepo())}
+                    placeholder="https://github.com/owner/repo"
+                    className={
+                      repoInputError || fieldErrors.githubLinks ? inputErrorClass : inputClass
+                    }
+                  />
+                  <FieldError message={repoInputError ?? undefined} />
+                </div>
                 <button
                   type="button"
                   onClick={addRepo}
-                  className="font-mono text-xs text-wdcc-blue bg-wdcc-blue/10 hover:bg-wdcc-blue/20 border-[1.5px] border-wdcc-blue/30 rounded-xl px-4 transition-all"
+                  className="font-mono text-xs text-wdcc-blue bg-wdcc-blue/10 hover:bg-wdcc-blue/20 border-[1.5px] border-wdcc-blue/30 rounded-xl px-4 transition-all self-start py-2.5"
                 >
                   Add
                 </button>
               </div>
               {/* Hidden input for first/required repo */}
               <input type="hidden" name="githubLink" value={repos[0] ?? ''} />
+              <FieldError message={fieldErrors.githubLinks} />
 
               {repos.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
@@ -220,7 +259,7 @@ export default function CreateProjectPage() {
 
             {/* Discord Channels */}
             <SectionLabel color="pink" icon="hash">
-              Discord Channels
+              Discord Channels <span className="text-wdcc-kelvin">*</span>
             </SectionLabel>
 
             <div className="flex flex-col gap-3">
@@ -271,6 +310,7 @@ export default function CreateProjectPage() {
                   + Add Channel
                 </button>
               </div>
+              <FieldError message={fieldErrors.discordSnowflakeIds} />
 
               {channels.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">

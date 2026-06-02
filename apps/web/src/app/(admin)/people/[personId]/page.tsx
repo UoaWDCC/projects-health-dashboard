@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState, use, FormEvent, useCallback } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { IdentityProvider } from '@repo/db'
-import GradientDivider from '@/components/ui/GradientDivider'
-import AdminCard from '@/components/ui/AdminCard'
-import { inputClass, labelClass, PROVIDER_COLORS } from '@/lib/admin/layout'
+import GradientDivider from '@/components/dashboard/GradientDivider'
+import AdminCard from '@/components/dashboard/AdminCard'
+import { inputClass, inputErrorClass, labelClass, PROVIDER_COLORS } from '@/lib/admin/layout'
 import ErrorMessage from '@/components/utils/ErrorMessage'
+import FieldError from '@/components/utils/FieldError'
+import { z } from 'zod'
+import { updatePersonSchema, addIdentitySchema } from '@/lib/schemas/admin'
 
 type PersonIdentity = {
   id: string
@@ -58,6 +61,9 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
   const [newIdentityProvider, setNewIdentityProvider] = useState<IdentityProvider>('DISCORD')
   const [newIdentityUsername, setNewIdentityUsername] = useState('')
   const [addIdentityError, setAddIdentityError] = useState<string | null>(null)
+  const [addIdentityFieldErrors, setAddIdentityFieldErrors] = useState<Record<string, string>>({})
+
+  const [editPersonFieldErrors, setEditPersonFieldErrors] = useState<Record<string, string>>({})
 
   const [editingIdentityId, setEditingIdentityId] = useState<string | null>(null)
   const [editIdentityUsername, setEditIdentityUsername] = useState('')
@@ -95,9 +101,26 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     fetchPerson()
   }, [fetchPerson])
 
-  const handleUpdatePerson = async (e: FormEvent) => {
+  const handleUpdatePerson = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setEditPersonError(null)
+
+    const imageUrlValue = editImageUrl.trim() || null
+    const validation = updatePersonSchema.safeParse({
+      displayName: editDisplayName.trim(),
+      imageUrl: imageUrlValue,
+      forceCascade,
+    })
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setEditPersonFieldErrors({
+        displayName: errors.displayName?.[0] ?? '',
+        imageUrl: errors.imageUrl?.[0] ?? '',
+      })
+      return
+    }
+    setEditPersonFieldErrors({})
+
     const res = await fetch(`/api/people/${personId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -116,9 +139,21 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     }
   }
 
-  const handleAddIdentity = async (e: FormEvent) => {
+  const handleAddIdentity = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setAddIdentityError(null)
+
+    const validation = addIdentitySchema.safeParse({
+      provider: newIdentityProvider,
+      username: newIdentityUsername,
+    })
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setAddIdentityFieldErrors({ username: errors.username?.[0] ?? '' })
+      return
+    }
+    setAddIdentityFieldErrors({})
+
     const res = await fetch(`/api/people/${personId}/identities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,10 +172,11 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     }
   }
 
-  const handleUpdateIdentity = async (e: FormEvent) => {
+  const handleUpdateIdentity = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!editingIdentityId) return
     setEditIdentityError(null)
+
     const res = await fetch(`/api/people/${personId}/identities/${editingIdentityId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -169,7 +205,7 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
     }
   }
 
-  const handleUpdateMembership = async (e: FormEvent) => {
+  const handleUpdateMembership = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!editingMembershipId) return
     setEditMembershipError(null)
@@ -267,19 +303,27 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   </label>
                   <input
                     value={editDisplayName}
-                    onChange={(e) => setEditDisplayName(e.target.value)}
-                    required
-                    className={inputClass}
+                    onChange={(e) => {
+                      setEditDisplayName(e.target.value)
+                      setEditPersonFieldErrors((p) => ({ ...p, displayName: '' }))
+                    }}
+                    className={editPersonFieldErrors.displayName ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={editPersonFieldErrors.displayName} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>Profile photo URL</label>
                   <input
+                    type="url"
                     value={editImageUrl}
-                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    onChange={(e) => {
+                      setEditImageUrl(e.target.value)
+                      setEditPersonFieldErrors((p) => ({ ...p, imageUrl: '' }))
+                    }}
                     placeholder="https://..."
-                    className={inputClass}
+                    className={editPersonFieldErrors.imageUrl ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={editPersonFieldErrors.imageUrl} />
                 </div>
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
@@ -406,11 +450,14 @@ export default function PersonPage({ params }: { params: Promise<{ personId: str
                   </label>
                   <input
                     value={newIdentityUsername}
-                    onChange={(e) => setNewIdentityUsername(e.target.value)}
+                    onChange={(e) => {
+                      setNewIdentityUsername(e.target.value)
+                      setAddIdentityFieldErrors((p) => ({ ...p, username: '' }))
+                    }}
                     placeholder="e.g. janesmith"
-                    required
-                    className={inputClass}
+                    className={addIdentityFieldErrors.username ? inputErrorClass : inputClass}
                   />
+                  <FieldError message={addIdentityFieldErrors.username} />
                 </div>
               </div>
               {addIdentityError && <ErrorMessage message={addIdentityError} />}

@@ -22,25 +22,31 @@ export default async function PublicDashboardPage() {
 
   return (
     <>
-      <div className="absolute min-h-[150vh] inset-0 -z-10 bg-gradient-to-b from-[#B6D8FB] to-white" />
-      <div>
+      {/* GRADIENT BACKGROUND */}
+      <div className="absolute min-h-[320vh] inset-0 -z-10 bg-gradient-to-b from-[#B6D8FB] to-white" />
+
+      <div className="flex flex-col gap-y-40">
+        {/* PAGE HEADER */}
         <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
-        <RevealOnScroll>
-          <div className="flex flex-col max-w-[1296px] mx-auto items-center mt-20">
+
+        {/* PAGE CONTENT */}
+        <RevealOnScroll className="flex flex-col items-center gap-y-40 px-5 sm:px-10 lg:px-20">
+          {/* ACTIVE PROJECTS */}
+          <div className="w-full">
             {/* GRID HEADER */}
             <div className="w-full pl-[9px] flex flex-row items-baseline gap-6">
               <h1 className="text-wdcc-oshan font-extrabold tracking-tight !leading-none m-0 text-[2.25rem]">
                 Active Projects
               </h1>
-              <span className=" text-wdcc-grey/50 text-xl font-medium whitespace-nowrap">
+              <span className="text-wdcc-grey/50 text-xl font-medium whitespace-nowrap">
                 {teamCount}&nbsp;&nbsp;team{teamCount !== 1 ? 's' : ''}
               </span>
             </div>
 
             {/* PROJECTS GRID */}
-            <div className="grid grid-cols-3 w-full mt-8">
+            <div className="grid grid-cols-3 mt-8 gap-4 w-full">
               {projectGridItems.map((project) => (
-                <div className="mx-auto" key={project?.id ?? 'add-new-project'}>
+                <div key={project?.id ?? 'add-new-project'}>
                   {project ? (
                     <Link href={`/project/${project.slug}`}>
                       <ProjectCard project={project} />
@@ -51,12 +57,10 @@ export default async function PublicDashboardPage() {
                 </div>
               ))}
             </div>
-
-            {/* LIVE COMMIT FEED */}
-            <div className="my-10 w-full">
-              <LiveCommitFeed />
-            </div>
           </div>
+
+          {/* LIVE COMMIT FEED */}
+          <LiveCommitFeed />
         </RevealOnScroll>
       </div>
     </>

@@ -5,6 +5,8 @@ export const BORDER_HOVER =
 
 export const inputClass =
   'font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-blue focus:bg-white focus:ring-2 focus:ring-wdcc-blue/10 transition-all placeholder:text-wdcc-grey-light'
+export const inputErrorClass =
+  'font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-kelvin rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light'
 export const labelClass =
   'font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold'
 
