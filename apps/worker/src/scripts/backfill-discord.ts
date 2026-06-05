@@ -115,7 +115,7 @@ export function bucketByWeek(
   return buckets
 }
 
-function parseArgs(): { fromMs: number; toMs: number } {
+export function parseArgs(): { fromMs: number; toMs: number } {
   const args = process.argv.slice(2)
   let fromMs = 0
   let toMs = Date.now()

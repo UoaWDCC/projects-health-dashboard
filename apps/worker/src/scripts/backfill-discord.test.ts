@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { db } from '@repo/db'
 import { mockFetch } from '../test-config/vitest.setup'
 
@@ -9,7 +9,13 @@ vi.mock('../lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-import { fetchHistoricalMessages, bucketByWeek, writeDiscordWeek, main } from './backfill-discord'
+import {
+  fetchHistoricalMessages,
+  bucketByWeek,
+  writeDiscordWeek,
+  parseArgs,
+  main,
+} from './backfill-discord'
 
 type APIMessage = {
   id: string
@@ -61,15 +67,14 @@ describe('fetchHistoricalMessages', () => {
 
   it('filters out bot messages and messages before fromMs', async () => {
     const fromMs = new Date('2026-05-04T00:00:00Z').getTime()
-    mockFetch
-      .mockResolvedValueOnce(
-        mockMessagesResponse([
-          makeMsg('1', 'u1', '2026-05-06T10:00:00Z'),
-          makeMsg('2', 'u2', '2026-05-06T10:00:00Z', true), // bot — excluded
-          makeMsg('3', 'u3', '2026-05-01T10:00:00Z'), // before fromMs — excluded
-        ])
-      )
-      .mockResolvedValueOnce(mockMessagesResponse([]))
+    // 3 messages < 100, so fetchHistoricalMessages breaks after the first batch
+    mockFetch.mockResolvedValueOnce(
+      mockMessagesResponse([
+        makeMsg('1', 'u1', '2026-05-06T10:00:00Z'),
+        makeMsg('2', 'u2', '2026-05-06T10:00:00Z', true), // bot — excluded
+        makeMsg('3', 'u3', '2026-05-01T10:00:00Z'), // before fromMs — excluded
+      ])
+    )
 
     const result = await fetchHistoricalMessages('ch-1', '9999', fromMs)
 
@@ -176,6 +181,53 @@ describe('bucketByWeek', () => {
   })
 })
 
+describe('parseArgs', () => {
+  const originalArgv = process.argv
+
+  afterEach(() => {
+    process.argv = originalArgv
+  })
+
+  it('returns fromMs=0 and toMs≈now when no args are given', () => {
+    process.argv = ['node', 'script.ts']
+    const before = Date.now()
+    const { fromMs, toMs } = parseArgs()
+    const after = Date.now()
+
+    expect(fromMs).toBe(0)
+    expect(toMs).toBeGreaterThanOrEqual(before)
+    expect(toMs).toBeLessThanOrEqual(after)
+  })
+
+  it('snaps --from to the Monday of the given week', () => {
+    process.argv = ['node', 'script.ts', '--from', '2026-05-06'] // Wednesday → Monday May 4
+    const { fromMs } = parseArgs()
+    expect(new Date(fromMs).toISOString()).toBe('2026-05-04T00:00:00.000Z')
+  })
+
+  it('snaps --to to the start of the next week after the given date', () => {
+    process.argv = ['node', 'script.ts', '--to', '2026-05-06'] // week of May 4 → toMs = May 11
+    const { toMs } = parseArgs()
+    expect(new Date(toMs).toISOString()).toBe('2026-05-11T00:00:00.000Z')
+  })
+
+  it('throws for an invalid --from date string', () => {
+    process.argv = ['node', 'script.ts', '--from', 'not-a-date']
+    expect(() => parseArgs()).toThrow('Invalid --from date: not-a-date')
+  })
+
+  it('throws for an invalid --to date string', () => {
+    process.argv = ['node', 'script.ts', '--to', 'oops']
+    expect(() => parseArgs()).toThrow('Invalid --to date: oops')
+  })
+
+  it('throws when --from is not before --to', () => {
+    // --from week-start = May 18; --to week-start + 7d = May 11 → fromMs > toMs
+    process.argv = ['node', 'script.ts', '--from', '2026-05-18', '--to', '2026-05-06']
+    expect(() => parseArgs()).toThrow('must be before --to')
+  })
+})
+
 describe('writeDiscordWeek', () => {
   const projectId = 'proj-1'
   const weekStart = new Date('2026-05-04T00:00:00Z')
@@ -201,6 +253,11 @@ describe('writeDiscordWeek', () => {
           messageCount: 5,
           uniqueAuthors: 2,
           unmappedMessageCount: 5, // all authors unmapped since personIdentity.findMany returns []
+        }),
+        update: expect.objectContaining({
+          messageCount: 5,
+          uniqueAuthors: 2,
+          unmappedMessageCount: 5,
         }),
       })
     )
@@ -229,11 +286,13 @@ describe('writeDiscordWeek', () => {
           },
         },
         create: expect.objectContaining({ messageCount: 3 }),
+        update: expect.objectContaining({ messageCount: 3 }),
       })
     )
     expect(db.discordWeeklyAggregate.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({ unmappedMessageCount: 2 }),
+        update: expect.objectContaining({ unmappedMessageCount: 2 }),
       })
     )
   })
@@ -247,6 +306,7 @@ describe('writeDiscordWeek', () => {
     expect(db.discordWeeklyAggregate.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({ unmappedMessageCount: 7, messageCount: 7 }),
+        update: expect.objectContaining({ unmappedMessageCount: 7, messageCount: 7 }),
       })
     )
   })
@@ -369,6 +429,57 @@ describe('main', () => {
     await main()
 
     expect(db.syncJob.create).not.toHaveBeenCalled()
+  })
+
+  it('throws immediately when DISCORD_BOT_TOKEN is not set', async () => {
+    const saved = process.env.DISCORD_BOT_TOKEN
+    delete process.env.DISCORD_BOT_TOKEN
+    try {
+      await expect(main()).rejects.toThrow('DISCORD_BOT_TOKEN is not set in environment variables')
+    } finally {
+      process.env.DISCORD_BOT_TOKEN = saved
+    }
+  })
+
+  it('processes messages, writes weekly aggregates, and marks SyncJob SUCCESS with correct itemsProcessed', async () => {
+    vi.mocked(db.project.findMany).mockResolvedValue([
+      {
+        id: 'p1',
+        name: 'Alpha',
+        channels: [{ externalId: 'c1', name: 'general' }],
+        repositories: [],
+      },
+    ] as never)
+
+    // 5 messages across two authors, all in week of 2026-05-04 (Mon) – batch < 100 so one fetch
+    mockFetch.mockResolvedValueOnce(
+      mockMessagesResponse([
+        makeMsg('5', 'u1', '2026-05-06T10:00:00Z'),
+        makeMsg('4', 'u1', '2026-05-07T11:00:00Z'),
+        makeMsg('3', 'u1', '2026-05-08T09:00:00Z'),
+        makeMsg('2', 'u2', '2026-05-05T08:00:00Z'),
+        makeMsg('1', 'u2', '2026-05-09T09:00:00Z'),
+      ])
+    )
+
+    await main()
+
+    const weekStart = new Date('2026-05-04T00:00:00.000Z')
+    expect(db.$transaction).toHaveBeenCalledTimes(1)
+    expect(db.discordWeeklyAggregate.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { projectId_weekStart: { projectId: 'p1', weekStart } },
+        create: expect.objectContaining({ messageCount: 5, uniqueAuthors: 2 }),
+      })
+    )
+    expect(db.syncJob.update).toHaveBeenCalledWith({
+      where: { id: 'sync-1' },
+      data: expect.objectContaining({
+        status: 'SUCCESS',
+        itemsProcessed: 5,
+        finishedAt: expect.any(Date),
+      }),
+    })
   })
 
   it('zeroes out discordMessages on WeeklyStats rows for weeks with no Discord activity', async () => {
