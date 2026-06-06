@@ -8,17 +8,27 @@ on:
 jobs:
   migrate:
     runs-on: ubuntu-latest
+    concurrency:
+      group: migrate-prod
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check for new migrations
         id: check
         run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD -- packages/db/prisma/migrations/)
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          if echo "$BEFORE" | grep -qE '^0+$'; then
+            BASE="HEAD~1"
+          else
+            BASE="$BEFORE"
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "$AFTER" -- packages/db/prisma/migrations/)
           if [ -n "$CHANGED" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
             echo "New migrations detected:"
@@ -28,15 +38,16 @@ jobs:
             echo "No new migrations, skipping."
           fi
 
+      - name: Install pnpm
+        if: steps.check.outputs.found == 'true'
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         if: steps.check.outputs.found == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install pnpm
-        if: steps.check.outputs.found == 'true'
-        uses: pnpm/action-setup@v4
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.check.outputs.found == 'true'
@@ -47,6 +58,7 @@ jobs:
         run: pnpm --filter @repo/db db:deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
 
       - name: Notify Discord on failure
         if: failure()
