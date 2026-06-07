@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
-import { ingestRepoMergedPRs } from './github-PR-tracker'
+import { ingestRepoPRs } from './github-PR-tracker'
+import { upsertCommit } from './github-commit-tracker'
 import { seedRepo, seedIdentity } from '../test-config/integration.helpers.js'
 
 vi.mock('@repo/github', () => ({
@@ -20,8 +21,10 @@ vi.mock('./github-commit-tracker', () => ({
   upsertCommit: vi.fn().mockResolvedValue(undefined),
 }))
 
+// current week: Mon 28 Apr – Sun 4 May 2026
 const weekStart = new Date('2026-04-28T00:00:00Z')
 const weekEnd = new Date('2026-05-04T23:59:59Z')
+// lookback start = Mon 21 Apr (Monday of the previous week)
 
 function makeFullPr(overrides: Record<string, unknown> = {}) {
   return {
@@ -31,7 +34,7 @@ function makeFullPr(overrides: Record<string, unknown> = {}) {
     html_url: 'https://github.com/org/project/pull/1',
     labels: [{ name: 'feature' }],
     created_at: '2026-04-29T10:00:00Z',
-    merged_at: '2026-04-30T10:00:00Z',
+    merged_at: '2026-04-30T10:00:00Z', // within weekStart..weekEnd by default
     closed_at: '2026-04-30T10:00:00Z',
     additions: 10,
     deletions: 5,
@@ -57,8 +60,9 @@ function setupOctokit(paginateResponses: unknown[][], requestResponses: unknown[
   return { mockPaginate, mockRequest }
 }
 
-describe('ingestRepoMergedPRs (integration)', () => {
+describe('ingestRepoPRs (integration)', () => {
   beforeEach(async () => {
+    vi.clearAllMocks()
     await db.pRFact.deleteMany()
     await db.unmatchedIdentity.deleteMany()
     await db.personIdentity.deleteMany()
@@ -67,21 +71,22 @@ describe('ingestRepoMergedPRs (integration)', () => {
     await db.project.deleteMany()
   })
 
-  it('returns 0 and writes nothing to the DB when no PRs are merged in window', async () => {
+  it('returns 0 and writes nothing when no PRs are found in the 2-week window', async () => {
     const repo = await seedRepo()
     setupOctokit([[]], [])
 
-    const count = await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    const count = await ingestRepoPRs(repo, weekStart, weekEnd)
 
     expect(count).toBe(0)
     expect(await db.pRFact.count()).toBe(0)
   })
 
-  it('writes the PR to the DB with correct fields', async () => {
+  it('writes PRFact for a PR merged within the current week', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }]], [makeFullPr()])
+    // paginateResponses: [search results, commits for PR #1]
+    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
 
-    await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    await ingestRepoPRs(repo, weekStart, weekEnd)
 
     const pr = await db.pRFact.findUnique({
       where: { repoId_number: { repoId: repo.id, number: 1 } },
@@ -94,12 +99,51 @@ describe('ingestRepoMergedPRs (integration)', () => {
     expect(pr!.repoId).toBe(repo.id)
   })
 
+  it('does not write PRFact for a PR merged before the current week but still captures commits', async () => {
+    const repo = await seedRepo()
+    // merged_at is within the lookback window but before weekStart
+    setupOctokit(
+      [[{ number: 1 }], [{ sha: 'old-commit' }]],
+      [makeFullPr({ merged_at: '2026-04-22T10:00:00Z', closed_at: '2026-04-22T10:00:00Z' })]
+    )
+
+    const count = await ingestRepoPRs(repo, weekStart, weekEnd)
+
+    expect(count).toBe(0)
+    expect(await db.pRFact.count()).toBe(0)
+    expect(vi.mocked(upsertCommit)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'old-commit',
+      'feature-branch'
+    )
+  })
+
+  it('does not write PRFact for an open or closed-unmerged PR but still captures commits', async () => {
+    const repo = await seedRepo()
+    setupOctokit(
+      [[{ number: 1 }], [{ sha: 'open-commit' }]],
+      [makeFullPr({ merged_at: null, closed_at: null })]
+    )
+
+    const count = await ingestRepoPRs(repo, weekStart, weekEnd)
+
+    expect(count).toBe(0)
+    expect(await db.pRFact.count()).toBe(0)
+    expect(vi.mocked(upsertCommit)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'open-commit',
+      'feature-branch'
+    )
+  })
+
   it('resolves a known author identity and saves it on the PR', async () => {
     const repo = await seedRepo()
     const identity = await seedIdentity(42, 'author')
-    setupOctokit([[{ number: 1 }]], [makeFullPr()])
+    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
 
-    await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    await ingestRepoPRs(repo, weekStart, weekEnd)
 
     const pr = await db.pRFact.findUnique({
       where: { repoId_number: { repoId: repo.id, number: 1 } },
@@ -110,9 +154,9 @@ describe('ingestRepoMergedPRs (integration)', () => {
 
   it('creates an unmatchedIdentity when author is not in the DB', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }]], [makeFullPr()])
+    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
 
-    await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    await ingestRepoPRs(repo, weekStart, weekEnd)
 
     const unmatched = await db.unmatchedIdentity.findUnique({
       where: { provider_externalId: { provider: 'GITHUB', externalId: '42' } },
@@ -129,9 +173,9 @@ describe('ingestRepoMergedPRs (integration)', () => {
 
   it('handles a PR with no author or mergedBy without throwing', async () => {
     const repo = await seedRepo()
-    setupOctokit([[{ number: 1 }]], [makeFullPr({ user: null, merged_by: null })])
+    setupOctokit([[{ number: 1 }], []], [makeFullPr({ user: null, merged_by: null })])
 
-    await expect(ingestRepoMergedPRs(repo, weekStart, weekEnd)).resolves.toBe(1)
+    await expect(ingestRepoPRs(repo, weekStart, weekEnd)).resolves.toBe(1)
 
     const pr = await db.pRFact.findUnique({
       where: { repoId_number: { repoId: repo.id, number: 1 } },
@@ -144,11 +188,11 @@ describe('ingestRepoMergedPRs (integration)', () => {
     const repo = await seedRepo()
     const identity = await seedIdentity(42, 'author')
 
-    setupOctokit([[{ number: 1 }]], [makeFullPr()])
-    await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    setupOctokit([[{ number: 1 }], []], [makeFullPr()])
+    await ingestRepoPRs(repo, weekStart, weekEnd)
 
-    setupOctokit([[{ number: 1 }]], [makeFullPr({ title: 'Updated Title' })])
-    await ingestRepoMergedPRs(repo, weekStart, weekEnd)
+    setupOctokit([[{ number: 1 }], []], [makeFullPr({ title: 'Updated Title' })])
+    await ingestRepoPRs(repo, weekStart, weekEnd)
 
     expect(await db.pRFact.count()).toBe(1)
 
