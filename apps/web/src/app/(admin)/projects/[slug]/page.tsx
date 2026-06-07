@@ -86,6 +86,9 @@ export default function ProjectPage({ params }: { params: Promise<{ slug: string
             View and manage all members of this project. Click a member to edit their profile and
             settings.
           </p>
+          <Link href={`/admin-dashboard/projects/${slug}/edit`}>
+            <button>Edit</button>
+          </Link>
         </div>
         <Image
           src="/webster.png"
