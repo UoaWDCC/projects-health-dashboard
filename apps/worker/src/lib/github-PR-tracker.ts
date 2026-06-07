@@ -6,6 +6,7 @@ import { logger } from '../lib/logger'
 import { resolveIdentity } from './github-utils'
 import { withRateLimit } from './github-utils'
 import { upsertCommit } from './github-commit-tracker'
+import { getCollectionWindow } from './date-utils'
 
 export async function ingestRepoMergedPRs(
   repo: { id: string; owner: string; name: string; installationId: string },
@@ -114,4 +115,77 @@ export async function ingestRepoMergedPRs(
 
   logger.info(`Saved ${count} merged PRs for ${repo.owner}/${repo.name}.`)
   return count
+}
+
+// Looks back 2 weeks for closed (unmerged) PRs and ingests their commits.
+// This catches commits on branches that were force-deleted or abandoned before
+// the regular branch-scan could pick them up.
+export async function ingestClosedBranchCommits(
+  repo: { id: string; owner: string; name: string; installationId: string },
+  weekEnd: Date
+): Promise<number> {
+  const [twoWeeksAgo] = getCollectionWindow(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))
+  const since = twoWeeksAgo.toISOString().slice(0, 10)
+  const until = weekEnd.toISOString().slice(0, 10)
+
+  logger.info(
+    `Fetching closed unmerged PR commits for ${repo.owner}/${repo.name} from ${since} to ${until}`
+  )
+
+  const octokit = await getInstallationOctokit(repo.installationId)
+
+  const closedPRs = await withRateLimit(() =>
+    octokit.paginate('GET /search/issues', {
+      q: `repo:${repo.owner}/${repo.name} is:pr is:closed is:unmerged closed:${since}..${until}`,
+      per_page: 100,
+    })
+  )
+
+  if (closedPRs.length === 0) {
+    logger.info(`No closed unmerged PRs found for ${repo.owner}/${repo.name} in the past 2 weeks.`)
+    return 0
+  }
+
+  let commitCount = 0
+  for (const pr of closedPRs) {
+    try {
+      const { data: fullPr } = await withRateLimit(() =>
+        octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: pr.number,
+        })
+      )
+
+      // Guard: skip if the PR was actually merged (search qualifier should prevent this)
+      if (fullPr.merged_at) continue
+
+      const prCommits = await withRateLimit(() =>
+        octokit.paginate('GET /repos/{owner}/{repo}/pulls/{pull_number}/commits', {
+          owner: repo.owner,
+          repo: repo.name,
+          pull_number: fullPr.number,
+          per_page: 100,
+        })
+      )
+
+      for (const commit of prCommits) {
+        try {
+          await upsertCommit(repo, octokit, commit.sha, fullPr.head.ref)
+          commitCount++
+        } catch (err) {
+          logger.error(
+            `Failed to upsert commit ${commit.sha} from closed PR #${fullPr.number} in ${repo.owner}/${repo.name}: ${err}`
+          )
+        }
+      }
+    } catch (err) {
+      logger.error(
+        `Failed to ingest commits for closed PR #${pr.number} in ${repo.owner}/${repo.name}: ${err}`
+      )
+    }
+  }
+
+  logger.info(`Saved ${commitCount} commits from closed branches for ${repo.owner}/${repo.name}.`)
+  return commitCount
 }
