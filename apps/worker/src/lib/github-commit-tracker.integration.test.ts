@@ -18,9 +18,6 @@ vi.mock('./github-utils', async (importOriginal) => {
   }
 })
 
-const weekStart = new Date('2026-05-04T00:00:00Z')
-const weekEnd = new Date('2026-05-10T23:59:59Z')
-
 function makeCommitData(overrides: Record<string, unknown> = {}) {
   return {
     sha: 'test-sha',
@@ -82,16 +79,19 @@ describe('github-commit-tracker (integration)', () => {
       const identity = await seedIdentity(789, 'dupuser')
       vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
 
-      const { mockOctokit } = setupOctokit(
+      const { mockOctokit, mockRequest } = setupOctokit(
         [],
-        [
-          makeCommitData({ sha: 'duplicate-sha', author: { id: 789, login: 'dupuser' } }),
-          makeCommitData({ sha: 'duplicate-sha', author: { id: 789, login: 'dupuser' } }),
-        ]
+        [makeCommitData({ sha: 'duplicate-sha', author: { id: 789, login: 'dupuser' } })]
       )
 
       await upsertCommit(repo, mockOctokit as never, 'duplicate-sha', 'feature-1')
+      // second call finds the SHA in DB and returns early — no GitHub API call made
       await upsertCommit(repo, mockOctokit as never, 'duplicate-sha', 'feature-2')
+
+      const commitFetchCalls = mockRequest.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'GET /repos/{owner}/{repo}/commits/{sha}'
+      )
+      expect(commitFetchCalls).toHaveLength(1)
 
       const committedData = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'duplicate-sha' } },
@@ -198,7 +198,7 @@ describe('github-commit-tracker (integration)', () => {
         ]
       )
 
-      await ingestRepoCommits(repo, weekStart, weekEnd)
+      await ingestRepoCommits(repo)
 
       expect(mockPaginate).toHaveBeenCalledTimes(2)
       const paginateCalls = mockPaginate.mock.calls
@@ -212,7 +212,7 @@ describe('github-commit-tracker (integration)', () => {
       expect(savedCommit!.message).toBe('Feature work')
     })
 
-    it('respects the weekStart/weekEnd window when filtering commits', async () => {
+    it('ingests all commits from compare endpoint regardless of author date', async () => {
       const repo = await seedRepo()
       const identity = await seedIdentity(333, 'newdev')
       vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
@@ -221,14 +221,8 @@ describe('github-commit-tracker (integration)', () => {
         [
           [{ name: 'feature' }],
           [
-            {
-              sha: 'new-commit',
-              commit: { author: { date: '2026-05-07T10:00:00Z' } },
-            },
-            {
-              sha: 'old-commit',
-              commit: { author: { date: '2026-01-01T10:00:00Z' } },
-            },
+            { sha: 'new-commit', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
+            { sha: 'old-commit', commit: { author: { date: '2026-01-01T10:00:00Z' } } },
           ],
         ],
         [
@@ -237,23 +231,28 @@ describe('github-commit-tracker (integration)', () => {
             author: { id: 333, login: 'newdev' },
             commit: { message: 'New commit', author: { date: '2026-05-07T10:00:00Z' } },
           }),
+          makeCommitData({
+            sha: 'old-commit',
+            author: { id: 333, login: 'newdev' },
+            commit: { message: 'Old commit', author: { date: '2026-01-01T10:00:00Z' } },
+          }),
         ]
       )
 
-      const totalCommits = await ingestRepoCommits(repo, weekStart, weekEnd)
+      const totalCommits = await ingestRepoCommits(repo)
 
-      expect(totalCommits).toBe(1)
+      expect(totalCommits).toBe(2)
 
-      const savedCommit = await db.commitFact.findUnique({
+      const savedNew = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'new-commit' } },
       })
-      expect(savedCommit).not.toBeNull()
-      expect(savedCommit!.authorIdentityId).toBe(identity.id)
+      expect(savedNew).not.toBeNull()
+      expect(savedNew!.authorIdentityId).toBe(identity.id)
 
-      const skippedCommit = await db.commitFact.findUnique({
+      const savedOld = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'old-commit' } },
       })
-      expect(skippedCommit).toBeNull()
+      expect(savedOld).not.toBeNull()
     })
 
     it('handles repos with no commits in the window', async () => {
@@ -264,7 +263,7 @@ describe('github-commit-tracker (integration)', () => {
         []
       )
 
-      const totalCommits = await ingestRepoCommits(repo, weekStart, weekEnd)
+      const totalCommits = await ingestRepoCommits(repo)
 
       expect(totalCommits).toBe(0)
       expect(mockPaginate).toHaveBeenCalledTimes(3)
