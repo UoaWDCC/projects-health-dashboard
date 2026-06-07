@@ -9,7 +9,10 @@ vi.mock('@repo/github', () => ({
 
 vi.mock('@repo/db', () => ({
   db: {
-    commitFact: { upsert: vi.fn() },
+    commitFact: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+    },
     personIdentity: { findUnique: vi.fn().mockResolvedValue(null) },
     unmatchedIdentity: { upsert: vi.fn() },
   },
@@ -23,9 +26,6 @@ vi.mock('./github-utils', async (importOriginal) => {
     resolveIdentity: vi.fn().mockResolvedValue(null),
   }
 })
-
-const weekStart = new Date('2026-05-04T00:00:00Z')
-const weekEnd = new Date('2026-05-10T23:59:59Z')
 
 const repo = {
   id: 'repo-id',
@@ -76,9 +76,9 @@ function mockOctokit({
 }
 
 function upsertCalls() {
-  return vi.mocked(db.commitFact.upsert).mock.calls.map((c) => {
-    const arg = c[0] as { create: { sha: string; branch: string | null } }
-    return { sha: arg.create.sha, branch: arg.create.branch }
+  return vi.mocked(db.commitFact.create).mock.calls.map((c) => {
+    const arg = c[0] as { data: { sha: string; branch: string | null } }
+    return { sha: arg.data.sha, branch: arg.data.branch }
   })
 }
 
@@ -98,7 +98,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo, weekStart, weekEnd)
+    await ingestRepoCommits(repo)
 
     const routesCalled = paginate.mock.calls.map((c) => c[0])
     expect(routesCalled).toContain('GET /repos/{owner}/{repo}/compare/{basehead}')
@@ -122,7 +122,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo, weekStart, weekEnd)
+    await ingestRepoCommits(repo)
 
     const shas = upsertCalls().map((c) => c.sha)
     expect(shas).toEqual(['feature-only-1', 'feature-only-2'])
@@ -143,7 +143,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo, weekStart, weekEnd)
+    await ingestRepoCommits(repo)
 
     const compareBaseheads = paginate.mock.calls
       .filter((c) => c[0] === 'GET /repos/{owner}/{repo}/compare/{basehead}')
@@ -154,22 +154,26 @@ describe('ingestRepoCommits (unit, no DB)', () => {
     expect(upsertCalls().map((c) => c.branch)).toEqual(['main', 'feature'])
   })
 
-  it('filters compare results by author date to the [weekStart, weekEnd] window', async () => {
+  it('upserts all commits from the compare endpoint regardless of author date', async () => {
     mockOctokit({
       defaultBranch: 'main',
       branches: [{ name: 'main' }, { name: 'feature' }],
       compareByBasehead: {
         'main...feature': [
-          { sha: 'before-window', commit: { author: { date: '2026-04-01T10:00:00Z' } } },
-          { sha: 'in-window', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
-          { sha: 'after-window', commit: { author: { date: '2026-06-01T10:00:00Z' } } },
+          { sha: 'old-commit', commit: { author: { date: '2026-04-01T10:00:00Z' } } },
+          { sha: 'current-commit', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
+          { sha: 'future-commit', commit: { author: { date: '2026-06-01T10:00:00Z' } } },
         ],
       },
     })
 
-    const total = await ingestRepoCommits(repo, weekStart, weekEnd)
+    const total = await ingestRepoCommits(repo)
 
-    expect(total).toBe(1)
-    expect(upsertCalls()).toEqual([{ sha: 'in-window', branch: 'feature' }])
+    expect(total).toBe(3)
+    expect(upsertCalls()).toEqual([
+      { sha: 'old-commit', branch: 'feature' },
+      { sha: 'current-commit', branch: 'feature' },
+      { sha: 'future-commit', branch: 'feature' },
+    ])
   })
 })

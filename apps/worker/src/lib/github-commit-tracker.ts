@@ -1,6 +1,6 @@
 // Finds the commits unique to each non-default branch in a repo and stores them in the database.
 
-import { db } from '@repo/db'
+import { db, Prisma } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { logger } from '../lib/logger'
 import { resolveIdentity, withRateLimit } from './github-utils'
@@ -10,17 +10,18 @@ type Octokit = Awaited<ReturnType<typeof getInstallationOctokit>>
 // Fetches full commit details (for stats and author) and inserts a CommitFact row.
 // Checks the DB first to skip the GitHub API call for already-known SHAs.
 // branch is set only on first insert and never overwritten.
+// Returns true if the commit was newly inserted, false if it already existed.
 export async function upsertCommit(
   repo: { id: string; owner: string; name: string },
   octokit: Octokit,
   sha: string,
   branch: string | null
-): Promise<void> {
+): Promise<boolean> {
   const existing = await db.commitFact.findUnique({
     where: { repoId_sha: { repoId: repo.id, sha } },
     select: { sha: true },
   })
-  if (existing) return
+  if (existing) return false
 
   const { data } = await withRateLimit(() =>
     octokit.request('GET /repos/{owner}/{repo}/commits/{sha}', {
@@ -35,19 +36,29 @@ export async function upsertCommit(
     repo
   )
 
-  await db.commitFact.create({
-    data: {
-      repoId: repo.id,
-      sha,
-      authorIdentityId,
-      message: data.commit.message,
-      branch,
-      linesAdded: data.stats?.additions || 0,
-      linesRemoved: data.stats?.deletions || 0,
-      committedAt: new Date(data.commit.author?.date || Date.now()),
-      ingestedAt: new Date(),
-    },
-  })
+  try {
+    await db.commitFact.create({
+      data: {
+        repoId: repo.id,
+        sha,
+        authorIdentityId,
+        message: data.commit.message,
+        branch,
+        linesAdded: data.stats?.additions || 0,
+        linesRemoved: data.stats?.deletions || 0,
+        committedAt: new Date(data.commit.author?.date || Date.now()),
+        ingestedAt: new Date(),
+      },
+    })
+    return true
+  } catch (err) {
+    // Two concurrent ingestions can both pass the findUnique check and race to insert
+    // the same SHA. Treat the unique constraint violation as a no-op.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return false
+    }
+    throw err
+  }
 }
 
 export async function ingestRepoCommits(repo: {
@@ -109,10 +120,10 @@ export async function ingestRepoCommits(repo: {
       )
     }
 
-    totalCommits += commits.length
-
     for (const commit of commits) {
-      await upsertCommit(repo, octokit, commit.sha, branch.name)
+      if (await upsertCommit(repo, octokit, commit.sha, branch.name)) {
+        totalCommits++
+      }
     }
   }
 
