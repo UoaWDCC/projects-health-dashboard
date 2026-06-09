@@ -1,10 +1,6 @@
 /**
  * Admin dashboard — only should be accessible to administrators.
  * Currently should allow administrators to create projects and view their current projects.
- *
- * TODO: Implement the design
- * Make it so that it is only accessible to the admin who owns the projects once authentication is implemented.
- * Add functionality to delete projects and edit projects.
  */
 
 'use client'
@@ -16,6 +12,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ClientSuspense from '@/components/utils/ClientSuspense'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
+import FormulaInput from '@/components/dashboard/FormulaInput'
 
 const fetchProjects = async (): Promise<Project[]> => {
   try {
@@ -220,6 +217,8 @@ export default function AdminDashboardPage() {
           ))}
         </ClientSuspense>
       </ul>
+
+      <FormulaInput />
     </>
   )
 }
