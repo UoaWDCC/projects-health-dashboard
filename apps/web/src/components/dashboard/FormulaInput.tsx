@@ -1,113 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { create, all } from 'mathjs'
-import { z } from 'zod'
+import { FORMULA_VARIABLES, getSampleScope, math } from '@/lib/admin/formula'
+import { formulaSchema } from '@/lib/schemas/admin'
 
-// ---------------------------------------------------------------------------
-// mathjs instance
-// ---------------------------------------------------------------------------
-const math = create(all)
+// #region Helper functions
 
-// ---------------------------------------------------------------------------
-// Variables
-// ---------------------------------------------------------------------------
-export const FORMULA_VARIABLES = [
-  {
-    key: 'prs',
-    label: 'Pull Requests',
-    description: 'Total open/merged PRs this week',
-    color: '#077CF1',
-    bg: 'rgba(7,124,241,0.10)',
-  },
-  {
-    key: 'lines_changed',
-    label: 'Lines Changed',
-    description: 'Lines added + removed across all commits',
-    color: '#E333A3',
-    bg: 'rgba(227,51,163,0.10)',
-  },
-  {
-    key: 'discord_messages',
-    label: 'Discord Messages',
-    description: 'Messages sent in linked channels',
-    color: '#5B8AF0',
-    bg: 'rgba(91,138,240,0.10)',
-  },
-  {
-    key: 'commits',
-    label: 'Commits',
-    description: 'Commits pushed this week',
-    color: '#0FAAA0',
-    bg: 'rgba(15,170,160,0.10)',
-  },
-] as const
-
-export type FormulaVariable = (typeof FORMULA_VARIABLES)[number]['key']
-
-// ---------------------------------------------------------------------------
-// Placeholder sample values (replace with real data fetching)
-// ---------------------------------------------------------------------------
-const getSampleScope = (): Record<FormulaVariable, number> => ({
-  prs: 4, // TODO: fetch from GitHub API for this project
-  lines_changed: 320, // TODO: fetch from GitHub commit stats
-  discord_messages: 47, // TODO: fetch from Discord channel stats
-  commits: 12, // TODO: fetch from GitHub commit count
-})
-
-// ---------------------------------------------------------------------------
-// Zod schema
-// ---------------------------------------------------------------------------
-const VALID_VARIABLE_KEYS = FORMULA_VARIABLES.map((v) => v.key)
-
-const getUnknownIdentifiers = (val: string): string[] => {
-  const identifiers = val.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? []
-  const mathBuiltins = Object.keys(math)
-  return identifiers.filter(
-    (id) => !VALID_VARIABLE_KEYS.includes(id as FormulaVariable) && !mathBuiltins.includes(id)
-  )
-}
-
-const formulaSchema = z
-  .string()
-  .min(1, 'Formula cannot be empty')
-  .superRefine((val, ctx) => {
-    const unknown = getUnknownIdentifiers(val)
-    if (unknown.length > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Unknown variable${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`,
-      })
-    }
-  })
-  .refine(
-    (val) => {
-      try {
-        const scope = getSampleScope()
-        math.compile(val).evaluate(scope)
-        return true
-      } catch {
-        return false
-      }
-    },
-    { message: 'Formula has a syntax error' }
-  )
-  .refine(
-    (val) => {
-      try {
-        const scope = getSampleScope()
-        const result = math.compile(val).evaluate(scope)
-        return typeof result === 'number' && isFinite(result)
-      } catch {
-        return false
-      }
-    },
-    { message: 'Formula must evaluate to a finite number' }
-  )
-
-// ---------------------------------------------------------------------------
-// Suggestion matching
-// ---------------------------------------------------------------------------
+/**
+ * Extracts all identifiers from the formula and returns those that are not in the list of valid variables or math built-ins.
+ * @param {string} val The formula string to analyse
+ * @param {string[]} mathBuiltins List of built-in function names from mathjs to exclude from unknown identifiers
+ * @returns {string[]} An array of unknown identifier names found in the formula
+ */
 function getActiveSuggestions(
   value: string,
   cursor: number
@@ -127,9 +31,12 @@ function getActiveSuggestions(
   return { suggestions, wordStart, word }
 }
 
-// ---------------------------------------------------------------------------
-// Preview evaluation
-// ---------------------------------------------------------------------------
+/**
+ * Evaluates the formula with sample variable values to provide a live preview.
+ * Returns either the computed result or an error message if evaluation fails.
+ * @param {string} formula The formula string to evaluate
+ * @returns {{ result: number | null; error: string | null }} An object containing either the numeric result or an error message
+ */
 function evaluatePreview(formula: string): { result: number | null; error: string | null } {
   if (!formula.trim()) return { result: null, error: null }
   try {
@@ -144,12 +51,13 @@ function evaluatePreview(formula: string): { result: number | null; error: strin
   }
 }
 
-// ---------------------------------------------------------------------------
-// Highlighted formula display
-// ---------------------------------------------------------------------------
+/**
+ * Simple syntax highlighter for the formula input. Wraps known variables, numbers, and operators
+ * @param {string} formula The raw formula string to highlight
+ * @returns {string} HTML string with syntax highlighting applied
+ */
 function highlightFormula(formula: string): string {
-  // Tokenise the plain-text formula first, then wrap each token in a coloured
-  // span — avoids regex running over already-injected HTML tag characters.
+  // Tokenise the plain-text formula first, then wrap each token in a coloured span - avoids regex running over already-injected HTML tag characters.
   const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
   const varKeys = FORMULA_VARIABLES.map((v) => v.key)
@@ -158,7 +66,7 @@ function highlightFormula(formula: string): string {
   )
 
   // Build tokeniser: known vars | numbers | operators | identifiers | whitespace | single-char fallback
-  // IMPORTANT: fallback must NOT be \S+ — it greedily eats "sqrt(discord_messages)" as one token.
+  // IMPORTANT: fallback must NOT be \S+ as it greedily eats "sqrt(discord_messages)" as one token.
   // Instead use an identifier pattern so "sqrt" tokenises separately from the "(" that follows it.
   const tokenRe = new RegExp(
     [
@@ -186,23 +94,19 @@ function highlightFormula(formula: string): string {
         return `<span style="color:#6b7280">${tok}</span>`
       }
       if (/^\s+$/.test(tok)) return tok
-      // Unknown identifier — show dimly so it's visible but clearly wrong
+      // Unknown identifier - show dimly so it's visible but clearly wrong
       return `<span style="color:#6b7280">${escape(tok)}</span>`
     })
     .join('')
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
+// # endregion
+
 export interface FormulaInputProps {
   initialFormula?: string | null
   onSaveSuccess?: (formula: string) => void
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export default function FormulaInput({ initialFormula = '', onSaveSuccess }: FormulaInputProps) {
   const [formula, setFormula] = useState(initialFormula ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -313,15 +217,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
     setSaving(true)
     try {
-      // Upserts Config row: scope = "GLOBAL", key = "healthFormula", value = formula string.
-      // Uses Prisma upsert server-side so concurrent writes always converge on latest value.
-      // The API route should do:
-      //   await prisma.config.upsert({
-      //     where:  { scope_key: { scope: 'GLOBAL', key: 'healthFormula' } },
-      //     update: { value: formula },
-      //     create: { scope: 'GLOBAL', projectId: null, key: 'healthFormula', value: formula },
-      //   })
-      const res = await fetch('/api/config/health-formula', {
+      const res = await fetch('/api/admin/formula', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formula }),
@@ -345,7 +241,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
   return (
     <div className="font-mono flex flex-col gap-6 w-full mx-auto px-5 sm:px-10 lg:px-20 py-10">
-      {/* ── Header ── */}
+      {/* Header */}
       <div>
         <h2 className="text-[#077CF1] font-extrabold text-sm uppercase tracking-widest m-0">
           Health Formula
@@ -354,10 +250,14 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
           Define the global health formula applied to all projects. Use the variables below with
           standard math operators (+, -, *, /, ^, sqrt, log, …). Click on any variable below for a
           quick insert into the formula. Auto-completion for variables is also provided.
+          <br />
+          <br />
+          <strong>NOTE:</strong> Two or more variables in succession without an operator between
+          them will be treated as multiplied (e.g. prs discord_messages = prs * discord_messages).
         </p>
       </div>
 
-      {/* ── Variable reference chips ── */}
+      {/* Variable reference chips */}
       <div className="flex flex-wrap gap-2">
         {FORMULA_VARIABLES.map((v) => (
           <button
@@ -385,9 +285,9 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
         ))}
       </div>
 
-      {/* ── Input area ── */}
+      {/* Input area */}
       <div className="relative">
-        {/* Gradient border wrapper — inline style required for dynamic gradient */}
+        {/* Gradient border wrapper */}
         <div
           className="rounded-2xl p-0.5 transition-all duration-300"
           style={{
@@ -429,7 +329,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
           </div>
         </div>
 
-        {/* ── Autocomplete dropdown ── */}
+        {/* Autocomplete dropdown */}
         {suggestions.length > 0 && (
           <div
             ref={suggBoxRef}
@@ -459,7 +359,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
         )}
       </div>
 
-      {/* ── Validation error ── */}
+      {/* Validation error */}
       {error && (
         <div
           className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl
@@ -473,7 +373,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
         </div>
       )}
 
-      {/* ── Live preview ── */}
+      {/* Live preview */}
       {formula.trim() && (
         <div
           className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200"
@@ -500,7 +400,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
         </div>
       )}
 
-      {/* ── Save button ── */}
+      {/* Save button */}
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}

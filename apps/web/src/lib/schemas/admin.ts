@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { getSampleScope, getUnknownIdentifiers, math } from '@/lib/admin/formula'
 
 // --- Shared primitives ---
 
@@ -90,3 +91,42 @@ export const rolesSchema = z
       })
     }
   })
+
+// -- Formula Input --
+
+export const formulaSchema = z
+  .string()
+  .min(1, 'Formula cannot be empty')
+  .superRefine((val, ctx) => {
+    const unknown = getUnknownIdentifiers(val)
+    if (unknown.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Unknown variable${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`,
+      })
+    }
+  })
+  .refine(
+    (val) => {
+      try {
+        const scope = getSampleScope()
+        math.compile(val).evaluate(scope)
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: 'Formula has a syntax error' }
+  )
+  .refine(
+    (val) => {
+      try {
+        const scope = getSampleScope()
+        const result = math.compile(val).evaluate(scope)
+        return typeof result === 'number' && isFinite(result)
+      } catch {
+        return false
+      }
+    },
+    { message: 'Formula must evaluate to a finite number' }
+  )
