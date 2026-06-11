@@ -38,19 +38,27 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
     await db.project.deleteMany()
   })
 
-  it('aggregates commit and PR counts correctly for a single project', async () => {
-    const { project, repo } = await seedProjectWithRepo()
-    const { person, identity } = await seedPersonWithIdentity('dev1')
+  it('aggregates commit and PR counts correctly across multiple repositories in a single project', async () => {
+    const { project, repo: repo1 } = await seedProjectWithRepo()
+    const { repo: repo2 } = await seedProjectWithRepo()
+    const { person, identity } = await seedPersonWithIdentity('multi-repo-dev')
     await seedProjectMember(project.id, person.id)
 
-    await seedCommitFact(repo.id, identity.id, { sha: 'c1' })
-    await seedCommitFact(repo.id, identity.id, { sha: 'c2' })
-    await seedCommitFact(repo.id, identity.id, { sha: 'c3' })
-    await seedPRFact(repo.id, identity.id, { number: 1 })
-    await seedPRFact(repo.id, identity.id, { number: 2 })
+    await seedCommitFact(repo1.id, identity.id, { sha: 'r1c1', branch: 'main' })
+    await seedCommitFact(repo1.id, identity.id, { sha: 'r1c2', branch: 'master' })
+    await seedCommitFact(repo1.id, identity.id, { sha: 'r1c3', branch: null })
+    await seedCommitFact(repo2.id, identity.id, { sha: 'r1c4' })
+    await seedPRFact(repo1.id, identity.id, { number: 1 })
+
+    await seedCommitFact(repo2.id, identity.id, { sha: 'r2c1', branch: 'main' })
+    await seedCommitFact(repo2.id, identity.id, { sha: 'r2c2', branch: 'master' })
+    await seedCommitFact(repo2.id, identity.id, { sha: 'r2c3', branch: null })
+    await seedCommitFact(repo2.id, identity.id, { sha: 'r2c4' })
+    await seedPRFact(repo2.id, identity.id, { number: 100 })
+    await seedPRFact(repo2.id, identity.id, { number: 101 })
 
     await computeWeeklyGitHubMetrics(
-      { id: project.id, repositories: [{ id: repo.id }] },
+      { id: project.id, repositories: [{ id: repo1.id }, { id: repo2.id }] },
       WEEK_START,
       WEEK_END
     )
@@ -59,9 +67,9 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
       where: { projectId_weekStart: { projectId: project.id, weekStart: WEEK_START } },
     })
 
-    expect(stats).not.toBeNull()
-    expect(stats!.commits).toBe(3)
-    expect(stats!.prsMerged).toBe(2)
+    if (!stats) throw new Error('Expected weekly stats to exist')
+    expect(stats.commits).toBe(2)
+    expect(stats.prsMerged).toBe(3)
   })
 
   it('only counts commits and PRs within the week window', async () => {
@@ -174,6 +182,7 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
     const { identity: outsiderIdentity } = await seedPersonWithIdentity('outsider')
 
     await seedCommitFact(repo.id, outsiderIdentity.id, { sha: 'out1', linesAdded: 10 })
+    await seedCommitFact(repo.id, null, { sha: 'out2', linesAdded: 10 })
 
     await computeWeeklyGitHubMetrics(
       { id: project.id, repositories: [{ id: repo.id }] },
@@ -181,11 +190,18 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
       WEEK_END
     )
 
+    const stats = await db.weeklyStats.findUnique({
+      where: { projectId_weekStart: { projectId: project.id, weekStart: WEEK_START } },
+    })
+
     const contribs = await db.memberWeeklyContribution.findMany({
       where: { weekStart: WEEK_START },
     })
 
     expect(contribs).toHaveLength(0)
+
+    if (!stats) throw new Error('Expected weekly stats to exist')
+    expect(stats.linesAdded).toBe(20)
   })
 
   it('skips computation without error when project has no repositories', async () => {
@@ -237,25 +253,30 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
     expect(contribs).toHaveLength(1)
   })
 
-  it('selects the member with the most lines changed as MVP', async () => {
+  it('selects the correct member as MVP based on tie-breaker hierarchy', async () => {
     const { project, repo } = await seedProjectWithRepo()
 
-    const { person: personMvp, identity: identityMvp } = await seedPersonWithIdentity('mvp-dev')
+    const { person: personMvp, identity: identityMvp } = await seedPersonWithIdentity('dev-mvp')
     const { person: personOther, identity: identityOther } =
-      await seedPersonWithIdentity('other-dev')
+      await seedPersonWithIdentity('dev-other')
 
     const memberMvp = await seedProjectMember(project.id, personMvp.id)
     await seedProjectMember(project.id, personOther.id)
 
     await seedCommitFact(repo.id, identityMvp.id, {
       sha: 'm1',
-      linesAdded: 150,
-      linesRemoved: 50,
+      linesAdded: 60,
+      linesRemoved: 40,
+    })
+    await seedCommitFact(repo.id, identityMvp.id, {
+      sha: 'm2',
+      linesAdded: 0,
+      linesRemoved: 0,
     })
     await seedCommitFact(repo.id, identityOther.id, {
-      sha: 'm2',
-      linesAdded: 20,
-      linesRemoved: 10,
+      sha: 'm3',
+      linesAdded: 60,
+      linesRemoved: 40,
     })
 
     await computeWeeklyGitHubMetrics(

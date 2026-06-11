@@ -67,7 +67,7 @@ export async function seedCommitFact(
     linesAdded?: number
     linesRemoved?: number
     committedAt?: Date
-    branch?: string
+    branch?: string | null
   } = {}
 ) {
   return db.commitFact.create({
@@ -76,7 +76,7 @@ export async function seedCommitFact(
       sha: opts.sha ?? randomUUID().replace(/-/g, '').slice(0, 16),
       authorIdentityId: identityId,
       message: 'Test commit',
-      branch: opts.branch ?? 'feature-branch',
+      branch: opts.branch === undefined ? 'feature-branch' : opts.branch,
       linesAdded: opts.linesAdded ?? 0,
       linesRemoved: opts.linesRemoved ?? 0,
       committedAt: opts.committedAt ?? new Date('2026-05-05T10:00:00Z'),
