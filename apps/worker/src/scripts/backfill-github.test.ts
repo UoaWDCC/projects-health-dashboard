@@ -168,6 +168,13 @@ describe('backfillRepoPRs', () => {
           linesAdded: 10,
           linesRemoved: 5,
         }),
+        update: expect.objectContaining({
+          title: 'PR 1',
+          labels: ['feature'],
+          mergedAt: new Date('2026-05-06T12:00:00Z'),
+          linesAdded: 10,
+          linesRemoved: 5,
+        }),
       })
     )
     expect(upsertCommit).toHaveBeenCalledTimes(3)
