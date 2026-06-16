@@ -14,7 +14,12 @@ type ProjectWithRelations = {
   slug: string
   description: string | null
   repositories: { owner: string; name: string }[]
-  channels: { externalId: string }[]
+  channels: { externalId: string; name: string }[]
+}
+
+type DiscordChannel = {
+  snowflakeId: string
+  name: string
 }
 
 export default function EditProjectForm({ project }: { project: ProjectWithRelations }) {
@@ -23,8 +28,11 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
     project.repositories.map((r) => `https://github.com/${r.owner}/${r.name}`)
   )
   const [repoInput, setRepoInput] = useState('')
-  const [channels, setChannels] = useState<string[]>(project.channels.map((c) => c.externalId))
+  const [channels, setChannels] = useState<DiscordChannel[]>(
+    project.channels.map((c) => ({ snowflakeId: c.externalId, name: c.name }))
+  )
   const [channelInput, setChannelInput] = useState('')
+  const [channelNameInput, setChannelNameInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -36,9 +44,12 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
   }
 
   const addChannel = () => {
-    if (channelInput.trim()) {
-      setChannels((prev) => [...prev, channelInput.trim()])
+    const snowflakeId = channelInput.trim()
+    const name = channelNameInput.trim()
+    if (snowflakeId && name) {
+      setChannels((prev) => [...prev, { snowflakeId, name }])
       setChannelInput('')
+      setChannelNameInput('')
     }
   }
 
@@ -77,13 +88,18 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
 
     const formData = new FormData(event.currentTarget)
 
-    formData.append('projectId', project.id)
-
     // Create the lists of GitHub repos and Discord channels.
     repos.forEach((r) => formData.append('githubLinks', r))
-    channels.forEach((c) => formData.append('discordSnowflakeIds', c))
+    channels.forEach((c) => {
+      formData.append('discordSnowflakeIds', c.snowflakeId)
+      formData.append('discordChannelNames', c.name)
+    })
 
-    const response = await fetch('/api/project', { method: 'PATCH', body: formData })
+    const response = await fetch(`/api/project/${project.slug}`, {
+      method: 'PATCH',
+      body: formData,
+      credentials: 'same-origin',
+    })
 
     if (!response.ok) {
       const text = await response.text()
@@ -241,11 +257,11 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
             </SectionLabel>
 
             <div className="flex flex-col gap-2">
-              <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
-                Snowflake ID <span className="text-wdcc-kelvin">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
+                    Snowflake ID <span className="text-wdcc-kelvin">*</span>
+                  </label>
                   <input
                     type="text"
                     value={channelInput}
@@ -258,14 +274,27 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
                     Right-click a channel in Discord → Copy Channel ID
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={addChannel}
-                  className="font-mono text-xs text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 transition-all self-start mt-0 py-2.5"
-                >
-                  Add
-                </button>
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
+                    Channel Name <span className="text-wdcc-kelvin">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={channelNameInput}
+                    onChange={(e) => setChannelNameInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addChannel())}
+                    placeholder="e.g. general"
+                    className="w-full font-mono text-sm text-wdcc-oshan bg-[#f8f8fc] border-[1.5px] border-wdcc-purple rounded-xl px-3.5 py-2.5 outline-none focus:border-wdcc-kelvin focus:bg-white focus:ring-2 focus:ring-wdcc-kelvin/10 transition-all placeholder:text-wdcc-grey-light"
+                  />
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={addChannel}
+                className="self-end font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
+              >
+                + Add Channel
+              </button>
 
               {channels.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1">
@@ -275,7 +304,7 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
                       color="pink"
                       onRemove={() => setChannels((prev) => prev.filter((_, j) => j !== i))}
                     >
-                      {c}
+                      #{c.name} · {c.snowflakeId}
                     </Chip>
                   ))}
                 </div>
