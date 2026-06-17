@@ -19,15 +19,20 @@ import { getCollectionWindow } from './lib/date-utils'
 //      sentimentParagraph, and summaryText to WeeklySummary. Dependency enforced
 //      in code, not by wall-clock timing.
 
-async function main() {
+// Sentinel returned by the GitHub ingestion catch handler.
+export const GITHUB_INGESTION_FAILED = 'github-ingestion-failed' as const
+
+export async function main() {
   const [weekStart, weekEnd] = getCollectionWindow()
 
   logger.info(
     `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
   )
-  const [, discordMessages] = await Promise.all([
+
+  const [githubResult, discordMessages] = await Promise.all([
     runGitHubIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`GitHub ingestion failed: ${err}`)
+      return GITHUB_INGESTION_FAILED
     }),
     runDiscordIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`Discord ingestion failed: ${err}`)
@@ -38,10 +43,17 @@ async function main() {
   // TODO: await runLlmAnalysis(discordMessages)
   void discordMessages // placeholder to avoid unused variable error until LLM analysis is implemented
 
-  logger.info('Weekly ingestion complete')
+  if (githubResult === GITHUB_INGESTION_FAILED) {
+    logger.error('Weekly ingestion completed with errors: GitHub ingestion failed')
+  } else {
+    logger.info('Weekly ingestion complete')
+  }
 }
 
-main().catch((err: unknown) => {
-  logger.error(`Fatal error in weekly job: ${err}`)
-  process.exit(1)
-})
+// Only bootstrap the job when run directly (e.g. `tsx src/index.ts`), not when imported by a test.
+if (typeof require !== 'undefined' && require.main === module) {
+  main().catch((err: unknown) => {
+    logger.error(`Fatal error in weekly job: ${err}`)
+    process.exit(1)
+  })
+}
