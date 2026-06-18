@@ -148,11 +148,6 @@ async function linkPersonToProject(
   return { outcome: 'member_linked', member }
 }
 
-function getFormString(formData: FormData, key: string): string {
-  const value = formData.get(key)
-  return typeof value === 'string' ? value.trim() : ''
-}
-
 function findExistingIdentity(provider: 'DISCORD' | 'GITHUB', username: string) {
   return db.personIdentity.findFirst({
     where: { provider, username: { equals: username, mode: 'insensitive' } },

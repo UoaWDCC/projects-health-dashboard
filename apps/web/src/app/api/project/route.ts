@@ -5,6 +5,12 @@ import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
 import { uploadImage } from '@/lib/storage'
 
+export function validateGitHubLinkFormat(link: string) {
+  // expected GitHub Link - https://github.com/owner/reponame
+  const regex = /^https:\/\/github\.com\/[^\/]+\/[^\/]+$/
+  return regex.test(link)
+}
+
 function parseDate(input: string): Date | null {
   // expected input format - YYYY-MM
   const [year, month] = input.split('-').map(Number)
@@ -14,7 +20,7 @@ function parseDate(input: string): Date | null {
   return new Date(Date.UTC(year, month - 1))
 }
 
-async function validateGitHubExists(link: string) {
+export async function validateGitHubExists(link: string) {
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
   if (!installationId) {
     console.error('GitHub App Installation ID is not configured')
@@ -24,13 +30,11 @@ async function validateGitHubExists(link: string) {
     )
   }
   const octokit = await getInstallationOctokit(installationId)
-
   try {
     await octokit.request('GET /repos/{owner}/{repo}', {
       owner: link.split('/')[3],
       repo: link.split('/')[4],
     })
-
     return null
   } catch (err: unknown) {
     console.error('GitHub validation error:', err)
@@ -49,7 +53,7 @@ async function validateGitHubExists(link: string) {
   }
 }
 
-async function validateSnowflakeExists(snowflakeId: string) {
+export async function validateSnowflakeExists(snowflakeId: string) {
   try {
     const TOKEN = process.env.DISCORD_BOT_TOKEN
     const res = await fetch(`https://discord.com/api/v10/channels/${snowflakeId}`, {
@@ -93,7 +97,6 @@ export async function POST(request: Request) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
-
   try {
     const formData = await request.formData()
 
@@ -192,7 +195,7 @@ export async function POST(request: Request) {
           startedAt: parseDate(projectStartDate),
           imageUrl,
           repositories: {
-            create: Array.from(githubLinks).map((githubLink) => ({
+            create: githubLinks.map((githubLink) => ({
               owner: githubLink.split('/')[3],
               name: githubLink.split('/')[4],
               installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',

@@ -131,6 +131,7 @@ model GitHubRepository {
   project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   commits             CommitFact[]
   prs                 PRFact[]
+  isActive       Boolean      @default(true)
 
   @@unique([owner, name])
 }
@@ -143,6 +144,7 @@ model DiscordChannel {
   externalId String  @unique // Discord channel snowflake
   name       String
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  isActive   Boolean @default(true)
 }
 
 // Links a Person to a Project, representing their membership.
