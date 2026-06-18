@@ -18,8 +18,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       where: { slug: slug },
     })
     const projectId = project?.id
-    console.log(projectId)
     const projectName = String(formData.get('projectName') ?? '').trim()
+    const projectSlug = projectName.toLowerCase().trim().replace(/\s+/g, '-')
+    // Ensure slug is unique
+    const clashingProjects = await db.project.findMany({
+      where: { slug: projectSlug },
+    })
+    if (clashingProjects.length > 0) {
+      return Response.json({ error: `Project slug ${projectSlug} already in use` }, { status: 409 })
+    }
     const githubLinks = new Set(
       (formData.getAll('githubLinks') || []).map(String).map((s) => s.trim())
     )
@@ -101,6 +108,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
         where: { id: projectId },
         data: {
           name: projectName,
+          slug: projectSlug,
           description: projectDescription || null,
         },
       })
