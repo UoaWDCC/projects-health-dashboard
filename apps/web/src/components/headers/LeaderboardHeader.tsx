@@ -1,3 +1,5 @@
+import LastUpdatedTime from './LastUpdatedTime'
+
 interface LeaderboardHeaderProps {
   lastUpdated: Date
 }
@@ -26,13 +28,7 @@ const LeaderboardHeader: React.FC<LeaderboardHeaderProps> = ({
           <rect width="12" height="12" rx="5.90908" fill="#16A34A" />
         </svg>
         <span className="text-wdcc-grey text-xs sm:text-sm lg:text-xl font-medium whitespace-nowrap">
-          Last updated on{' '}
-          {lastUpdated.toLocaleString(undefined, {
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          Last updated on <LastUpdatedTime isoDate={lastUpdated.toISOString()} />
         </span>
       </div>
     </div>
