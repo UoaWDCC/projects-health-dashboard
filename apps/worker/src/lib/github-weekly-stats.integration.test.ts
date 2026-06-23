@@ -202,6 +202,7 @@ describe('computeWeeklyGitHubMetrics (integration)', () => {
 
     if (!stats) throw new Error('Expected weekly stats to exist')
     expect(stats.linesAdded).toBe(20)
+    expect(stats.commits).toBe(2)
   })
 
   it('skips computation without error when project has no repositories', async () => {
