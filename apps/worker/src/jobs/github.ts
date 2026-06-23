@@ -32,7 +32,7 @@ export async function runGitHubIngestion(weekStart: Date, weekEnd: Date): Promis
         }
 
         try {
-          const commitCount = await ingestRepoCommits(repo, weekStart, weekEnd)
+          const commitCount = await ingestRepoCommits(repo)
           totalProcessed += commitCount
         } catch (err) {
           logger.error(`Failed to ingest commits for ${repo.owner}/${repo.name}: ${err}`)
