@@ -2,17 +2,12 @@ import resolveConfig from 'tailwindcss/resolveConfig'
 import tailwindConfig from '../../../tailwind.config'
 
 const fullConfig = resolveConfig(tailwindConfig)
-const wdcc = (
+type LeaderboardColumn = { fill: string; stroke: string; lightFill: string; lightStroke: string }
+const lb = (
   fullConfig.theme.colors as unknown as {
-    wdcc: {
-      purple: string
-      peach: string
-      blue: { light: string; DEFAULT: string }
-      amber: string
-      kelvin: string
-    }
+    leaderboard: { loc: LeaderboardColumn; commits: LeaderboardColumn; prs: LeaderboardColumn }
   }
-).wdcc
+).leaderboard
 
 export const formatStat = (value: number | string): string => {
   if (typeof value === 'string') return value
@@ -21,18 +16,34 @@ export const formatStat = (value: number | string): string => {
   return value.toString()
 }
 
-// Colour theme applied to a leaderboard section. fillColor is the rank-1 highlight
-// background; borderColor is the accent border shown only on the first-place row.
+// Colour theme applied to a leaderboard section. fillColor/borderColor are the rank-1
+// highlight; lightFillColor/lightBorderColor are used for ranks 2–5.
 export interface LeaderboardRowTheme {
   fillColor: string
   borderColor?: string
+  lightFillColor: string
+  lightBorderColor: string
 }
 
-// One theme per leaderboard category — colours sourced from tailwind.config.ts.
 export const LEADERBOARD_THEMES = {
-  pink: { fillColor: wdcc.purple, borderColor: wdcc.kelvin },
-  blue: { fillColor: wdcc.blue.light, borderColor: wdcc.blue.DEFAULT },
-  orange: { fillColor: wdcc.peach, borderColor: wdcc.amber },
+  pink: {
+    fillColor: lb.loc.fill,
+    borderColor: lb.loc.stroke,
+    lightFillColor: lb.loc.lightFill,
+    lightBorderColor: lb.loc.lightStroke,
+  },
+  blue: {
+    fillColor: lb.commits.fill,
+    borderColor: lb.commits.stroke,
+    lightFillColor: lb.commits.lightFill,
+    lightBorderColor: lb.commits.lightStroke,
+  },
+  orange: {
+    fillColor: lb.prs.fill,
+    borderColor: lb.prs.stroke,
+    lightFillColor: lb.prs.lightFill,
+    lightBorderColor: lb.prs.lightStroke,
+  },
 } satisfies Record<string, LeaderboardRowTheme>
 
 // Shape returned by every leaderboard query — maps directly onto LeaderboardRowData.
