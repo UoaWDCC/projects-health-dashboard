@@ -3,8 +3,6 @@ import { formatStat, LeaderboardEntry, LeaderboardRowTheme } from '@/lib/project
 import Image from 'next/image'
 import Link from 'next/link'
 
-const NEUTRAL = { bg: '#D9D9D9', text: '#4E4E4D' }
-
 interface LeaderboardRowProps {
   entry: LeaderboardEntry
   theme: LeaderboardRowTheme
@@ -12,12 +10,14 @@ interface LeaderboardRowProps {
 
 export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
   const { rank, projectSlug, projectName, thumbnailUrl, statValue } = entry
-  const { fillColor, borderColor } = theme
+  const { fillColor, borderColor, lightFillColor, lightBorderColor } = theme
   const isFirstPlace = rank === 1
 
-  const bgBase = isFirstPlace ? fillColor : NEUTRAL.bg
-  const textColor = isFirstPlace ? '#1F2031' : NEUTRAL.text
-  const border = isFirstPlace && borderColor ? `2px solid ${borderColor}` : '2px solid transparent'
+  const bgBase = isFirstPlace ? fillColor : lightFillColor
+  const textColor = isFirstPlace ? '#FFFFFF' : '#000000'
+  const border = isFirstPlace
+    ? `2px solid ${borderColor ?? fillColor}`
+    : `2px solid ${lightBorderColor}`
 
   return (
     <Link
@@ -54,13 +54,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         )}
       </div>
 
-      <span
-        className={cn(
-          'font-sans text-2xl flex-1 truncate',
-          isFirstPlace ? 'font-bold' : 'font-medium'
-        )}
-        style={{ color: textColor }}
-      >
+      <span className="font-sans text-2xl flex-1 truncate font-bold" style={{ color: textColor }}>
         {projectName}
       </span>
 
