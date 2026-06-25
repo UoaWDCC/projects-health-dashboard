@@ -14,10 +14,10 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
   const isFirstPlace = rank === 1
 
   const bgBase = isFirstPlace ? fillColor : lightFillColor
-  const textColor = isFirstPlace ? '#FFFFFF' : '#000000'
   const border = isFirstPlace
     ? `2px solid ${borderColor ?? fillColor}`
     : `2px solid ${lightBorderColor}`
+  const textClass = isFirstPlace ? 'text-white' : 'text-black'
 
   return (
     <Link
@@ -35,9 +35,9 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
       <span
         className={cn(
           'font-mono text-2xl min-w-[28px] text-center',
-          isFirstPlace ? 'font-bold' : 'font-medium'
+          isFirstPlace ? 'font-bold' : 'font-medium',
+          textClass
         )}
-        style={{ color: textColor }}
       >
         {rank}
       </span>
@@ -54,11 +54,11 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         )}
       </div>
 
-      <span className="font-sans text-2xl flex-1 truncate font-bold" style={{ color: textColor }}>
+      <span className={cn('font-sans text-2xl flex-1 truncate font-bold', textClass)}>
         {projectName}
       </span>
 
-      <span className="font-mono text-xl font-medium shrink-0" style={{ color: textColor }}>
+      <span className={cn('font-mono text-xl font-medium shrink-0', textClass)}>
         {formatStat(statValue)}
       </span>
     </Link>
