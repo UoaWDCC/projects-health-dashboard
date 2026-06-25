@@ -31,7 +31,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
     >
       <span
         className={cn(
-          'font-mono text-2xl min-w-[28px] text-center',
+          'font-mono lg:text-2xl texl-lg min-w-[28px] text-center',
           isFirstPlace ? 'font-bold' : 'font-medium',
           textClass
         )}
@@ -51,11 +51,16 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         )}
       </div>
 
-      <span className={cn('font-sans text-2xl flex-1 truncate font-bold', textClass)}>
+      <span
+        className={cn(
+          'lg:font-sans font-mono lg:text-2xl text-base flex-1 truncate lg:font-bold',
+          textClass
+        )}
+      >
         {projectName}
       </span>
 
-      <span className={cn('font-mono text-xl font-medium shrink-0', textClass)}>
+      <span className={cn('font-mono lg:text-xl text-sm font-medium shrink-0', textClass)}>
         {formatStat(statValue)}
       </span>
     </Link>

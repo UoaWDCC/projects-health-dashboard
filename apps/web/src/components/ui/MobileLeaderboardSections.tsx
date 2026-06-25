@@ -53,7 +53,7 @@ export default function MobileLeaderboardSections({
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex-1 rounded-lg py-2 font-mono text-xs font-medium transition-colors duration-200 ${
+              className={`flex-1 rounded-lg py-2 font-mono text-xs transition-colors duration-200 ${
                 activeTab === id ? `bg-white ${tabActiveClassName} shadow-sm` : 'text-gray-500'
               }`}
             >
