@@ -31,7 +31,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
     >
       <span
         className={cn(
-          'font-mono lg:text-2xl texl-lg min-w-[28px] text-center',
+          'font-mono lg:text-2xl min-w-[28px] text-center',
           isFirstPlace ? 'font-bold' : 'font-medium',
           textClass
         )}
