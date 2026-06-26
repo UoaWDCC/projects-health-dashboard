@@ -34,27 +34,25 @@ const LEADERBOARD_SECTIONS = [
   },
 ] as const
 
-type LeaderboardSectionId = (typeof LEADERBOARD_SECTIONS)[number]['id']
-
 export default function MobileLeaderboardSections({
   data,
   loading,
 }: MobileLeaderboardSectionsProps) {
-  const [activeTab, setActiveTab] = useState<LeaderboardSectionId>('linesOfCode')
-  const activeSection = LEADERBOARD_SECTIONS.find((section) => section.id === activeTab)
-
-  if (!activeSection) return null
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
+  const activeSection = LEADERBOARD_SECTIONS[activeSectionIndex]
 
   return (
     <>
       <div className="px-5 sm:px-10 mt-4 mb-4">
         <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
-          {LEADERBOARD_SECTIONS.map(({ id, tabLabel, tabActiveClassName }) => (
+          {LEADERBOARD_SECTIONS.map(({ id, tabLabel, tabActiveClassName }, index) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => setActiveSectionIndex(index)}
               className={`flex-1 rounded-lg py-2 font-mono text-xs transition-colors duration-200 ${
-                activeTab === id ? `bg-white ${tabActiveClassName} shadow-sm` : 'text-gray-500'
+                activeSectionIndex === index
+                  ? `bg-white ${tabActiveClassName} shadow-sm`
+                  : 'text-gray-500'
               }`}
             >
               {tabLabel}
