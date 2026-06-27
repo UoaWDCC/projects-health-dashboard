@@ -54,6 +54,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    if (rawSnowflakeIds.length > 20 || githubLinks.size > 20) {
+      return Response.json(
+        { error: 'Too many repos or channels linked (no more than 20 each)' },
+        { status: 400 }
+      )
+    }
+
     // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
     const discordChannels = new Map<string, string>()
     for (let i = 0; i < rawSnowflakeIds.length; i++) {
