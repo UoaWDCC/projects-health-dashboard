@@ -22,11 +22,8 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
   return (
     <Link
       href={projectSlug ? `/project/${projectSlug}` : '/'}
-      className="flex flex-row items-center gap-4 px-5 w-full transition-[background-color] duration-150 ease hover:opacity-80"
+      className="flex min-h-16 w-full items-center gap-3 rounded-2xl px-3 py-3 transition-opacity duration-150 hover:opacity-80 lg:min-h-20 lg:gap-4 lg:rounded-3xl lg:px-5"
       style={{
-        maxWidth: '415px',
-        height: '84px',
-        borderRadius: '24.52px',
         backgroundColor: bgBase,
         border,
         cursor: 'pointer',
@@ -34,7 +31,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
     >
       <span
         className={cn(
-          'font-mono text-2xl min-w-[28px] text-center',
+          'font-mono lg:text-2xl min-w-[28px] text-center',
           isFirstPlace ? 'font-bold' : 'font-medium',
           textClass
         )}
@@ -42,7 +39,7 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         {rank}
       </span>
 
-      <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-[#CFE8FC] flex items-center justify-center">
+      <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#CFE8FC] lg:size-12">
         {thumbnailUrl && (
           <Image
             src={thumbnailUrl}
@@ -54,11 +51,16 @@ export default function LeaderboardRow({ entry, theme }: LeaderboardRowProps) {
         )}
       </div>
 
-      <span className={cn('font-sans text-2xl flex-1 truncate font-bold', textClass)}>
+      <span
+        className={cn(
+          'lg:font-sans font-mono lg:text-2xl text-base flex-1 truncate lg:font-bold',
+          textClass
+        )}
+      >
         {projectName}
       </span>
 
-      <span className={cn('font-mono text-xl font-medium shrink-0', textClass)}>
+      <span className={cn('font-mono lg:text-xl text-sm font-medium shrink-0', textClass)}>
         {formatStat(statValue)}
       </span>
     </Link>
