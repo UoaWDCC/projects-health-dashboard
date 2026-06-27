@@ -5,10 +5,33 @@ import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
 import { uploadImage } from '@/lib/storage'
 
+export interface ValidatedRepo {
+  owner: string
+  name: string
+  installationId: string
+}
+
 export function validateGitHubLinkFormat(link: string) {
   // expected GitHub Link - https://github.com/owner/reponame
   const regex = /^https:\/\/github\.com\/[^\/]+\/[^\/]+$/
   return regex.test(link)
+}
+
+export function parseGitHubRepo(link: string) {
+  try {
+    const url = new URL(link)
+    const segments = url.pathname.split('/')
+
+    if (segments.length >= 3 && segments[1] && segments[2]) {
+      return {
+        owner: segments[1],
+        repo: segments[2],
+      }
+    }
+  } catch (error) {
+    console.log(`${error}: Invalid GitHub repo link`)
+  }
+  return null
 }
 
 function parseDate(input: string): Date | null {
@@ -31,10 +54,11 @@ export async function validateGitHubExists(link: string) {
   }
   const octokit = await getInstallationOctokit(installationId)
   try {
-    await octokit.request('GET /repos/{owner}/{repo}', {
-      owner: link.split('/')[3],
-      repo: link.split('/')[4],
-    })
+    const repoInfo = parseGitHubRepo(link)
+    if (!repoInfo) {
+      return null
+    }
+    await octokit.request('GET /repos/{owner}/{repo}', repoInfo)
     return null
   } catch (err: unknown) {
     console.error('GitHub validation error:', err)
@@ -94,6 +118,15 @@ export async function validateSnowflakeExists(snowflakeId: string) {
 
 // API route for handling project creation
 export async function POST(request: Request) {
+  const installationId = process.env.GITHUB_APP_INSTALLATION_ID
+  if (!installationId) {
+    console.error('GitHub App Installation ID is not configured')
+    return Response.json(
+      { error: 'GitHub configuration error, Installation ID not found' },
+      { status: 500 }
+    )
+  }
+
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
@@ -110,6 +143,13 @@ export async function POST(request: Request) {
 
     if (rawSnowflakeIds.length !== rawChannelNames.length) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    if (rawSnowflakeIds.length > 20 || rawGithubLinks.length > 20) {
+      return Response.json(
+        { error: 'Too many repos or channels linked (no more than 20 each)' },
+        { status: 400 }
+      )
     }
 
     const parsed = createProjectSchema.safeParse({
@@ -145,12 +185,18 @@ export async function POST(request: Request) {
     }
 
     // github validation
+    const validRepositories: ValidatedRepo[] = []
     for (const githubLink of githubLinks) {
       const githubError = await validateGitHubExists(githubLink)
       if (githubError) return githubError
 
+      const repoInfo = parseGitHubRepo(githubLink)
+      if (!repoInfo) {
+        return Response.json({ error: `Invalid GitHub URL format: ${githubLink}` }, { status: 400 })
+      }
+
       const existingRepo = await db.gitHubRepository.findFirst({
-        where: { owner: githubLink.split('/')[3], name: githubLink.split('/')[4] },
+        where: { owner: repoInfo.owner, name: repoInfo.repo },
       })
       if (existingRepo) {
         return Response.json(
@@ -160,6 +206,12 @@ export async function POST(request: Request) {
           { status: 409 }
         )
       }
+
+      validRepositories.push({
+        owner: repoInfo.owner,
+        name: repoInfo.repo,
+        installationId: installationId,
+      })
     }
 
     // discord validation
@@ -195,11 +247,7 @@ export async function POST(request: Request) {
           startedAt: parseDate(projectStartDate),
           imageUrl,
           repositories: {
-            create: githubLinks.map((githubLink) => ({
-              owner: githubLink.split('/')[3],
-              name: githubLink.split('/')[4],
-              installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
-            })),
+            create: validRepositories,
           },
           channels: {
             create: Array.from(discordChannels, ([externalId, name]) => ({

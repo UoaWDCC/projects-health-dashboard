@@ -293,7 +293,7 @@ export async function runDiscordIngestion(weekStart: Date, weekEnd: Date): Promi
         data: {
           status: SyncJobStatus.FAILED,
           finishedAt: new Date(),
-          errorMessage: (err as Error).message,
+          errorMessage: err instanceof Error ? err.message : String(err),
           itemsProcessed,
         },
       })
