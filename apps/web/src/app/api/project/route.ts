@@ -29,7 +29,7 @@ export function parseGitHubRepo(link: string) {
       }
     }
   } catch (error) {
-    console.log(`${error}: Invalid GitHub repo link`)
+    console.error(`${error}: Invalid GitHub repo link`)
   }
   return null
 }
@@ -56,7 +56,7 @@ export async function validateGitHubExists(link: string) {
   try {
     const repoInfo = parseGitHubRepo(link)
     if (!repoInfo) {
-      return null
+      return Response.json({ error: 'Invalid GitHub link' }, { status: 400 })
     }
     await octokit.request('GET /repos/{owner}/{repo}', repoInfo)
     return null
@@ -118,6 +118,10 @@ export async function validateSnowflakeExists(snowflakeId: string) {
 
 // API route for handling project creation
 export async function POST(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
   if (!installationId) {
     console.error('GitHub App Installation ID is not configured')
@@ -127,9 +131,6 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!(await hasRole('ADMIN'))) {
-    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
-  }
   try {
     const formData = await request.formData()
 

@@ -11,6 +11,10 @@ import {
 
 // API route for editing project details
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
   if (!installationId) {
     console.error('GitHub App Installation ID is not configured')
@@ -18,10 +22,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       { error: 'GitHub configuration error, Installation ID not found' },
       { status: 500 }
     )
-  }
-
-  if (!(await hasRole('ADMIN'))) {
-    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
 
   try {
