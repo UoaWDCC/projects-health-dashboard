@@ -1,14 +1,27 @@
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
-import { validateGitHubExists } from '../route'
-import { validateGitHubLinkFormat } from '../route'
-import { validateSnowflakeExists } from '../route'
+import {
+  validateGitHubExists,
+  validateGitHubLinkFormat,
+  validateSnowflakeExists,
+  parseGitHubRepo,
+  ValidatedRepo,
+} from '../route'
 
 // API route for editing project details
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  const installationId = process.env.GITHUB_APP_INSTALLATION_ID
+  if (!installationId) {
+    console.error('GitHub App Installation ID is not configured')
+    return Response.json(
+      { error: 'GitHub configuration error, Installation ID not found' },
+      { status: 500 }
+    )
   }
 
   try {
@@ -41,6 +54,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    if (rawSnowflakeIds.length > 20 || githubLinks.size > 20) {
+      return Response.json(
+        { error: 'Too many repos or channels linked (no more than 20 each)' },
+        { status: 400 }
+      )
+    }
+
     // Pair snowflakes with their channel names, dedupe by snowflake (keeps first-occurrence name).
     const discordChannels = new Map<string, string>()
     for (let i = 0; i < rawSnowflakeIds.length; i++) {
@@ -56,17 +76,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const validatedRepos: ValidatedRepo[] = []
     for (const githubLink of githubLinks) {
       if (!validateGitHubLinkFormat(githubLink))
         return Response.json({ error: 'Invalid GitHub Repository Link' }, { status: 400 })
       const githubError = await validateGitHubExists(githubLink)
       if (githubError) return githubError
 
-      const owner = githubLink.split('/')[3]
-      const name = githubLink.split('/')[4]
+      const repoInfo = parseGitHubRepo(githubLink)
+      if (!repoInfo) {
+        return Response.json({ error: `Invalid GitHub URL format: ${githubLink}` }, { status: 400 })
+      }
 
       const existingRepo = await db.gitHubRepository.findFirst({
-        where: { owner, name, projectId: { not: projectId } },
+        where: { owner: repoInfo.owner, name: repoInfo.repo, projectId: { not: projectId } },
       })
       if (existingRepo) {
         return Response.json(
@@ -76,6 +99,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
           { status: 409 }
         )
       }
+
+      validatedRepos.push({
+        owner: repoInfo.owner,
+        name: repoInfo.repo,
+        installationId: installationId,
+      })
     }
 
     for (const discordSnowflakeId of discordChannels.keys()) {
@@ -114,12 +143,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       })
 
       // Soft delete, reactivate, or create new repos
+
       const currentRepos = await tx.gitHubRepository.findMany({
         where: { projectId },
       })
-      const newRepoPairs = Array.from(githubLinks).map((link) => ({
-        owner: link.split('/')[3],
-        name: link.split('/')[4],
+      const newRepoPairs = Array.from(validatedRepos).map((repo) => ({
+        owner: repo.owner,
+        name: repo.name,
       }))
 
       const reposToSoftDelete = currentRepos.filter(
@@ -155,7 +185,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
             projectId,
             owner: nr.owner,
             name: nr.name,
-            installationId: process.env.GITHUB_APP_INSTALLATION_ID ?? '0',
+            installationId: installationId,
             isActive: true,
           },
         })
