@@ -1,6 +1,14 @@
 'use client'
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts'
 
 interface LineGraphProps {
   title: string
@@ -13,6 +21,32 @@ function formatDate(iso: string): string {
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   return `${dd}/${mm}`
+}
+
+const TOOLTIP_BOX_HEIGHT = 26
+const TOOLTIP_FOREIGN_OBJECT_WIDTH = 80
+
+function ActivePointTooltip({ cx, cy, value }: { cx?: number; cy?: number; value?: number }) {
+  if (cx === undefined || cy === undefined) return null
+
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={4} fill="#077CF1" />
+      <foreignObject
+        x={cx - TOOLTIP_FOREIGN_OBJECT_WIDTH / 2}
+        y={cy - TOOLTIP_BOX_HEIGHT - 16}
+        width={TOOLTIP_FOREIGN_OBJECT_WIDTH}
+        height={TOOLTIP_BOX_HEIGHT + 8}
+      >
+        <div className="flex flex-col items-center">
+          <div className="rounded-md bg-[#077CF1] px-2 py-1 font-mono text-sm font-bold text-white">
+            {value}
+          </div>
+          <div className="-mt-1 h-2 w-2 rotate-45 bg-[#077CF1]" />
+        </div>
+      </foreignObject>
+    </g>
+  )
 }
 
 export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) {
@@ -31,7 +65,7 @@ export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) 
       {/* Chart area — fixed height, data points spread evenly across full width */}
       <div className="bg-white px-2 pt-4 pb-2" style={{ height: '280px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+          <LineChart data={data} margin={{ top: 44, right: 24, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} stroke="#E0E0E0" />
             <XAxis
               dataKey="date"
@@ -45,13 +79,14 @@ export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) 
               tickLine={false}
               width={40}
             />
+            <Tooltip content={() => null} cursor={false} isAnimationActive={false} />
             <Line
               type="linear"
               dataKey="value"
               stroke="#077CF1"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#077CF1' }}
+              activeDot={<ActivePointTooltip />}
             />
           </LineChart>
         </ResponsiveContainer>
