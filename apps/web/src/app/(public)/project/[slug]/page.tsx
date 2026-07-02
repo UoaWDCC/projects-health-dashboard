@@ -1,5 +1,6 @@
 import TeamHeader from '@/components/headers/TeamHeader'
 import WeeklyMvp from '@/components/ui/WeeklyMvp'
+import ViewAllMembersButton from '@/components/ui/ViewAllMembersButton'
 import { getProjectHeaderData } from '@/lib/project/projects'
 import { getProjectWeeklyMvp } from '@/lib/project/weekly-stats'
 import { notFound } from 'next/navigation'
@@ -22,10 +23,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     <>
       <TeamHeader project={project} />
 
-      <div className="px-5 sm:px-10 lg:px-20 py-20 w-full flex flex-col items-center gap-20">
+      <div className="px-5 sm:px-10 lg:px-20 py-8 sm:py-12 lg:py-20 w-full flex flex-col items-center gap-8 sm:gap-12 lg:gap-20">
         {mvp && mvpName && (
-          <div className="w-full flex flex-col items-center gap-10">
-            <h2 className="text-4xl font-extrabold self-start">Weekly MVP</h2>
+          <div className="w-full flex flex-col items-center gap-4 lg:gap-10">
+            <h2 className="text-2xl lg:text-4xl font-extrabold self-start">Weekly MVP</h2>
 
             <WeeklyMvp
               name={mvpName}
@@ -34,6 +35,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             />
           </div>
         )}
+
+        <ViewAllMembersButton />
 
         <GraphViewToggle slug={slug} />
       </div>
