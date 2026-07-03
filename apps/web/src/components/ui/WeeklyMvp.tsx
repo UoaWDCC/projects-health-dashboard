@@ -16,9 +16,9 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
   const imgSrc = avatarUrl && !imgError ? avatarUrl : '/default-avatar.svg'
 
   return (
-    <div className="w-full flex flex-col md:flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-6 md:p-0 md:h-[288px]">
+    <div className="w-full flex flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-4 lg:p-0 lg:h-[288px]">
       {/* Wrap the images in a relative container so the crown can be positioned relative to the avatar */}
-      <div className="relative w-32 h-32 mt-5 md:w-[175px] md:h-[175px] mx-auto md:mx-10 mb-6 md:my-auto shrink-0">
+      <div className="relative w-[72px] h-[72px] lg:w-[175px] lg:h-[175px] ml-2 mr-4 lg:mx-10 shrink-0">
         {/* Main Avatar Image */}
         <Image
           src={imgSrc}
@@ -35,12 +35,12 @@ export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvp
           alt="MVP Crown"
           width={175}
           height={175}
-          className="absolute -top-16 -left-12 md:-top-[85px] md:-left-[65px] w-full h-full drop-shadow-md z-10"
+          className="absolute -top-9 -left-7 lg:-top-[85px] lg:-left-[65px] w-full h-full drop-shadow-md z-10"
         />
       </div>
-      <div className="flex flex-col font-sans justify-center text-center md:text-left md:ml-2">
-        <p className="font-extrabold text-2xl md:text-4xl mb-2 md:mb-3 md:mt-3">{name}</p>
-        <p className="text-lg md:text-2xl mt-1 md:mt-3 font-medium text-wdcc-grey">
+      <div className="flex flex-col font-sans justify-center text-left lg:ml-2 min-w-0">
+        <p className="font-extrabold text-xl lg:text-4xl mb-1 lg:mb-3 lg:mt-3">{name}</p>
+        <p className="text-sm lg:text-2xl lg:mt-3 font-medium text-wdcc-grey">
           Lines Committed:{' '}
           <span className="font-bold text-wdcc-oshan">{linesCommitted.toLocaleString()}</span>
         </p>

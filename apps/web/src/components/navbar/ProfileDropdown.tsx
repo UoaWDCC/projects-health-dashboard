@@ -39,23 +39,25 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full px-3 py-2 flex items-center gap-2 bg-white/60 border border-wdcc-oshan/[18%] hover:bg-gray-200 transition-all duration-200 ease-in-out"
+        className="rounded-full flex items-center lg:gap-2 lg:px-3 lg:py-2 lg:bg-white/60 lg:border lg:border-wdcc-oshan/[18%] lg:hover:bg-gray-200 transition-all duration-200 ease-in-out"
       >
         {user &&
           (user.avatarUrl ? (
             <Image
               src={user.avatarUrl}
               alt={user.displayName ?? 'Profile picture'}
-              width={25}
-              height={25}
-              className="rounded-full object-cover"
+              width={36}
+              height={36}
+              className="w-9 h-9 lg:w-[25px] lg:h-[25px] rounded-full object-cover"
             />
           ) : (
-            <span className="flex items-center justify-center w-9 h-9 rounded-full">
+            <span className="flex items-center justify-center w-9 h-9 rounded-full bg-wdcc-blue-light lg:bg-transparent">
               {initials}
             </span>
           ))}
-        <span className="text-xs font-sans font-semibold">{user?.displayName ?? 'Sign In'}</span>
+        <span className="text-xs font-sans font-semibold">
+          {user ? <span className="hidden lg:inline">{user.displayName}</span> : 'Sign In'}
+        </span>
       </button>
 
       {open && (

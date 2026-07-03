@@ -25,10 +25,10 @@ export default function GraphViewToggle({ slug }: { slug: string }) {
   return (
     <div className="w-full flex flex-col items-center gap-5">
       <div className="w-full flex flex-row items-center justify-between">
-        <h2 className="text-4xl font-extrabold">Progress indicators</h2>
+        <h2 className="text-2xl lg:text-4xl font-extrabold">Progress indicators</h2>
         <button
           onClick={toggle}
-          className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-wdcc-grey"
+          className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-wdcc-grey"
         >
           {isRowView ? (
             <>

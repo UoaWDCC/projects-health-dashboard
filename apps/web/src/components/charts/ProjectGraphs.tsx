@@ -24,7 +24,7 @@ export default function ProjectGraphs({
 
   return (
     <div
-      className={`grid gap-6 mx-4 mt-6 w-full transition-all duration-500 ease-in-out ${isRowView ? 'grid-cols-1' : 'grid-cols-2'}`}
+      className={`grid gap-6 mx-4 mt-6 w-full transition-all duration-500 ease-in-out ${isRowView ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}
     >
       <LineGraph title="Weekly Commits" dates={dates} dataPoints={stats?.commits ?? []} />
       <LineGraph title="Weekly PRs" dates={dates} dataPoints={stats?.prs ?? []} />
