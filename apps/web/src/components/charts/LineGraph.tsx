@@ -26,14 +26,34 @@ function formatDate(iso: string): string {
 const TOOLTIP_BOX_HEIGHT = 26
 const TOOLTIP_FOREIGN_OBJECT_WIDTH = 80
 
-function ActivePointTooltip({ cx, cy, value }: { cx?: number; cy?: number; value?: number }) {
+function ActivePointTooltip({
+  cx,
+  cy,
+  value,
+  viewBox,
+}: {
+  cx?: number
+  cy?: number
+  value?: number
+  viewBox?: { x: number; y: number; width: number; height: number }
+}) {
   if (cx === undefined || cy === undefined) return null
+
+  const clampedX = viewBox
+    ? Math.max(
+        viewBox.x,
+        Math.min(
+          cx - TOOLTIP_FOREIGN_OBJECT_WIDTH / 2,
+          viewBox.x + viewBox.width - TOOLTIP_FOREIGN_OBJECT_WIDTH
+        )
+      )
+    : cx - TOOLTIP_FOREIGN_OBJECT_WIDTH / 2
 
   return (
     <g>
       <circle cx={cx} cy={cy} r={4} fill="#077CF1" />
       <foreignObject
-        x={cx - TOOLTIP_FOREIGN_OBJECT_WIDTH / 2}
+        x={clampedX}
         y={cy - TOOLTIP_BOX_HEIGHT - 16}
         width={TOOLTIP_FOREIGN_OBJECT_WIDTH}
         height={TOOLTIP_BOX_HEIGHT + 8}
