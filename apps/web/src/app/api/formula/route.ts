@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
-import { db } from '@repo/db'
+import { db, Role } from '@repo/db'
 import { z } from 'zod'
 import { formulaSchema } from '@/lib/schemas/admin'
+import { hasRole } from '@/lib/auth'
 
 const FORMULA_KEY = 'healthFormula'
 const GLOBAL_SCOPE = 'GLOBAL'
 
 export async function GET() {
+  if (!(await hasRole(Role.ADMIN))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   const config = await db.config.findUnique({
     where: { scope_key: { scope: GLOBAL_SCOPE, key: FORMULA_KEY } },
   })
@@ -17,6 +22,10 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!(await hasRole(Role.ADMIN))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
   let body: unknown
   try {
     body = await request.json()
