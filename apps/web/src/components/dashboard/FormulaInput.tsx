@@ -1,106 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { FORMULA_VARIABLES, getSampleScope, math } from '@/lib/admin/formula'
+import {
+  evaluatePreview,
+  FORMULA_VARIABLES,
+  getActiveSuggestions,
+  highlightFormula,
+} from '@/lib/admin/formula'
 import { formulaSchema } from '@/lib/schemas/admin'
-
-// #region Helper functions
-
-/**
- * Extracts all identifiers from the formula and returns those that are not in the list of valid variables or math built-ins.
- * @param {string} val The formula string to analyse
- * @param {string[]} mathBuiltins List of built-in function names from mathjs to exclude from unknown identifiers
- * @returns {string[]} An array of unknown identifier names found in the formula
- */
-function getActiveSuggestions(
-  value: string,
-  cursor: number
-): {
-  suggestions: (typeof FORMULA_VARIABLES)[number][]
-  wordStart: number
-  word: string
-} {
-  const before = value.slice(0, cursor)
-  const match = before.match(/[a-zA-Z_][a-zA-Z0-9_]*$/)
-  if (!match) return { suggestions: [], wordStart: cursor, word: '' }
-
-  const word = match[0].toLowerCase()
-  const wordStart = cursor - word.length
-  const suggestions = FORMULA_VARIABLES.filter((v) => v.key.startsWith(word) && v.key !== word)
-
-  return { suggestions, wordStart, word }
-}
-
-/**
- * Evaluates the formula with sample variable values to provide a live preview.
- * Returns either the computed result or an error message if evaluation fails.
- * @param {string} formula The formula string to evaluate
- * @returns {{ result: number | null; error: string | null }} An object containing either the numeric result or an error message
- */
-function evaluatePreview(formula: string): { result: number | null; error: string | null } {
-  if (!formula.trim()) return { result: null, error: null }
-  try {
-    const scope = getSampleScope()
-    const result = math.compile(formula).evaluate(scope)
-    if (typeof result !== 'number' || !isFinite(result)) {
-      return { result: null, error: 'Result is not a finite number' }
-    }
-    return { result, error: null }
-  } catch (e) {
-    return { result: null, error: String(e) }
-  }
-}
-
-/**
- * Simple syntax highlighter for the formula input. Wraps known variables, numbers, and operators
- * @param {string} formula The raw formula string to highlight
- * @returns {string} HTML string with syntax highlighting applied
- */
-function highlightFormula(formula: string): string {
-  // Tokenise the plain-text formula first, then wrap each token in a coloured span - avoids regex running over already-injected HTML tag characters.
-  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-  const varKeys = FORMULA_VARIABLES.map((v) => v.key)
-  const varColorMap: Record<string, string> = Object.fromEntries(
-    FORMULA_VARIABLES.map((v) => [v.key, v.color])
-  )
-
-  // Build tokeniser: known vars | numbers | operators | identifiers | whitespace | single-char fallback
-  // IMPORTANT: fallback must NOT be \S+ as it greedily eats "sqrt(discord_messages)" as one token.
-  // Instead use an identifier pattern so "sqrt" tokenises separately from the "(" that follows it.
-  const tokenRe = new RegExp(
-    [
-      ...varKeys,
-      String.raw`\d+(?:\.\d+)?`,
-      String.raw`[+\-*/%^(),]`,
-      String.raw`[a-zA-Z_][a-zA-Z0-9_]*`,
-      String.raw`\s+`,
-      String.raw`[\s\S]`,
-    ].join('|'),
-    'g'
-  )
-
-  const tokens = formula.match(tokenRe) ?? (formula ? [formula] : [])
-
-  return tokens
-    .map((tok) => {
-      if (varColorMap[tok]) {
-        return `<span style="color:${varColorMap[tok]};font-weight:600">${escape(tok)}</span>`
-      }
-      if (/^\d+(?:\.\d+)?$/.test(tok)) {
-        return `<span style="color:#0FAAA0">${tok}</span>`
-      }
-      if (/^[+\-*/%^()]+$/.test(tok)) {
-        return `<span style="color:#6b7280">${tok}</span>`
-      }
-      if (/^\s+$/.test(tok)) return tok
-      // Unknown identifier - show dimly so it's visible but clearly wrong
-      return `<span style="color:#6b7280">${escape(tok)}</span>`
-    })
-    .join('')
-}
-
-// # endregion
 
 export interface FormulaInputProps {
   initialFormula?: string | null
@@ -217,7 +124,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
     setSaving(true)
     try {
-      const res = await fetch('/api/admin/formula', {
+      const res = await fetch('/api/formula', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formula }),

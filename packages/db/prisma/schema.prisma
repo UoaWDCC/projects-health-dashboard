@@ -174,8 +174,8 @@ model Config {
   id        String   @id @default(cuid())
   scope     String   // "GLOBAL" or the Project.id string
   projectId String?  // Nullable FK; null for global configs
-  key       String
-  value     Json     // Float, Int, Boolean, or structured object
+  key       String   // "healthFormula"
+  value     Json     // Float, Int, Boolean, or structured object - stores the formula string
   updatedAt DateTime @updatedAt
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
