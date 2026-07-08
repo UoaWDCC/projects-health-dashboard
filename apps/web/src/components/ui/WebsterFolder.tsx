@@ -30,7 +30,10 @@ const FOLDER_VIEWBOX = '186 116 567 386'
 
 export default function WebsterFolder() {
   return (
-    <div className="group relative inline-block drop-shadow-2xl" style={{ paddingTop: 130 }}>
+    <div
+      className="group relative inline-block drop-shadow-2xl"
+      style={{ paddingTop: 130, perspective: 800 }}
+    >
       {/* Folder Back */}
       <div className="absolute inset-x-0 z-10" style={{ top: 130 }}>
         <svg
@@ -46,7 +49,7 @@ export default function WebsterFolder() {
               className="webster-folder-cls-1"
               d="M405.85,235.11h-167.82c-24.35,0-44.1-19.74-44.1-44.1v-66.33c0-24.35,19.74-44.1,44.1-44.1h108.3c3.65.3,8.9,1.16,14.75,3.63,6.53,2.76,11.15,6.41,13.98,9.03,15.74,11.78,31.48,23.55,47.23,35.33,92.15.31,184.31.63,276.46.94,2.81-.21,21.49-1.27,35.2,12.93,8.58,8.89,10.77,19.17,11.43,23.37-.07,12.7-.14,25.4-.2,38.1-85.66-17.62-195.76-23.77-308.15,18.29-10.76,4.03-21.15,8.35-31.18,12.92h0Z"
             />
-            <rect
+            {/* <rect
               className="webster-folder-cls-3"
               x="193.94"
               y="164.01"
@@ -54,7 +57,7 @@ export default function WebsterFolder() {
               height="329.72"
               rx="28.2"
               ry="28.2"
-            />
+            /> */}
           </g>
         </svg>
       </div>
@@ -70,7 +73,14 @@ export default function WebsterFolder() {
       </div>
 
       {/* Folder Front */}
-      <div className="absolute inset-x-0 z-30" style={{ top: 130 }}>
+      <div
+        className="absolute inset-x-0 z-30 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:[transform:rotateX(-15deg)]"
+        style={{
+          top: 130,
+          transformOrigin: '50% 98%',
+          transformStyle: 'preserve-3d',
+        }}
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox={FOLDER_VIEWBOX}
