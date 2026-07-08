@@ -14,8 +14,10 @@ export interface FormulaInputProps {
   onSaveSuccess?: (formula: string) => void
 }
 
-export default function FormulaInput({ initialFormula = '', onSaveSuccess }: FormulaInputProps) {
+export default function FormulaInput({ initialFormula = null, onSaveSuccess }: FormulaInputProps) {
   const [formula, setFormula] = useState(initialFormula ?? '')
+  const [savedFormula, setSavedFormula] = useState<string | null>(initialFormula ?? null)
+  const [loadingInitial, setLoadingInitial] = useState(initialFormula == null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -29,7 +31,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
   const preview = evaluatePreview(formula)
 
-  // Sync overlay scroll with textarea scroll
   const syncScroll = useCallback(() => {
     if (overlayRef.current && textareaRef.current) {
       overlayRef.current.scrollTop = textareaRef.current.scrollTop
@@ -37,7 +38,24 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     }
   }, [])
 
-  // Validate on change
+  useEffect(() => {
+    if (initialFormula != null) return
+    const load = async () => {
+      try {
+        const res = await fetch('/api/formula')
+        if (!res.ok) return
+        const data = (await res.json()) as { formula: string | null }
+        if (data.formula) {
+          setFormula(data.formula)
+          setSavedFormula(data.formula)
+        }
+      } finally {
+        setLoadingInitial(false)
+      }
+    }
+    load()
+  }, [initialFormula])
+
   useEffect(() => {
     if (!formula.trim()) {
       setError(null)
@@ -47,7 +65,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     setError(result.success ? null : result.error.issues[0].message)
   }, [formula])
 
-  // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
     setFormula(val)
@@ -60,17 +77,14 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     setActiveSuggIdx(0)
   }
 
-  // Apply a suggestion
   const applySuggestion = (varKey: string) => {
     const cursor = textareaRef.current?.selectionStart ?? formula.length
     const word = formula.slice(suggWordStart, cursor)
     const before = formula.slice(0, suggWordStart)
     const after = formula.slice(suggWordStart + word.length)
-    const newFormula = before + varKey + after
-    setFormula(newFormula)
+    setFormula(before + varKey + after)
     setSuggestions([])
 
-    // Place cursor after inserted variable
     setTimeout(() => {
       const pos = suggWordStart + varKey.length
       textareaRef.current?.setSelectionRange(pos, pos)
@@ -78,7 +92,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     }, 0)
   }
 
-  // Keyboard handling
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (suggestions.length === 0) return
 
@@ -96,15 +109,13 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     }
   }
 
-  // Insert variable chip from the reference panel
   const insertVariable = (varKey: string) => {
     const ta = textareaRef.current
     const cursor = ta?.selectionStart ?? formula.length
     const before = formula.slice(0, cursor)
     const after = formula.slice(cursor)
     const separator = before.length > 0 && !/[\s(]$/.test(before) ? ' ' : ''
-    const newFormula = before + separator + varKey + after
-    setFormula(newFormula)
+    setFormula(before + separator + varKey + after)
     setSaved(false)
 
     setTimeout(() => {
@@ -114,7 +125,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
     }, 0)
   }
 
-  // Save handler
   const handleSave = async () => {
     const result = formulaSchema.safeParse(formula)
     if (!result.success) {
@@ -136,6 +146,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
       }
 
       setSaved(true)
+      setSavedFormula(formula)
       onSaveSuccess?.(formula)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save')
@@ -145,6 +156,23 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
   }
 
   const isValid = !error && formula.trim().length > 0
+  const isDirty = savedFormula !== null && formula !== savedFormula
+  const unchanged = savedFormula !== null && formula === savedFormula
+
+  if (loadingInitial) {
+    return (
+      <div className="font-mono flex flex-col gap-6 w-full mx-auto px-5 sm:px-10 lg:px-20 py-10 animate-pulse">
+        <div className="h-4 w-36 rounded bg-white/10" />
+        <div className="h-3 w-full rounded bg-white/5" />
+        <div className="flex gap-2">
+          {[80, 112, 140, 72].map((w, i) => (
+            <div key={i} className="h-6 rounded-lg bg-white/10" style={{ width: w }} />
+          ))}
+        </div>
+        <div className="h-24 rounded-2xl bg-white/5" />
+      </div>
+    )
+  }
 
   return (
     <div className="font-mono flex flex-col gap-6 w-full mx-auto px-5 sm:px-10 lg:px-20 py-10">
@@ -163,6 +191,50 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
           them will be treated as multiplied (e.g. prs discord_messages = prs * discord_messages).
         </p>
       </div>
+
+      {/* Currently saved formula */}
+      {savedFormula && (
+        <div
+          className="rounded-2xl px-4 py-3.5 border"
+          style={{
+            background: 'rgba(15,170,160,0.08)',
+            borderColor: 'rgba(15,170,160,0.25)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="flex items-center justify-center w-5 h-5 rounded-full shrink-0"
+                style={{ background: 'rgba(15,170,160,0.15)' }}
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8l4 4 6-6"
+                    stroke="#0FAAA0"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="text-[0.65rem] text-[#0FAAA0]/80 uppercase tracking-widest font-bold">
+                Currently saved
+              </span>
+            </div>
+            {isDirty && (
+              <span
+                className="px-2 py-0.5 rounded-full text-[0.6rem] text-[#E333A3] uppercase tracking-widest font-bold"
+                style={{ background: 'rgba(227,51,163,0.12)' }}
+              >
+                Unsaved changes
+              </span>
+            )}
+          </div>
+          <code className="block mt-2 text-[0.82rem] text-[#0FAAA0] break-all leading-snug">
+            {savedFormula}
+          </code>
+        </div>
+      )}
 
       {/* Variable reference chips */}
       <div className="flex flex-wrap gap-2">
@@ -194,7 +266,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
       {/* Input area */}
       <div className="relative">
-        {/* Gradient border wrapper */}
         <div
           className="rounded-2xl p-0.5 transition-all duration-300"
           style={{
@@ -206,7 +277,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
           }}
         >
           <div className="rounded-[14px] bg-[#0d0f1a] relative overflow-hidden">
-            {/* Syntax highlight overlay */}
             <div
               ref={overlayRef}
               aria-hidden="true"
@@ -215,8 +285,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
                          select-none"
               dangerouslySetInnerHTML={{ __html: highlightFormula(formula) }}
             />
-
-            {/* Actual textarea */}
             <textarea
               ref={textareaRef}
               value={formula}
@@ -236,7 +304,6 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
           </div>
         </div>
 
-        {/* Autocomplete dropdown */}
         {suggestions.length > 0 && (
           <div
             ref={suggBoxRef}
@@ -268,10 +335,7 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
 
       {/* Validation error */}
       {error && (
-        <div
-          className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl
-                        bg-[#E333A3]/[0.08] border border-[#E333A3]/25"
-        >
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#E333A3]/[0.08] border border-[#E333A3]/25">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
             <circle cx="8" cy="8" r="7" stroke="#E333A3" strokeWidth="1.5" />
             <path d="M8 5v4M8 11v.5" stroke="#E333A3" strokeWidth="1.5" strokeLinecap="round" />
@@ -311,14 +375,16 @@ export default function FormulaInput({ initialFormula = '', onSaveSuccess }: For
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}
-          disabled={!isValid || saving}
+          disabled={!isValid || saving || unchanged}
           className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border-none
-                     font-mono text-[0.8rem] font-bold uppercase tracking-widest
-                     transition-all duration-200 disabled:cursor-not-allowed"
+             font-mono text-[0.8rem] font-bold uppercase tracking-widest
+             transition-all duration-200 disabled:cursor-not-allowed"
           style={{
             background:
-              isValid && !saving ? 'linear-gradient(135deg, #077CF1 0%, #0FAAA0 100%)' : '#1f2231',
-            color: isValid && !saving ? '#fff' : '#4b5563',
+              isValid && !saving && !unchanged
+                ? 'linear-gradient(135deg, #077CF1 0%, #0FAAA0 100%)'
+                : '#1f2231',
+            color: isValid && !saving && !unchanged ? '#fff' : '#4b5563',
           }}
         >
           {saving ? (

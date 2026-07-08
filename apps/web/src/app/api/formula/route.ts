@@ -17,7 +17,7 @@ export async function GET() {
   })
 
   return NextResponse.json({
-    formula: config ? (config.value as string) : null,
+    formula: config?.value?.toString() ?? null,
   })
 }
 
