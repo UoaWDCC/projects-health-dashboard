@@ -10,11 +10,16 @@ import {
 import { formulaSchema } from '@/lib/schemas/admin'
 
 export interface FormulaInputProps {
+  type: 'Health' | 'MVP'
   initialFormula?: string | null
   onSaveSuccess?: (formula: string) => void
 }
 
-export default function FormulaInput({ initialFormula = null, onSaveSuccess }: FormulaInputProps) {
+export default function FormulaInput({
+  type,
+  initialFormula = null,
+  onSaveSuccess,
+}: FormulaInputProps) {
   const [formula, setFormula] = useState(initialFormula ?? '')
   const [savedFormula, setSavedFormula] = useState<string | null>(initialFormula ?? null)
   const [loadingInitial, setLoadingInitial] = useState(initialFormula == null)
@@ -42,7 +47,7 @@ export default function FormulaInput({ initialFormula = null, onSaveSuccess }: F
     if (initialFormula != null) return
     const load = async () => {
       try {
-        const res = await fetch('/api/formula')
+        const res = await fetch(`/api/formula/${type.toLowerCase()}`)
         if (!res.ok) return
         const data = (await res.json()) as { formula: string | null }
         if (data.formula) {
@@ -54,7 +59,7 @@ export default function FormulaInput({ initialFormula = null, onSaveSuccess }: F
       }
     }
     load()
-  }, [initialFormula])
+  }, [initialFormula, type])
 
   useEffect(() => {
     if (!formula.trim()) {
@@ -134,7 +139,7 @@ export default function FormulaInput({ initialFormula = null, onSaveSuccess }: F
 
     setSaving(true)
     try {
-      const res = await fetch('/api/formula', {
+      const res = await fetch(`/api/formula/${type.toLowerCase()}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formula }),
@@ -179,12 +184,12 @@ export default function FormulaInput({ initialFormula = null, onSaveSuccess }: F
       {/* Header */}
       <div>
         <h2 className="text-[#077CF1] font-extrabold text-sm uppercase tracking-widest m-0">
-          Health Formula
+          {type} Formula
         </h2>
         <p className="text-gray-500 text-xs mt-1.5 leading-relaxed">
-          Define the global health formula applied to all projects. Use the variables below with
-          standard math operators (+, -, *, /, ^, sqrt, log, …). Click on any variable below for a
-          quick insert into the formula. Auto-completion for variables is also provided.
+          Define the global {type.toLowerCase()} formula applied to all projects. Use the variables
+          below with standard math operators (+, -, *, /, ^, sqrt, log, …). Click on any variable
+          below for a quick insert into the formula. Auto-completion for variables is also provided.
           <br />
           <br />
           <strong>NOTE:</strong> Two or more variables in succession without an operator between
