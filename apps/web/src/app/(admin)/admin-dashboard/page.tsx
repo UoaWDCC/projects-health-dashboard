@@ -218,7 +218,8 @@ export default function AdminDashboardPage() {
         </ClientSuspense>
       </ul>
 
-      <FormulaInput />
+      <FormulaInput type="Health" />
+      <FormulaInput type="MVP" />
     </>
   )
 }
