@@ -31,9 +31,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ type: stri
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ type: string }> }) {
-  // if (!(await hasRole(Role.ADMIN))) {
-  //   return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
-  // }
+  if (!(await hasRole(Role.ADMIN))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
 
   const { type } = await params
 
