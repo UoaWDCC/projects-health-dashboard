@@ -1,38 +1,22 @@
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import MemberAvatar from './MemberAvatar'
-import { AVATAR_COLORS } from '@/lib/project/members'
-import type { ProjectMemberSummary } from '@/lib/project/members'
-
-const MAX_PREVIEW_AVATARS = 3
 
 /**
- * Mobile-only "View all members" button showing a preview of the first few members' avatars.
+ * Mobile-only "View all members" link to the project's team members page.
  */
-export default function ViewAllMembersButton({ members }: { members: ProjectMemberSummary[] }) {
-  const previewMembers = members.slice(0, MAX_PREVIEW_AVATARS)
-
+export default function ViewAllMembersButton({ slug }: { slug: string }) {
   return (
-    <button
-      type="button"
-      aria-label="View all members"
-      className="lg:hidden w-full flex items-center gap-4 rounded-2xl bg-wdcc-oshan px-6 py-5 text-white cursor-default"
+    <Link
+      href={`/project/${slug}/members`}
+      className="lg:hidden w-full flex items-center gap-4 rounded-2xl bg-wdcc-oshan px-6 py-5 text-white"
     >
-      {previewMembers.length > 0 && (
-        <div className="flex items-center -space-x-2 shrink-0">
-          {previewMembers.map((member, index) => (
-            <MemberAvatar
-              key={member.id}
-              name={member.name}
-              imageUrl={member.imageUrl}
-              color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
-              fallback="dot"
-              className="w-6 h-6 rounded-full border-2 border-wdcc-oshan"
-            />
-          ))}
-        </div>
-      )}
-      <span className="font-sans text-sm font-semibold">View all members</span>
+      <div className="flex items-center -space-x-2 shrink-0">
+        <span className="w-6 h-6 rounded-full border-2 border-wdcc-oshan bg-[#077CF1]" />
+        <span className="w-6 h-6 rounded-full border-2 border-wdcc-oshan bg-[#E333A3]" />
+        <span className="w-6 h-6 rounded-full border-2 border-wdcc-oshan bg-[#FFB05F]" />
+      </div>
+      <span className="font-sans text-base font-semibold">View all members</span>
       <ArrowRight className="ml-auto w-5 h-5 shrink-0" />
-    </button>
+    </Link>
   )
 }
