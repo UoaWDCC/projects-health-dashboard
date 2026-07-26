@@ -34,6 +34,10 @@ const repo = {
   installationId: '123',
 }
 
+// Current week = Mon 2026-05-04 .. Sun 2026-05-10; the branch walk's 2-week lookback
+// therefore starts on Mon 2026-04-27. Commits authored on/after that date are ingested.
+const weekEnd = new Date('2026-05-10T23:59:59Z')
+
 function makeCommitDetail(sha: string, date = '2026-05-05T10:00:00Z') {
   return {
     sha,
@@ -98,7 +102,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo)
+    await ingestRepoCommits(repo, weekEnd)
 
     const routesCalled = paginate.mock.calls.map((c) => c[0])
     expect(routesCalled).toContain('GET /repos/{owner}/{repo}/compare/{basehead}')
@@ -122,7 +126,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo)
+    await ingestRepoCommits(repo, weekEnd)
 
     const shas = upsertCalls().map((c) => c.sha)
     expect(shas).toEqual(['feature-only-1', 'feature-only-2'])
@@ -143,7 +147,7 @@ describe('ingestRepoCommits (unit, no DB)', () => {
       },
     })
 
-    await ingestRepoCommits(repo)
+    await ingestRepoCommits(repo, weekEnd)
 
     const compareBaseheads = paginate.mock.calls
       .filter((c) => c[0] === 'GET /repos/{owner}/{repo}/compare/{basehead}')
@@ -154,26 +158,43 @@ describe('ingestRepoCommits (unit, no DB)', () => {
     expect(upsertCalls().map((c) => c.branch)).toEqual(['main', 'feature'])
   })
 
-  it('upserts all commits from the compare endpoint regardless of author date', async () => {
+  it('captures a late prior-week commit but skips commits older than the 2-week lookback', async () => {
     mockOctokit({
       defaultBranch: 'main',
       branches: [{ name: 'main' }, { name: 'feature' }],
       compareByBasehead: {
         'main...feature': [
+          // Before the lookback start (Mon 2026-04-27) — skipped.
           { sha: 'old-commit', commit: { author: { date: '2026-04-01T10:00:00Z' } } },
+          // Authored in the prior week, pushed late this week — must be captured so it
+          // can be reconciled into last week's stats.
+          { sha: 'prior-week-commit', commit: { author: { date: '2026-04-29T10:00:00Z' } } },
           { sha: 'current-commit', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
-          { sha: 'future-commit', commit: { author: { date: '2026-06-01T10:00:00Z' } } },
         ],
       },
     })
 
-    const total = await ingestRepoCommits(repo)
+    const total = await ingestRepoCommits(repo, weekEnd)
 
-    expect(total).toBe(3)
+    expect(total).toBe(2)
     expect(upsertCalls()).toEqual([
-      { sha: 'old-commit', branch: 'feature' },
+      { sha: 'prior-week-commit', branch: 'feature' },
       { sha: 'current-commit', branch: 'feature' },
-      { sha: 'future-commit', branch: 'feature' },
     ])
+  })
+
+  it('keeps commits that have no author date rather than dropping them', async () => {
+    mockOctokit({
+      defaultBranch: 'main',
+      branches: [{ name: 'main' }, { name: 'feature' }],
+      compareByBasehead: {
+        'main...feature': [{ sha: 'undated-commit' } as never],
+      },
+    })
+
+    const total = await ingestRepoCommits(repo, weekEnd)
+
+    expect(total).toBe(1)
+    expect(upsertCalls()).toEqual([{ sha: 'undated-commit', branch: 'feature' }])
   })
 })

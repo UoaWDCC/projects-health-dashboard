@@ -4,6 +4,7 @@ import { db, Prisma } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { logger } from '../lib/logger'
 import { resolveIdentity, withRateLimit } from './github-utils'
+import { getCollectionWindow } from './date-utils'
 
 type Octokit = Awaited<ReturnType<typeof getInstallationOctokit>>
 
@@ -61,13 +62,28 @@ export async function upsertCommit(
   }
 }
 
-export async function ingestRepoCommits(repo: {
-  id: string
-  owner: string
-  name: string
-  installationId: string
-}): Promise<number> {
-  logger.info(`Fetching commits for ${repo.owner}/${repo.name}`)
+export async function ingestRepoCommits(
+  repo: {
+    id: string
+    owner: string
+    name: string
+    installationId: string
+  },
+  weekEnd: Date
+): Promise<number> {
+  // The branch walk looks back two weeks (the current week plus the prior week),
+  // mirroring the PR walk's lookback window. This ensures a commit authored last week
+  // but pushed late — to a branch with no associated PR, or a PR that hasn't been
+  // updated recently — is still captured here even though neither the PR walk nor a
+  // current-week-only branch walk would see it. The prior week's WeeklyStats and
+  // MemberWeeklyContribution are recomputed after ingestion (see runGitHubIngestion),
+  // so any newly captured commit is bucketed into the week it was authored in.
+  // Lookback start = Monday of the previous week.
+  const [lookbackStart] = getCollectionWindow(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))
+
+  logger.info(
+    `Fetching commits for ${repo.owner}/${repo.name} authored since ${lookbackStart.toISOString()}`
+  )
 
   const octokit = await getInstallationOctokit(repo.installationId)
 
@@ -98,7 +114,7 @@ export async function ingestRepoCommits(repo: {
 
     // Compare endpoint returns commits reachable from head but NOT from base,
     // so commits inherited from the default branch (e.g. via merge or rebase) are excluded.
-    type CompareCommit = { sha: string }
+    type CompareCommit = { sha: string; commit?: { author?: { date?: string } | null } }
     const basehead = `${defaultBranch}...${branch.name}`
     const commits = await withRateLimit<CompareCommit[]>(() =>
       octokit.paginate(
@@ -121,6 +137,15 @@ export async function ingestRepoCommits(repo: {
     }
 
     for (const commit of commits) {
+      // Skip commits authored before the 2-week lookback window. Commits without an
+      // author date are kept so we never silently drop a commit we can't date.
+      const authorDate = commit.commit?.author?.date
+      if (authorDate && new Date(authorDate) < lookbackStart) {
+        continue
+      }
+
+      // upsertCommit is a no-op for SHAs already stored (e.g. captured earlier by the
+      // PR walk), so commits are never double-counted across the two walks.
       if (await upsertCommit(repo, octokit, commit.sha, branch.name)) {
         totalCommits++
       }

@@ -68,6 +68,10 @@ function setupOctokit(
   return { mockPaginate, mockRequest, mockOctokit }
 }
 
+// Current week = Mon 2026-05-04 .. Sun 2026-05-10; the branch walk's 2-week lookback
+// therefore starts on Mon 2026-04-27.
+const weekEnd = new Date('2026-05-10T23:59:59Z')
+
 describe('github-commit-tracker (integration)', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -198,7 +202,7 @@ describe('github-commit-tracker (integration)', () => {
         ]
       )
 
-      await ingestRepoCommits(repo)
+      await ingestRepoCommits(repo, weekEnd)
 
       expect(mockPaginate).toHaveBeenCalledTimes(2)
       const paginateCalls = mockPaginate.mock.calls
@@ -212,7 +216,7 @@ describe('github-commit-tracker (integration)', () => {
       expect(savedCommit!.message).toBe('Feature work')
     })
 
-    it('ingests all commits from compare endpoint regardless of author date', async () => {
+    it('ingests commits within the 2-week lookback and skips older ones', async () => {
       const repo = await seedRepo()
       const identity = await seedIdentity(333, 'newdev')
       vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
@@ -231,17 +235,12 @@ describe('github-commit-tracker (integration)', () => {
             author: { id: 333, login: 'newdev' },
             commit: { message: 'New commit', author: { date: '2026-05-07T10:00:00Z' } },
           }),
-          makeCommitData({
-            sha: 'old-commit',
-            author: { id: 333, login: 'newdev' },
-            commit: { message: 'Old commit', author: { date: '2026-01-01T10:00:00Z' } },
-          }),
         ]
       )
 
-      const totalCommits = await ingestRepoCommits(repo)
+      const totalCommits = await ingestRepoCommits(repo, weekEnd)
 
-      expect(totalCommits).toBe(2)
+      expect(totalCommits).toBe(1)
 
       const savedNew = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'new-commit' } },
@@ -249,10 +248,41 @@ describe('github-commit-tracker (integration)', () => {
       expect(savedNew).not.toBeNull()
       expect(savedNew!.authorIdentityId).toBe(identity.id)
 
+      // Authored before the lookback window (Mon 2026-04-27) — must not be ingested.
       const savedOld = await db.commitFact.findUnique({
         where: { repoId_sha: { repoId: repo.id, sha: 'old-commit' } },
       })
-      expect(savedOld).not.toBeNull()
+      expect(savedOld).toBeNull()
+    })
+
+    it('captures a prior-week commit pushed late to a branch with no PR', async () => {
+      const repo = await seedRepo()
+      const identity = await seedIdentity(444, 'latedev')
+      vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
+
+      setupOctokit(
+        [
+          [{ name: 'feature' }],
+          [{ sha: 'late-commit', commit: { author: { date: '2026-04-29T10:00:00Z' } } }],
+        ],
+        [
+          makeCommitData({
+            sha: 'late-commit',
+            author: { id: 444, login: 'latedev' },
+            commit: { message: 'Prior-week work', author: { date: '2026-04-29T10:00:00Z' } },
+          }),
+        ]
+      )
+
+      const totalCommits = await ingestRepoCommits(repo, weekEnd)
+
+      expect(totalCommits).toBe(1)
+
+      const saved = await db.commitFact.findUnique({
+        where: { repoId_sha: { repoId: repo.id, sha: 'late-commit' } },
+      })
+      expect(saved).not.toBeNull()
+      expect(saved!.branch).toBe('feature')
     })
 
     it('handles repos with no commits in the window', async () => {
@@ -263,7 +293,7 @@ describe('github-commit-tracker (integration)', () => {
         []
       )
 
-      const totalCommits = await ingestRepoCommits(repo)
+      const totalCommits = await ingestRepoCommits(repo, weekEnd)
 
       expect(totalCommits).toBe(0)
       expect(mockPaginate).toHaveBeenCalledTimes(3)
