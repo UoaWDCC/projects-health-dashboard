@@ -1,16 +1,19 @@
 import TeamHeader from '@/components/headers/TeamHeader'
 import WeeklyMvp from '@/components/ui/WeeklyMvp'
+import TeamSection from '@/components/ui/TeamSection'
 import ViewAllMembersButton from '@/components/ui/ViewAllMembersButton'
 import { getProjectHeaderData } from '@/lib/project/projects'
+import { getProjectMembers } from '@/lib/project/members'
 import { getProjectWeeklyMvp } from '@/lib/project/weekly-stats'
 import { notFound } from 'next/navigation'
 import GraphViewToggle from '@/components/charts/GraphViewToggle'
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const slug = (await params).slug
-  const [project, mvp] = await Promise.all([
+  const [project, mvp, members] = await Promise.all([
     getProjectHeaderData(slug),
     getProjectWeeklyMvp(slug).catch(() => null),
+    getProjectMembers(slug).catch(() => []),
   ])
 
   if (!project) {
@@ -36,7 +39,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        <ViewAllMembersButton />
+        <TeamSection members={members} />
+        <ViewAllMembersButton members={members} />
 
         <GraphViewToggle slug={slug} />
       </div>
