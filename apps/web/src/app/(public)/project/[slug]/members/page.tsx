@@ -76,8 +76,8 @@ export default async function TeamMembersPage({ params }: { params: Promise<{ sl
       <div className="px-5 sm:px-10 lg:px-20 py-8 lg:py-14">
         {members.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-8">
-            {members.map((member) => (
-              <MemberCard key={member.id} member={member} />
+            {members.map((member, index) => (
+              <MemberCard key={member.id} member={member} index={index} />
             ))}
           </div>
         ) : (

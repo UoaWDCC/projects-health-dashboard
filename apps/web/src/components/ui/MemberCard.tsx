@@ -1,5 +1,6 @@
 import MemberAvatar from './MemberAvatar'
 import type { TeamMemberStats } from '@/lib/project/weekly-stats'
+import { AVATAR_COLORS } from '@/lib/project/members'
 
 const STATS = [
   {
@@ -25,7 +26,7 @@ const STATS = [
   },
 ] as const
 
-export default function MemberCard({ member }: { member: TeamMemberStats }) {
+export default function MemberCard({ member, index }: { member: TeamMemberStats; index: number }) {
   return (
     <div className="h-full rounded-2xl lg:rounded-3xl p-px bg-[linear-gradient(160deg,#E333A366_0%,#077CF14D_50%,#FFB05F80_100%)]">
       <div className="h-full rounded-[15px] lg:rounded-[23px] bg-white overflow-hidden flex flex-col">
@@ -34,7 +35,7 @@ export default function MemberCard({ member }: { member: TeamMemberStats }) {
           <MemberAvatar
             name={member.name}
             imageUrl={member.imageUrl}
-            size={112}
+            color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
             className="w-14 h-14 lg:w-24 lg:h-24 xl:w-28 xl:h-28"
           />
         </div>
