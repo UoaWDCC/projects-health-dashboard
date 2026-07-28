@@ -51,9 +51,10 @@ export interface TeamMemberStats {
 }
 
 /**
- * All active members of a project with their contribution stats for the most
- * recent collected week, ranked by lines committed (ties broken by commits,
- * then name). Members with no contribution row for the week show zeros.
+ * All active members of a project with their contribution stats for that
+ * project's most recent collected week, ranked by lines committed (ties broken
+ * by commits, then name). Members with no contribution row for the week show
+ * zeros.
  */
 export async function getProjectTeamMembers(slug: string): Promise<TeamMemberStats[]> {
   const members = await db.projectMember.findMany({
@@ -75,7 +76,13 @@ export async function getProjectTeamMembers(slug: string): Promise<TeamMemberSta
   })
   if (members.length === 0) return []
 
+  const memberIds = members.map((m) => m.id)
+
+  // Scoped to this project's members rather than the global max weekStart: if this
+  // project's sync fails for a week that another project collected, a global max
+  // would resolve to a week this project has no rows for and zero out every member.
   const latest = await db.memberWeeklyContribution.findFirst({
+    where: { projectMemberId: { in: memberIds } },
     orderBy: { weekStart: 'desc' },
     select: { weekStart: true },
   })
@@ -84,7 +91,7 @@ export async function getProjectTeamMembers(slug: string): Promise<TeamMemberSta
     ? await db.memberWeeklyContribution.findMany({
         where: {
           weekStart: latest.weekStart,
-          projectMemberId: { in: members.map((m) => m.id) },
+          projectMemberId: { in: memberIds },
         },
         select: { projectMemberId: true, linesAdded: true, commits: true, prsMerged: true },
       })
