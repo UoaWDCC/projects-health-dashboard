@@ -6,10 +6,14 @@ import { getProjectHeaderData } from '@/lib/project/projects'
 import { getProjectTeamMembers } from '@/lib/project/weekly-stats'
 import { db, SyncJobStatus, SyncJobType } from '@repo/db'
 
-async function getLastUpdated(): Promise<Date> {
+async function getLastUpdated(slug: string): Promise<Date> {
   try {
     const syncJob = await db.syncJob.findFirst({
-      where: { type: SyncJobType.GITHUB, status: SyncJobStatus.SUCCESS },
+      where: {
+        type: SyncJobType.GITHUB,
+        status: SyncJobStatus.SUCCESS,
+        project: { slug },
+      },
       orderBy: { finishedAt: 'desc' },
       select: { finishedAt: true },
     })
@@ -24,7 +28,7 @@ export default async function TeamMembersPage({ params }: { params: Promise<{ sl
   const [project, members, lastUpdated] = await Promise.all([
     getProjectHeaderData(slug),
     getProjectTeamMembers(slug).catch(() => []),
-    getLastUpdated(),
+    getLastUpdated(slug),
   ])
 
   if (!project) {
