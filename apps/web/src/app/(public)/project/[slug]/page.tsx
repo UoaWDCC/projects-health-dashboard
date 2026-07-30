@@ -39,8 +39,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        <TeamSection members={members} />
-        <ViewAllMembersButton members={members} />
+        <TeamSection slug={slug} members={members} />
+        <ViewAllMembersButton slug={slug} members={members} />
 
         <GraphViewToggle slug={slug} />
       </div>

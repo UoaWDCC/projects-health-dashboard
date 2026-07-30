@@ -40,6 +40,83 @@ export async function getProjectWeeklyMvp(slug: string) {
   })
 }
 
+export interface TeamMemberStats {
+  id: string
+  name: string
+  username: string | null
+  imageUrl: string | null
+  linesCommitted: number
+  commits: number
+  pullRequests: number
+}
+
+/**
+ * All active members of a project with their contribution stats for that
+ * project's most recent collected week, ranked by lines committed (ties broken
+ * by commits, then name). Members with no contribution row for the week show
+ * zeros.
+ */
+export async function getProjectTeamMembers(slug: string): Promise<TeamMemberStats[]> {
+  const members = await db.projectMember.findMany({
+    where: { project: { slug }, isActive: true },
+    select: {
+      id: true,
+      displayName: true,
+      person: {
+        select: {
+          displayName: true,
+          imageUrl: true,
+          identities: {
+            where: { provider: 'GITHUB' },
+            select: { username: true },
+          },
+        },
+      },
+    },
+  })
+  if (members.length === 0) return []
+
+  const memberIds = members.map((m) => m.id)
+
+  // Scoped to this project's members rather than the global max weekStart: if this
+  // project's sync fails for a week that another project collected, a global max
+  // would resolve to a week this project has no rows for and zero out every member.
+  const latest = await db.memberWeeklyContribution.findFirst({
+    where: { projectMemberId: { in: memberIds } },
+    orderBy: { weekStart: 'desc' },
+    select: { weekStart: true },
+  })
+
+  const contributions = latest
+    ? await db.memberWeeklyContribution.findMany({
+        where: {
+          weekStart: latest.weekStart,
+          projectMemberId: { in: memberIds },
+        },
+        select: { projectMemberId: true, linesAdded: true, commits: true, prsMerged: true },
+      })
+    : []
+  const contributionsByMember = new Map(contributions.map((c) => [c.projectMemberId, c]))
+
+  return members
+    .map((m) => {
+      const contribution = contributionsByMember.get(m.id)
+      return {
+        id: m.id,
+        name: m.displayName ?? m.person.displayName,
+        username: m.person.identities[0]?.username ?? null,
+        imageUrl: m.person.imageUrl,
+        linesCommitted: contribution?.linesAdded ?? 0,
+        commits: contribution?.commits ?? 0,
+        pullRequests: contribution?.prsMerged ?? 0,
+      }
+    })
+    .sort(
+      (a, b) =>
+        b.linesCommitted - a.linesCommitted || b.commits - a.commits || a.name.localeCompare(b.name)
+    )
+}
+
 export interface ProjectWeeklyStats {
   dates: string[]
   commits: number[]

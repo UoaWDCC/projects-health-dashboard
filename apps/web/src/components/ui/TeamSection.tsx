@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import MemberAvatar from './MemberAvatar'
 import { AVATAR_COLORS } from '@/lib/project/members'
@@ -7,12 +8,20 @@ const MAX_VISIBLE_MEMBERS = 6
 
 /**
  * Desktop-only team member cards with an overflow "+N" card when there are more members than max.
+ * The header action and the overflow card both link to the project's team members page.
  */
-export default function TeamSection({ members }: { members: ProjectMemberSummary[] }) {
+export default function TeamSection({
+  slug,
+  members,
+}: {
+  slug: string
+  members: ProjectMemberSummary[]
+}) {
   if (members.length === 0) {
     return null
   }
 
+  const membersHref = `/project/${slug}/members`
   const visibleMembers = members.slice(0, MAX_VISIBLE_MEMBERS)
   const overflowCount = members.length - visibleMembers.length
 
@@ -26,14 +35,13 @@ export default function TeamSection({ members }: { members: ProjectMemberSummary
           </p>
         </div>
 
-        <button
-          type="button"
-          aria-label="View all members (coming soon)"
-          className="flex items-center gap-3 rounded-full bg-wdcc-oshan px-7 py-4 font-sans text-xl font-medium text-white cursor-default"
+        <Link
+          href={membersHref}
+          className="flex items-center gap-3 rounded-full bg-wdcc-oshan px-7 py-4 font-sans text-xl font-medium text-white transition-transform duration-200 hover:scale-[1.03]"
         >
           View all members
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Link>
       </div>
 
       <div className="mt-8 flex gap-4">
@@ -55,16 +63,16 @@ export default function TeamSection({ members }: { members: ProjectMemberSummary
         ))}
 
         {overflowCount > 0 && (
-          <button
-            type="button"
+          <Link
+            href={membersHref}
             aria-label={`View all ${members.length} members`}
-            className="flex flex-1 min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E9EBF4] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)] cursor-default"
+            className="flex flex-1 min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E9EBF4] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-transform duration-200 hover:scale-[1.03]"
           >
             <span className="flex w-full flex-1 items-center justify-center bg-wdcc-oshan text-3xl font-extrabold text-white xl:text-4xl">
               +{overflowCount}
             </span>
             <span className="w-full py-3 text-center font-mono text-wdcc-blue">View all ›</span>
-          </button>
+          </Link>
         )}
       </div>
     </section>
