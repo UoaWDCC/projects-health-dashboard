@@ -23,21 +23,25 @@ function formatDate(iso: string): string {
   return `${dd}/${mm}`
 }
 
-const TOOLTIP_BOX_HEIGHT = 26
+const TOOLTIP_BOX_HEIGHT = 50
 const TOOLTIP_FOREIGN_OBJECT_WIDTH = 80
 
 function ActivePointTooltip({
   cx,
   cy,
   value,
+  payload,
   viewBox,
 }: {
   cx?: number
   cy?: number
   value?: number
+  payload?: { date?: string }
   viewBox?: { x: number; y: number; width: number; height: number }
 }) {
   if (cx === undefined || cy === undefined) return null
+
+  const date = payload?.date ?? ''
 
   const clampedX = viewBox
     ? Math.max(
@@ -59,8 +63,12 @@ function ActivePointTooltip({
         height={TOOLTIP_BOX_HEIGHT + 8}
       >
         <div className="flex flex-col items-center">
-          <div className="rounded-md bg-[#077CF1] px-2 py-1 font-mono text-sm font-bold text-white">
-            {value}
+          <div className="flex flex-col items-center rounded-md bg-[#077CF1] px-2.5 py-1 text-white shadow-sm">
+            {date && <span className="text-[12px] font-mono text-blue-100">{date}</span>}
+
+            <span className="rounded-md bg-[#077CF1] font-mono text-sm font-bold text-white">
+              {value}
+            </span>
           </div>
           <div className="-mt-1 h-2 w-2 rotate-45 bg-[#077CF1]" />
         </div>
