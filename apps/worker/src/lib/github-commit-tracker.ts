@@ -137,11 +137,17 @@ export async function ingestRepoCommits(
     }
 
     for (const commit of commits) {
-      // Skip commits authored before the 2-week lookback window. Commits without an
-      // author date are kept so we never silently drop a commit we can't date.
+      // Keep only commits authored within the window [lookbackStart, weekEnd].
+      // Older commits fall outside the 2-week lookback; commits authored after
+      // weekEnd belong to a later week and must be skipped in case the job runs
+      // late. Commits without an author date are kept so we never silently drop
+      // a commit we can't date.
       const authorDate = commit.commit?.author?.date
-      if (authorDate && new Date(authorDate) < lookbackStart) {
-        continue
+      if (authorDate) {
+        const authoredAt = new Date(authorDate)
+        if (authoredAt < lookbackStart || authoredAt > weekEnd) {
+          continue
+        }
       }
 
       // upsertCommit is a no-op for SHAs already stored (e.g. captured earlier by the

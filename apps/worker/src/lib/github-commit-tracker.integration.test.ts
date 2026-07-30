@@ -285,6 +285,44 @@ describe('github-commit-tracker (integration)', () => {
       expect(saved!.branch).toBe('feature')
     })
 
+    it('skips commits authored after weekEnd when the job runs late', async () => {
+      const repo = await seedRepo()
+      const identity = await seedIdentity(555, 'futuredev')
+      vi.mocked(resolveIdentity).mockResolvedValue(identity.id)
+
+      setupOctokit(
+        [
+          [{ name: 'feature' }],
+          [
+            { sha: 'in-window-commit', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
+            { sha: 'future-commit', commit: { author: { date: '2026-05-20T10:00:00Z' } } },
+          ],
+        ],
+        [
+          makeCommitData({
+            sha: 'in-window-commit',
+            author: { id: 555, login: 'futuredev' },
+            commit: { message: 'In-window work', author: { date: '2026-05-07T10:00:00Z' } },
+          }),
+        ]
+      )
+
+      const totalCommits = await ingestRepoCommits(repo, weekEnd)
+
+      expect(totalCommits).toBe(1)
+
+      const savedInWindow = await db.commitFact.findUnique({
+        where: { repoId_sha: { repoId: repo.id, sha: 'in-window-commit' } },
+      })
+      expect(savedInWindow).not.toBeNull()
+
+      // Authored after weekEnd (Sun 2026-05-10) — belongs to a later week, must not be ingested.
+      const savedFuture = await db.commitFact.findUnique({
+        where: { repoId_sha: { repoId: repo.id, sha: 'future-commit' } },
+      })
+      expect(savedFuture).toBeNull()
+    })
+
     it('handles repos with no commits in the window', async () => {
       const repo = await seedRepo()
 

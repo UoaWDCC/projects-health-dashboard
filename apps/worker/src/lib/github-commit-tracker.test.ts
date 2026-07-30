@@ -183,6 +183,27 @@ describe('ingestRepoCommits (unit, no DB)', () => {
     ])
   })
 
+  it('skips commits authored after weekEnd (e.g. when the job runs late)', async () => {
+    mockOctokit({
+      defaultBranch: 'main',
+      branches: [{ name: 'main' }, { name: 'feature' }],
+      compareByBasehead: {
+        'main...feature': [
+          // Authored within the window — captured.
+          { sha: 'in-window-commit', commit: { author: { date: '2026-05-07T10:00:00Z' } } },
+          // Authored after weekEnd (Sun 2026-05-10); belongs to a later week, so it must be
+          // skipped even though the compare endpoint returns it when the job runs late.
+          { sha: 'future-commit', commit: { author: { date: '2026-05-20T10:00:00Z' } } },
+        ],
+      },
+    })
+
+    const total = await ingestRepoCommits(repo, weekEnd)
+
+    expect(total).toBe(1)
+    expect(upsertCalls()).toEqual([{ sha: 'in-window-commit', branch: 'feature' }])
+  })
+
   it('keeps commits that have no author date rather than dropping them', async () => {
     mockOctokit({
       defaultBranch: 'main',
