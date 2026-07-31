@@ -25,7 +25,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
   if (viewMode === 'rows') {
     return (
       <div className="relative w-full rounded-2xl overflow-visible font-sans">
-        {/* Gradient outline */}
         <div
           className="
             pointer-events-none absolute inset-0 rounded-2xl
@@ -57,9 +56,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0 pl-1">
-            <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`} />
-            <span className="text-[clamp(0.65rem,3vw,0.8rem)] text-wdcc-grey-light font-mono whitespace-nowrap">
-              {statusStyle.label}
+            <span
+              className={`flex items-center gap-1.5 ${isActive ? 'rounded-full bg-[#E1F6E8] px-2.5 py-1' : ''}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${statusStyle.dot} shrink-0`} />
+              <span className="text-[clamp(0.65rem,3vw,0.8rem)] text-wdcc-grey-light font-mono whitespace-nowrap">
+                {statusStyle.label}
+              </span>
             </span>
           </div>
         </div>
@@ -70,7 +73,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
   if (viewMode === 'tiles') {
     return (
       <div className="relative w-full aspect-square rounded-2xl overflow-visible font-sans">
-        {/* Gradient outline */}
         <div
           className="
             pointer-events-none absolute inset-0 rounded-2xl
@@ -92,7 +94,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
             )}
           </div>
 
-          <h3 className="mt-2.5 text-[clamp(0.85rem,4.6vw,1.15rem)] font-extrabold leading-tight line-clamp-2">
+          <h3 className="mt-2.5 text-[clamp(0.7rem,3.4vw,0.95rem)] font-extrabold leading-tight line-clamp-2">
             {name}
           </h3>
 
@@ -101,9 +103,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
           </p>
 
           <div className="mt-auto flex items-center gap-1.5 pt-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} shrink-0`} />
-            <span className="text-[clamp(0.6rem,2.8vw,0.75rem)] text-wdcc-grey-light font-mono truncate">
-              {statusStyle.label}
+            <span
+              className={`flex items-center gap-1.5 min-w-0 ${isActive ? 'rounded-full bg-[#E1F6E8] px-2 py-1' : ''}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} shrink-0`} />
+              <span className="text-[clamp(0.6rem,2.8vw,0.75rem)] text-wdcc-grey-light font-mono truncate">
+                {statusStyle.label}
+              </span>
             </span>
           </div>
         </div>
@@ -179,9 +185,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
         </p>
 
         <div className="mt-auto pt-3 sm:pt-4 xl:pt-[clamp(8px,2vw,16px)] flex items-center gap-2">
-          <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${statusStyle.dot}`} />
-          <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)] text-wdcc-grey-light font-mono">
-            {statusStyle.label}
+          <span
+            className={`flex items-center gap-2 ${isActive ? 'rounded-full bg-[#E1F6E8] px-3 py-1.5' : ''}`}
+          >
+            <span
+              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${statusStyle.dot} shrink-0`}
+            />
+            <span className="text-[13px] sm:text-[14px] xl:text-[clamp(14px,1.6vw,19.7px)] text-wdcc-grey-light font-mono">
+              {statusStyle.label}
+            </span>
           </span>
         </div>
       </div>

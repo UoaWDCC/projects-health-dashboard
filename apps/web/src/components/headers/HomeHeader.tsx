@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import WebsterFolder from '../ui/WebsterFolder'
+import { formatRelativeTime } from '@/lib/utils'
 
 interface HomeHeaderProps {
   activeProjectCount: number
+  lastCommitAt: Date | null
 }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({
   activeProjectCount,
+  lastCommitAt,
 }: HomeHeaderProps): React.JSX.Element => {
   return (
     <div className="px-5 sm:px-10 lg:px-20 pt-4 sm:pt-10 lg:pt-20 relative w-full">
@@ -25,6 +28,12 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
           </svg>
           <span className="text-wdcc-grey text-xs sm:text-sm lg:text-2xl font-medium whitespace-nowrap">
             {activeProjectCount} active project{activeProjectCount !== 1 ? 's' : ''}
+            {lastCommitAt && (
+              <>
+                <span className="text-wdcc-grey/40"> · </span>
+                {formatRelativeTime(lastCommitAt)}
+              </>
+            )}
           </span>
         </div>
       )}
