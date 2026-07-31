@@ -23,21 +23,36 @@ function formatDate(iso: string): string {
   return `${dd}/${mm}`
 }
 
-const TOOLTIP_BOX_HEIGHT = 26
+const TOOLTIP_BOX_HEIGHT = 50
 const TOOLTIP_FOREIGN_OBJECT_WIDTH = 80
 
 function ActivePointTooltip({
   cx,
   cy,
   value,
+  payload,
   viewBox,
 }: {
   cx?: number
   cy?: number
   value?: number
+  payload?: { date?: string }
   viewBox?: { x: number; y: number; width: number; height: number }
 }) {
   if (cx === undefined || cy === undefined) return null
+
+  const date = payload?.date ?? ''
+
+  const tooltipHeight = TOOLTIP_BOX_HEIGHT + 16
+  const minY = viewBox?.y ?? 0
+
+  // Check if positioning above would overflow the top boundary of the SVG
+  const isNearTop = cy - tooltipHeight < minY
+
+  // Compute dynamic Y position & arrow orientation
+  const foreignObjectY = isNearTop
+    ? cy + 16 // Position below the point
+    : cy - tooltipHeight // Position above the point
 
   const clampedX = viewBox
     ? Math.max(
@@ -52,17 +67,26 @@ function ActivePointTooltip({
   return (
     <g>
       <circle cx={cx} cy={cy} r={4} fill="#077CF1" />
+
       <foreignObject
         x={clampedX}
-        y={cy - TOOLTIP_BOX_HEIGHT - 16}
+        y={foreignObjectY}
         width={TOOLTIP_FOREIGN_OBJECT_WIDTH}
-        height={TOOLTIP_BOX_HEIGHT + 8}
+        height={TOOLTIP_BOX_HEIGHT + 16}
+        className="overflow-visible"
       >
         <div className="flex flex-col items-center">
-          <div className="rounded-md bg-[#077CF1] px-2 py-1 font-mono text-sm font-bold text-white">
-            {value}
+          {/* Arrow tail points up when tooltip is placed below */}
+          {isNearTop && <div className="-mb-1 h-2 w-2 rotate-45 bg-[#077CF1]" />}
+
+          <div className="flex flex-col items-center rounded-md bg-[#077CF1] px-2.5 py-1 text-white shadow-sm">
+            {date && <span className="text-[12px] font-mono text-blue-100">{date}</span>}
+
+            <span className="font-mono text-sm font-bold text-white">{value}</span>
           </div>
-          <div className="-mt-1 h-2 w-2 rotate-45 bg-[#077CF1]" />
+
+          {/* Arrow tail points down when tooltip is placed above */}
+          {!isNearTop && <div className="-mt-1 h-2 w-2 rotate-45 bg-[#077CF1]" />}
         </div>
       </foreignObject>
     </g>
@@ -85,7 +109,7 @@ export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) 
       {/* Chart area — fixed height, data points spread evenly across full width */}
       <div className="bg-white px-2 pt-4 pb-2" style={{ height: '280px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 44, right: 24, bottom: 8, left: 8 }}>
+          <LineChart data={data} margin={{ top: 44, right: 34, bottom: 8, left: 8 }}>
             <CartesianGrid vertical={false} stroke="#E0E0E0" />
             <XAxis
               dataKey="date"
