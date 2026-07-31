@@ -7,6 +7,7 @@ import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
 import { hasRole } from '@/lib/auth'
 import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
+import { getLatestLiveCommits } from '@/actions/live-commits'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -21,32 +22,35 @@ export default async function PublicDashboardPage() {
   const isAdmin = await hasRole('ADMIN')
   const projectGridItems = isAdmin ? [...projects, null] : projects
   const teamCount = projects.length
+  const latestCommits = await getLatestLiveCommits()
+  const lastCommitAt = latestCommits[0]?.committedAt ?? null
 
   return (
     <>
-      {/* GRADIENT BACKGROUND */}
       <div className="absolute inset-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
       {/* LIVE COMMIT BANNER SCROLL */}
       <div className="lg:hidden h-10">
-        <div className="lg:hidden absolute inset-0 bg-[#E1F6E8] h-10 w-full" />
+        <div className="lg:hidden absolute inset-0 bg-[#git op] h-10 w-full" />
         <LiveCommitMarquee />
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col lg:gap-y-40">
         {/* PAGE HEADER */}
         <div className="bg-[#D4E5FD] lg:bg-inherit">
-          <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
+          <HomeHeader
+            activeProjectCount={projects.filter((project) => project.isActive).length}
+            lastCommitAt={lastCommitAt}
+          />
         </div>
 
         {/* PAGE CONTENT MOBILE */}
-        <div className="lg:hidden flex flex-col items-center gap-y-8 px-5 pt-10 mb-16">
+        <div className="lg:hidden flex flex-col items-center gap-y-5 px-5 pt-10 mb-16">
           <ProjectCardGrid projects={projectGridItems} teamCount={teamCount} />
           <LiveCommitFeed />
         </div>
         {/* PAGE CONTENT DESKTOP */}
-        <RevealOnScroll className="hidden lg:flex flex-col items-center gap-y-40 px-20 mb-16">
+        <RevealOnScroll className="hidden lg:flex flex-col items-center gap-y-32 px-20 mb-16">
           {/* ACTIVE PROJECTS */}
           <div className="w-full">
-            {/* GRID HEADER */}
             <div className="w-full pl-[9px] flex flex-row items-baseline gap-6">
               <h1 className="text-wdcc-oshan font-extrabold tracking-tight !leading-none m-0 text-[2.25rem]">
                 Active Projects
@@ -61,7 +65,7 @@ export default async function PublicDashboardPage() {
               {projectGridItems.map((project) => (
                 <div key={project?.id ?? 'add-new-project'}>
                   {project ? (
-                    <Link href={`/project/${project.slug}`}>
+                    <Link href={`/project/${project.slug}`} className="block w-full">
                       <ProjectCard project={project} />
                     </Link>
                   ) : (

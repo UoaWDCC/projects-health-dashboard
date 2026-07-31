@@ -1,5 +1,6 @@
 import { LiveCommit } from '@repo/db'
 import Link from 'next/link'
+import { formatRelativeTime } from '@/lib/utils'
 
 export default function LiveCommitRow({
   commit,
@@ -48,34 +49,8 @@ export default function LiveCommitRow({
       <p
         className={`font-mono font-normal text-wdcc-grey-light text-[clamp(0.5rem,2vw,1rem)] text-right place-self-center whitespace-nowrap shrink-0`}
       >
-        {processDateTime(committedAt)}
+        {formatRelativeTime(committedAt)}
       </p>
     </div>
   )
-}
-
-function processDateTime(timestamp: Date) {
-  const now = new Date()
-  const diff = now.getTime() - timestamp.getTime()
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-  if (seconds === 0) {
-    return 'Just now'
-  }
-
-  if (seconds < 60) {
-    return `${seconds}s ago`
-  }
-
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  }
-
-  if (hours < 24) {
-    return `${hours}h ago`
-  }
-
-  return `${days}d ago`
 }

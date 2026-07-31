@@ -55,8 +55,6 @@ export default function LiveCommitFeedMarquee() {
           LIVE
         </p>
       </div>
-
-      {/* Marquee Ticker */}
       <div className="flex-1 overflow-hidden flex items-center h-full">
         {error ? (
           <p className="font-mono text-xs text-rose-500 px-4">{error}</p>
