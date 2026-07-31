@@ -12,10 +12,104 @@ const statusStyles = {
   },
 }
 
-const ProjectCard: React.FC<{ project: ProjectCardData }> = ({ project }) => {
+interface ProjectCardProps {
+  project: ProjectCardData
+  viewMode?: 'tiles' | 'rows'
+}
+
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
   const { name, description, isActive, imageUrl } = project
   const statusKey: keyof typeof statusStyles = isActive === true ? 'active' : 'archived'
   const statusStyle = statusStyles[statusKey]
+
+  if (viewMode === 'rows') {
+    return (
+      <div className="relative w-full rounded-2xl overflow-visible font-sans">
+        {/* Gradient outline */}
+        <div
+          className="
+            pointer-events-none absolute inset-0 rounded-2xl
+            bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
+          "
+        />
+        <div className="absolute inset-[2px] bg-white rounded-[14px]" />
+
+        <div className="relative z-10 flex flex-row items-center gap-3 p-2.5">
+          <div className="w-14 h-14 rounded-[16px] bg-[#d9d9d9] overflow-hidden shrink-0">
+            {imageUrl && (
+              <Image
+                src={imageUrl}
+                alt={name}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[clamp(0.85rem,4vw,1.05rem)] font-extrabold leading-tight truncate">
+              {name}
+            </h3>
+            <p className="mt-0.5 text-[clamp(0.65rem,3vw,0.8rem)] leading-snug text-wdcc-grey-light font-mono truncate">
+              {description}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 pl-1">
+            <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`} />
+            <span className="text-[clamp(0.65rem,3vw,0.8rem)] text-wdcc-grey-light font-mono whitespace-nowrap">
+              {statusStyle.label}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (viewMode === 'tiles') {
+    return (
+      <div className="relative w-full aspect-square rounded-2xl overflow-visible font-sans">
+        {/* Gradient outline */}
+        <div
+          className="
+            pointer-events-none absolute inset-0 rounded-2xl
+            bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
+          "
+        />
+        <div className="absolute inset-[2px] bg-white rounded-[14px]" />
+
+        <div className="absolute inset-[2px] z-10 flex flex-col p-3 overflow-hidden">
+          <div className="w-[34%] aspect-square max-w-[52px] rounded-[16px] bg-[#d9d9d9] overflow-hidden shrink-0">
+            {imageUrl && (
+              <Image
+                src={imageUrl}
+                alt={name}
+                width={52}
+                height={52}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+
+          <h3 className="mt-2.5 text-[clamp(0.85rem,4.6vw,1.15rem)] font-extrabold leading-tight line-clamp-2">
+            {name}
+          </h3>
+
+          <p className="mt-1 text-[clamp(0.6rem,2.6vw,0.75rem)] leading-snug text-wdcc-grey-light font-mono line-clamp-1">
+            {description}
+          </p>
+
+          <div className="mt-auto flex items-center gap-1.5 pt-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} shrink-0`} />
+            <span className="text-[clamp(0.6rem,2.8vw,0.75rem)] text-wdcc-grey-light font-mono truncate">
+              {statusStyle.label}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

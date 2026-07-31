@@ -9,10 +9,10 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   activeProjectCount,
 }: HomeHeaderProps): React.JSX.Element => {
   return (
-    <div className="px-5 sm:px-10 lg:px-20 pt-8 sm:pt-12 lg:pt-20 relative w-full">
+    <div className="px-5 sm:px-10 lg:px-20 pt-4 sm:pt-10 lg:pt-20 relative w-full">
       {/* Status pill */}
       {activeProjectCount > 0 && (
-        <div className="backdrop-blur-xl rounded-full border-2 border-white font-mono px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60 hover:brightness-95 cursor-default transition-all duration-500 ease-in-out">
+        <div className="backdrop-blur-xl rounded-full border-1 lg:border-2 border-white font-mono px-3 sm:px-4 lg:px-5 py-1 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60 hover:brightness-95 cursor-default transition-all duration-500 ease-in-out">
           <svg
             width="12"
             height="12"
@@ -30,7 +30,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
       )}
 
       {/* Main Headings*/}
-      <div className="mt-6 sm:mt-8 lg:mt-11 flex items-end justify-between">
+      <div className="flex items-end justify-between mt-4 sm:mt-6 lg:mt-11 ">
         <div className="flex flex-col justify-between">
           <div>
             <h1 className="text-wdcc-oshan uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(2.625rem,8vw,6.3125rem)]">
@@ -38,8 +38,8 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
             </h1>
 
             {/* Subheading */}
-            <div className="mt-6 sm:mt-8 lg:mt-10 max-w-[54.1875rem]">
-              <h3 className="text-wdcc-grey font-medium text-[clamp(1rem,2.5vw,1.75rem)] leading-relaxed m-0">
+            <div className="mt-4 sm:mt-6 lg:mt-10 max-w-[54.1875rem]">
+              <h3 className="text-wdcc-grey font-medium text-[clamp(0.81rem,2.5vw,1.75rem)] leading-relaxed m-0">
                 Track commits, team vibes, and health scores across all WDCC projects — live and at
                 a glance.
               </h3>
@@ -47,7 +47,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
           </div>
 
           {/* CTA */}
-          <div className="pt-12 sm:pt-14 lg:pt-16">
+          <div className="pt-4 sm:pt-6 lg:pt-16 pb-6">
             <Link
               href="/leaderboard"
               className="rounded-full px-7 sm:px-8 lg:px-8 py-3 sm:py-4 lg:py-4 bg-wdcc-oshan hover:bg-wdcc-orange transition-all duration-500 ease-in-out text-white font-bold text-base sm:text-lg lg:text-lg inline-block"

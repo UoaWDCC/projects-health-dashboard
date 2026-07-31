@@ -1,18 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import LiveCommitRow from './LiveCommitRow'
+import Marquee from 'react-fast-marquee'
+import MarqueeLiveCommitRow from './LiveCommitRowMarquee'
 import { getLatestLiveCommits, getProjectSlugs } from '@/actions/live-commits'
 import { createClient } from '@/lib/supabase/client'
 import { LiveCommit } from '@repo/db'
 
-export default function LiveCommitFeed() {
+export default function LiveCommitFeedMarquee() {
   const [commits, setCommits] = useState<LiveCommit[]>([])
   const [projectSlugs, setProjectSlugs] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Fetch initial commits and projects
     getProjectSlugs()
       .then(setProjectSlugs)
       .catch((err) => console.error('Failed to fetch project slugs:', err))
@@ -21,7 +21,7 @@ export default function LiveCommitFeed() {
       .then(setCommits)
       .catch((err) => {
         console.error('Failed to fetch live commits:', err)
-        setError('Failed to load live commits. Please try again later.')
+        setError('Failed to load live commits.')
       })
 
     const supabase = createClient()
@@ -48,35 +48,34 @@ export default function LiveCommitFeed() {
   }, [])
 
   return (
-    <div className="flex rounded-3xl border-2 border-white w-full mx-auto flex-col bg-white/70">
-      <div className="flex flex-row items-center gap-5 px-8 py-5">
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="shrink-0 w-2 h-2 sm:w-2.5 sm:h-2.5 lg:w-3 lg:h-3"
-        >
-          <rect width="12" height="12" rx="5.90908" fill="#16A34A" />
-        </svg>
-        <p className="font-mono font-medium text-lg text-wdcc-grey">LIVE COMMITS</p>
+    <div className="h-10 w-full flex flex-row items-center bg-[#F4F7FB] overflow-hidden border-b border-slate-200">
+      <div className="flex h-full shrink-0 items-center gap-2.5 px-4 z-10 bg-[#E1F6E8]">
+        <span className="rounded-full bg-[#1AB385] shrink-0 z-10 p-[4.5px]" />
+        <p className="font-mono font-light text-[1rem] text-[#177B4D] leading-none select-none">
+          LIVE
+        </p>
       </div>
-      {error ? (
-        <div className="flex items-center justify-center py-8 border-t-2 border-wdcc-oshan/10">
-          <p className="font-sans font-medium text-wdcc-grey text-center">{error}</p>
-        </div>
-      ) : (
-        commits.map((commit) => (
-          <LiveCommitRow
-            key={commit.id}
-            commit={commit}
-            projectSlug={
-              commit.projectId ? projectSlugs[commit.projectId] || commit.repoName : commit.repoName
-            }
-          />
-        ))
-      )}
+
+      {/* Marquee Ticker */}
+      <div className="flex-1 overflow-hidden flex items-center h-full">
+        {error ? (
+          <p className="font-mono text-xs text-rose-500 px-4">{error}</p>
+        ) : (
+          <Marquee pauseOnHover autoFill gradient={false}>
+            {commits.map((commit) => (
+              <MarqueeLiveCommitRow
+                key={commit.id}
+                commit={commit}
+                projectSlug={
+                  commit.projectId
+                    ? projectSlugs[commit.projectId] || commit.repoName
+                    : commit.repoName
+                }
+              />
+            ))}
+          </Marquee>
+        )}
+      </div>
     </div>
   )
 }

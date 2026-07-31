@@ -1,10 +1,12 @@
 import ProjectCard from '@/components/ui/ProjectCard'
+import ProjectCardGrid from '@/components/ui/ProjectCardGrid'
 import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
 import RevealOnScroll from '@/components/ui/RevealOnScroll'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
 import Link from 'next/link'
 import { hasRole } from '@/lib/auth'
+import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -23,14 +25,25 @@ export default async function PublicDashboardPage() {
   return (
     <>
       {/* GRADIENT BACKGROUND */}
-      <div className="absolute min-h-[320vh] inset-0 -z-10 bg-gradient-to-b from-[#B6D8FB] to-white" />
-
-      <div className="flex flex-col gap-y-40">
+      <div className="absolute inset-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
+      {/* LIVE COMMIT BANNER SCROLL */}
+      <div className="lg:hidden h-10">
+        <div className="lg:hidden absolute inset-0 bg-[#E1F6E8] h-10 w-full" />
+        <LiveCommitMarquee />
+      </div>
+      <div className="flex flex-col">
         {/* PAGE HEADER */}
-        <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
+        <div className="bg-[#D4E5FD] lg:bg-inherit">
+          <HomeHeader activeProjectCount={projects.filter((project) => project.isActive).length} />
+        </div>
 
-        {/* PAGE CONTENT */}
-        <RevealOnScroll className="flex flex-col items-center gap-y-40 px-5 sm:px-10 lg:px-20">
+        {/* PAGE CONTENT MOBILE */}
+        <div className="lg:hidden flex flex-col items-center gap-y-8 px-5 pt-10 mb-16">
+          <ProjectCardGrid projects={projectGridItems} teamCount={teamCount} />
+          <LiveCommitFeed />
+        </div>
+        {/* PAGE CONTENT DESKTOP */}
+        <RevealOnScroll className="hidden lg:flex flex-col items-center gap-y-40 px-20 mb-16">
           {/* ACTIVE PROJECTS */}
           <div className="w-full">
             {/* GRID HEADER */}
@@ -44,7 +57,7 @@ export default async function PublicDashboardPage() {
             </div>
 
             {/* PROJECTS GRID */}
-            <div className="grid grid-cols-3 mt-8 gap-4 w-full">
+            <div className="grid grid-cols-2 lg:grid-cols-3 mt-8 gap-4 w-full">
               {projectGridItems.map((project) => (
                 <div key={project?.id ?? 'add-new-project'}>
                   {project ? (
@@ -58,7 +71,6 @@ export default async function PublicDashboardPage() {
               ))}
             </div>
           </div>
-
           {/* LIVE COMMIT FEED */}
           <LiveCommitFeed />
         </RevealOnScroll>
