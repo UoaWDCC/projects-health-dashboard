@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import MemberCard from '@/components/ui/MemberCard'
 import LastUpdatedTime from '@/components/headers/LastUpdatedTime'
+import { getUserRoles } from '@/lib/auth'
 import { getProjectHeaderData } from '@/lib/project/projects'
 import { getProjectTeamMembers } from '@/lib/project/weekly-stats'
-import { db, SyncJobStatus, SyncJobType } from '@repo/db'
+import { db, Role, SyncJobStatus, SyncJobType } from '@repo/db'
 
 async function getLastUpdated(slug: string): Promise<Date> {
   try {
@@ -25,15 +26,19 @@ async function getLastUpdated(slug: string): Promise<Date> {
 
 export default async function TeamMembersPage({ params }: { params: Promise<{ slug: string }> }) {
   const slug = (await params).slug
-  const [project, members, lastUpdated] = await Promise.all([
+  const [project, members, lastUpdated, roles] = await Promise.all([
     getProjectHeaderData(slug),
     getProjectTeamMembers(slug).catch(() => []),
     getLastUpdated(slug),
+    getUserRoles(),
   ])
 
   if (!project) {
     notFound()
   }
+
+  // Only execs can drill into a member's contribution breakdown.
+  const isExec = roles.includes(Role.EXEC) || roles.includes(Role.ADMIN)
 
   return (
     <>
@@ -81,7 +86,12 @@ export default async function TeamMembersPage({ params }: { params: Promise<{ sl
         {members.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-8">
             {members.map((member, index) => (
-              <MemberCard key={member.id} member={member} index={index} />
+              <MemberCard
+                key={member.id}
+                member={member}
+                index={index}
+                href={isExec ? `/project/${slug}/members/${member.id}` : undefined}
+              />
             ))}
           </div>
         ) : (
