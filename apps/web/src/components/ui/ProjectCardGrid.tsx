@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import ProjectCard from '@/components/ui/ProjectCard'
 import type { ProjectCardData } from '@/lib/project/projects'
+import { useLitAmounts } from '@/hooks/useLitAmounts'
 
 type ViewMode = 'tiles' | 'rows'
 
@@ -12,8 +13,32 @@ interface ProjectCardGridProps {
   teamCount: number
 }
 
+const NAVBAR_BOTTOM_OFFSET_PX = 12
+const FALLOFF_RANGE_PX = 300
+
+function computeScrollLitAmount(rect: DOMRect): number {
+  const navbarBottomY = window.innerHeight - NAVBAR_BOTTOM_OFFSET_PX
+  const peakY = window.innerHeight / 3
+  const cardCenterY = rect.top + rect.height / 2
+  const inSafeZone = cardCenterY > 0 && cardCenterY < navbarBottomY
+  return inSafeZone ? 1 - Math.abs(cardCenterY - peakY) / FALLOFF_RANGE_PX : 0
+}
+
 export default function ProjectCardGrid({ projects }: ProjectCardGridProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('tiles')
+  const { litAmounts, setCardRef, scheduleRecompute } =
+    useLitAmounts<string>(computeScrollLitAmount)
+
+  useEffect(() => {
+    scheduleRecompute()
+    window.addEventListener('scroll', scheduleRecompute, { passive: true })
+    window.addEventListener('resize', scheduleRecompute)
+
+    return () => {
+      window.removeEventListener('scroll', scheduleRecompute)
+      window.removeEventListener('resize', scheduleRecompute)
+    }
+  }, [viewMode, scheduleRecompute])
 
   return (
     <div className="w-full">
@@ -88,10 +113,17 @@ export default function ProjectCardGrid({ projects }: ProjectCardGridProps) {
         className={`mt-6 gap-4 w-full ${viewMode === 'tiles' ? 'grid grid-cols-2' : 'flex flex-col'}`}
       >
         {projects.map((project) => (
-          <div key={project?.id ?? 'add-new-project'}>
+          <div
+            key={project?.id ?? 'add-new-project'}
+            ref={project ? setCardRef(project.id) : undefined}
+          >
             {project && (
               <Link href={`/project/${project.slug}`} className="block w-full">
-                <ProjectCard project={project} viewMode={viewMode} />
+                <ProjectCard
+                  project={project}
+                  viewMode={viewMode}
+                  litAmount={litAmounts.get(project.id) ?? 0}
+                />
               </Link>
             )}
           </div>

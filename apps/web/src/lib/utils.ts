@@ -7,6 +7,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value))
+}
+
 export function formatRelativeTime(timestamp: Date): string {
   const now = new Date()
   const diff = now.getTime() - timestamp.getTime()
