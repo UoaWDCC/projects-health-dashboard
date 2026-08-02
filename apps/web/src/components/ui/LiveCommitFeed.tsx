@@ -48,8 +48,8 @@ export default function LiveCommitFeed() {
   }, [])
 
   return (
-    <div className="flex rounded-3xl border-2 border-wdcc-grey/10 lg:border-white w-full mx-auto flex-col bg-[#FAFBFC] lg:bg-white/70">
-      <div className="flex flex-row items-center gap-5 px-8 pt-5 pb-3">
+    <div className="flex rounded-3xl border-2 border-wdcc-grey/10 lg:border lg:border-white/50 w-full mx-auto flex-col bg-[#FAFBFC] lg:bg-white/70">
+      <div className="flex flex-row items-center gap-2 lg:gap-5 pl-2 pt-5 lg:pb-3">
         <svg
           width="12"
           height="12"
@@ -60,7 +60,9 @@ export default function LiveCommitFeed() {
         >
           <rect width="12" height="12" rx="5.90908" fill="#16A34A" />
         </svg>
-        <p className="font-mono font-medium text-base lg:text-lg text-wdcc-grey">LIVE COMMITS</p>
+        <p className="font-mono font-light tracking-widest lg:tracking-normal lg:font-medium text-sm lg:text-lg text-wdcc-grey">
+          LIVE COMMITS
+        </p>
       </div>
       {error ? (
         <div className="flex items-center justify-center py-8 border-t-2 border-wdcc-oshan/10">

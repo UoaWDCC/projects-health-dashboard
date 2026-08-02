@@ -34,7 +34,7 @@ export default function RevealOnScroll({
     <section
       className={cn(
         'transition-all duration-500 ease-out',
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5 pointer-events-none',
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-50 translate-y-5 pointer-events-none',
         className
       )}
     >

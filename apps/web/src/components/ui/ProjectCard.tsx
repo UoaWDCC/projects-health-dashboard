@@ -1,5 +1,7 @@
+import { forwardRef, memo } from 'react'
 import Image from 'next/image'
 import type { ProjectCardData } from '@/lib/project/projects'
+import { clamp01 } from '@/lib/utils'
 
 const statusStyles = {
   active: {
@@ -15,22 +17,32 @@ const statusStyles = {
 interface ProjectCardProps {
   project: ProjectCardData
   viewMode?: 'tiles' | 'rows'
+  litAmount?: number
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
+function borderStyle(amount: number, maxInsetPx: number, baseRadius: string): React.CSSProperties {
+  const clamped = clamp01(amount)
+  const alpha = 0.4 + clamped * 0.6
+  const insetPx = Math.round(clamped * maxInsetPx)
+  return {
+    background: `linear-gradient(to top right, rgba(255,176,95,${alpha}) 22%, rgba(227,51,163,${alpha}) 50%, rgba(7,124,241,${alpha}) 100%)`,
+    inset: `-${insetPx}px`,
+    borderRadius: `calc(${baseRadius} + ${insetPx}px)`,
+  }
+}
+
+const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function ProjectCard(
+  { project, viewMode, litAmount = 0 },
+  ref
+) {
   const { name, description, isActive, imageUrl } = project
   const statusKey: keyof typeof statusStyles = isActive === true ? 'active' : 'archived'
   const statusStyle = statusStyles[statusKey]
 
   if (viewMode === 'rows') {
     return (
-      <div className="relative w-full rounded-2xl overflow-visible font-sans">
-        <div
-          className="
-            pointer-events-none absolute inset-0 rounded-2xl
-            bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
-          "
-        />
+      <div ref={ref} className="relative w-full rounded-2xl overflow-visible font-sans">
+        <div className="pointer-events-none absolute" style={borderStyle(litAmount, 2, '16px')} />
         <div className="absolute inset-[2px] bg-white rounded-[14px]" />
 
         <div className="relative z-10 flex flex-row items-center gap-3 p-2.5">
@@ -72,13 +84,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
 
   if (viewMode === 'tiles') {
     return (
-      <div className="relative w-full aspect-square rounded-2xl overflow-visible font-sans">
-        <div
-          className="
-            pointer-events-none absolute inset-0 rounded-2xl
-            bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
-          "
-        />
+      <div
+        ref={ref}
+        className="relative w-full aspect-square rounded-2xl overflow-visible font-sans"
+      >
+        <div className="pointer-events-none absolute" style={borderStyle(litAmount, 2, '16px')} />
         <div className="absolute inset-[2px] bg-white rounded-[14px]" />
 
         <div className="absolute inset-[2px] z-10 flex flex-col p-3 overflow-hidden">
@@ -94,15 +104,15 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
             )}
           </div>
 
-          <h3 className="mt-2.5 text-[clamp(0.7rem,3.4vw,0.95rem)] font-extrabold leading-tight line-clamp-2">
+          <h3 className="mt-2.5 shrink-0 text-[clamp(0.7rem,3.4vw,0.95rem)] font-extrabold leading-tight line-clamp-2">
             {name}
           </h3>
 
-          <p className="mt-1 text-[clamp(0.6rem,2.6vw,0.75rem)] leading-snug text-wdcc-grey-light font-mono line-clamp-1">
+          <p className="mt-1 shrink-0 text-[clamp(0.6rem,2.6vw,0.75rem)] leading-snug text-wdcc-grey-light font-mono line-clamp-2">
             {description}
           </p>
 
-          <div className="mt-auto flex items-center gap-1.5 pt-2">
+          <div className="mt-auto shrink-0 flex items-center gap-1.5 pt-2">
             <span
               className={`flex items-center gap-1.5 min-w-0 ${isActive ? 'rounded-full bg-[#E1F6E8] px-2 py-1' : ''}`}
             >
@@ -118,26 +128,22 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
   }
 
   return (
+    // 420px is also hardcoded into page.tsx's CARD_GROUP_INSET — keep both in sync.
     <div
+      ref={ref}
       className="
-        relative w-full 
+        relative w-full mx-auto
         xl:max-w-[420px] xl:aspect-[420/270]
         max-w-[420px] sm:min-h-[270px]
         rounded-[clamp(18px,2.5vw,31px)]
-        group overflow-visible font-sans
+        overflow-visible font-sans
       "
     >
-      {/* Gradient background */}
       <div
-        className="
-          pointer-events-none absolute inset-0
-          group-hover:-inset-[3px] md:group-hover:-inset-[4px]
-          rounded-[clamp(18px,2.5vw,31px)] transition-all duration-700 ease-in-out
-          bg-[linear-gradient(to_bottom_left,_rgba(255,176,95,0.4)_22%,_rgba(227,51,163,0.4)_50%,_rgba(7,124,241,0.4)_100%)]
-          group-hover:bg-[linear-gradient(to_top_right,_rgba(255,176,95,1)_22%,_rgba(227,51,163,1)_50%,_rgba(7,124,241,1)_100%)]
-        "
+        className="pointer-events-none absolute"
+        style={borderStyle(litAmount, 4, 'clamp(18px,2.5vw,31px)')}
       />
-      <div className="absolute inset-[3px] md:inset-[4px] transition-all duration-700 ease-in-out bg-white rounded-[clamp(15px,2.2vw,28px)]" />
+      <div className="absolute inset-[3px] md:inset-[4px] bg-white rounded-[clamp(15px,2.2vw,28px)]" />
 
       <div
         className="
@@ -199,6 +205,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, viewMode }) => {
       </div>
     </div>
   )
-}
+})
 
-export default ProjectCard
+export default memo(ProjectCard)
