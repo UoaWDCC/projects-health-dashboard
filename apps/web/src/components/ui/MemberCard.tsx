@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import MemberAvatar from './MemberAvatar'
 import type { TeamMemberStats } from '@/lib/project/weekly-stats'
 import { AVATAR_COLORS } from '@/lib/project/members'
@@ -26,8 +27,20 @@ const STATS = [
   },
 ] as const
 
-export default function MemberCard({ member, index }: { member: TeamMemberStats; index: number }) {
-  return (
+/**
+ * `href` makes the card a link to the member's contribution breakdown. Only execs
+ * get one — for everyone else the card stays a plain, non-interactive tile.
+ */
+export default function MemberCard({
+  member,
+  index,
+  href,
+}: {
+  member: TeamMemberStats
+  index: number
+  href?: string
+}) {
+  const card = (
     <div className="h-full rounded-2xl lg:rounded-3xl p-px bg-[linear-gradient(160deg,#E333A366_0%,#077CF14D_50%,#FFB05F80_100%)]">
       <div className="h-full rounded-[15px] lg:rounded-[23px] bg-white overflow-hidden flex flex-col">
         {/* Avatar — banner background on desktop only, per Figma */}
@@ -67,5 +80,17 @@ export default function MemberCard({ member, index }: { member: TeamMemberStats;
         </div>
       </div>
     </div>
+  )
+
+  if (!href) return card
+
+  return (
+    <Link
+      href={href}
+      aria-label={`View contribution breakdown for ${member.name}`}
+      className="block h-full rounded-2xl lg:rounded-3xl transition-transform duration-200 hover:scale-[1.03]"
+    >
+      {card}
+    </Link>
   )
 }

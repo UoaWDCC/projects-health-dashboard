@@ -9,13 +9,18 @@ const MAX_VISIBLE_MEMBERS = 6
 /**
  * Desktop-only team member cards with an overflow "+N" card when there are more members than max.
  * The header action and the overflow card both link to the project's team members page.
+ *
+ * When `isExec` is set, each member card also links straight to that member's
+ * contribution breakdown, so execs can skip the team members page.
  */
 export default function TeamSection({
   slug,
   members,
+  isExec = false,
 }: {
   slug: string
   members: ProjectMemberSummary[]
+  isExec?: boolean
 }) {
   if (members.length === 0) {
     return null
@@ -45,22 +50,39 @@ export default function TeamSection({
       </div>
 
       <div className="mt-8 flex gap-4">
-        {visibleMembers.map((member, index) => (
-          <div
-            key={member.id}
-            className="flex-1 min-w-0 overflow-hidden rounded-2xl border border-[#E9EBF4] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]"
-          >
-            <div className="flex h-[140px] items-end justify-center bg-[#E9EBF4] xl:h-[170px]">
-              <MemberAvatar
-                name={member.name}
-                imageUrl={member.imageUrl}
-                color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
-                className="w-36 h-36"
-              />
+        {visibleMembers.map((member, index) => {
+          const content = (
+            <>
+              <div className="flex h-[140px] items-end justify-center bg-[#E9EBF4] xl:h-[170px]">
+                <MemberAvatar
+                  name={member.name}
+                  imageUrl={member.imageUrl}
+                  color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
+                  className="w-36 h-36"
+                />
+              </div>
+              <p className="truncate px-2 py-3 text-center font-mono">{member.name}</p>
+            </>
+          )
+
+          return isExec ? (
+            <Link
+              key={member.id}
+              href={`/project/${slug}/members/${member.id}`}
+              aria-label={`View contribution breakdown for ${member.name}`}
+              className="flex-1 min-w-0 block overflow-hidden rounded-2xl border border-[#E9EBF4] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-transform duration-200 hover:scale-[1.03]"
+            >
+              {content}
+            </Link>
+          ) : (
+            <div
+              key={member.id}
+              className="flex-1 min-w-0 overflow-hidden rounded-2xl border border-[#E9EBF4] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.1)]"
+            >
+              {content}
             </div>
-            <p className="truncate px-2 py-3 text-center font-mono">{member.name}</p>
-          </div>
-        ))}
+          )
+        })}
 
         {overflowCount > 0 && (
           <Link
