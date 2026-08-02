@@ -1,51 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Marquee from 'react-fast-marquee'
 import MarqueeLiveCommitRow from './LiveCommitRowMarquee'
-import { getLatestLiveCommits, getProjectSlugs } from '@/actions/live-commits'
-import { createClient } from '@/lib/supabase/client'
-import { LiveCommit } from '@repo/db'
+import { useLiveCommits } from '@/hooks/useLiveCommits'
 
 export default function LiveCommitFeedMarquee() {
-  const [commits, setCommits] = useState<LiveCommit[]>([])
-  const [projectSlugs, setProjectSlugs] = useState<Record<string, string>>({})
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    getProjectSlugs()
-      .then(setProjectSlugs)
-      .catch((err) => console.error('Failed to fetch project slugs:', err))
-
-    getLatestLiveCommits()
-      .then(setCommits)
-      .catch((err) => {
-        console.error('Failed to fetch live commits:', err)
-        setError('Failed to load live commits.')
-      })
-
-    const supabase = createClient()
-    const channel = supabase
-      .channel('live-commits-channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'LiveCommit' },
-        async () => {
-          try {
-            const latest = await getLatestLiveCommits()
-            setCommits(latest)
-            setError(null)
-          } catch (err) {
-            console.error('Failed to fetch latest live commits:', err)
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+  const { commits, projectSlugs, error } = useLiveCommits()
 
   return (
     <div className="h-10 w-full flex flex-row items-center bg-[#F4F7FB] overflow-hidden border-b border-slate-200">
