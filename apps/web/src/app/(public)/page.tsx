@@ -31,7 +31,6 @@ export default async function PublicDashboardPage() {
       <div className="absolute inset-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
       {/* LIVE COMMIT BANNER SCROLL */}
       <div className="lg:hidden h-10">
-        <div className="lg:hidden absolute inset-0 bg-[#git op] h-10 w-full" />
         <LiveCommitMarquee />
       </div>
       <div className="flex flex-col lg:gap-y-40">

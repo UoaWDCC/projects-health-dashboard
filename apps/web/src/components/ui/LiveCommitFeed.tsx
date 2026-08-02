@@ -1,51 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import LiveCommitRow from './LiveCommitRow'
-import { getLatestLiveCommits, getProjectSlugs } from '@/actions/live-commits'
-import { createClient } from '@/lib/supabase/client'
-import { LiveCommit } from '@repo/db'
+import { useLiveCommits } from '@/hooks/useLiveCommits'
 
 export default function LiveCommitFeed() {
-  const [commits, setCommits] = useState<LiveCommit[]>([])
-  const [projectSlugs, setProjectSlugs] = useState<Record<string, string>>({})
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Fetch initial commits and projects
-    getProjectSlugs()
-      .then(setProjectSlugs)
-      .catch((err) => console.error('Failed to fetch project slugs:', err))
-
-    getLatestLiveCommits()
-      .then(setCommits)
-      .catch((err) => {
-        console.error('Failed to fetch live commits:', err)
-        setError('Failed to load live commits. Please try again later.')
-      })
-
-    const supabase = createClient()
-    const channel = supabase
-      .channel('live-commits-channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'LiveCommit' },
-        async () => {
-          try {
-            const latest = await getLatestLiveCommits()
-            setCommits(latest)
-            setError(null)
-          } catch (err) {
-            console.error('Failed to fetch latest live commits:', err)
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+  const { commits, projectSlugs, error } = useLiveCommits()
 
   return (
     <div className="flex rounded-3xl border-2 border-wdcc-grey/10 lg:border lg:border-white/50 w-full mx-auto flex-col bg-[#FAFBFC] lg:bg-white/70">
