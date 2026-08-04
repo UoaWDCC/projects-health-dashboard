@@ -91,7 +91,6 @@ export default function AuthListPage() {
     } catch {
       setStatus({ ok: false, message: 'Server error or response failed to parse' })
     } finally {
-      // finally 保证提前 return 的分支也会关掉 loading,否则出错时页面会永远卡在 Loading。
       setLoading(false)
     }
   }, [])

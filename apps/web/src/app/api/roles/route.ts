@@ -1,8 +1,59 @@
 import { db, Role } from '@repo/db'
-import { createClient } from '@/lib/supabase/server'
 import { hasRole } from '@/lib/auth'
 import { rolesSchema } from '@/lib/schemas/admin'
-import { randomUUID } from 'node:crypto'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Resolve a Profile whose id matches auth.users.id.
+ * Creates the auth user (and thus Profile via handle_auth_user_sync) when the email is new.
+ */
+async function ensureProfileForEmail(email: string) {
+  const existing = await db.profile.findUnique({ where: { email } })
+  if (existing) return existing
+  // create auth user
+  const admin = createAdminClient()
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  })
+
+  let authUserId = data.user?.id ?? null
+  // exists in auth.users but not in profile
+  if (!authUserId && error && /already|registered|exists/i.test(error.message)) {
+    authUserId = await findAuthUserIdByEmail(admin, email)
+  }
+
+  // if not found, throw error
+  if (!authUserId) {
+    throw new Error(error?.message ?? `Failed to create or resolve auth user for ${email}`)
+  }
+
+  // Trigger usually inserts Profile; upsert covers races / missing trigger in local setups.
+  return db.profile.upsert({
+    where: { id: authUserId },
+    update: { email },
+    create: { id: authUserId, email },
+  })
+}
+
+async function findAuthUserIdByEmail(admin: SupabaseClient, email: string) {
+  const normalised = email.toLowerCase()
+  let page = 1
+
+  // Admin listUsers has no email filter in this client version — page until we find a match.
+  // Fine for a small WDCC auth directory; switch to a filtered admin query if this grows.
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) throw new Error(error.message)
+
+    const match = data.users.find((user) => user.email?.toLowerCase() === normalised)
+    if (match) return match.id
+    if (data.users.length < 200) return null
+    page += 1
+  }
+}
 
 // find all EXEC and ADMIN
 export async function GET() {
@@ -31,7 +82,10 @@ export async function GET() {
         displayName: true,
         lastSignInAt: true,
         createdAt: true,
-        roles: { select: { role: true, createdAt: true } },
+        roles: {
+          where: { role: { in: [Role.ADMIN, Role.EXEC] } },
+          select: { role: true, createdAt: true },
+        },
       },
       orderBy: { email: 'asc' },
     })
@@ -86,14 +140,9 @@ export async function POST(request: Request) {
 
     const { email, adminRole: addAdmin, execRole: addExec } = parsed.data
 
-    // Create a placeholder Profile when the email is not in the database yet, so admins can grant
-    // roles to people who have never signed in. The roles attach on their first login.
-    // upsert (not findUnique + create) keeps this safe when two admins add the same email at once.
-    const profile = await db.profile.upsert({
-      where: { email },
-      update: {},
-      create: { id: randomUUID(), email },
-    })
+    // Prefer auth.admin.createUser over a random Profile id so Profile.id always matches
+    // auth.users.id. handle_auth_user_sync then upserts cleanly on first Google sign-in.
+    const profile = await ensureProfileForEmail(email)
 
     const rolesToAdd: Role[] = []
     if (addAdmin) {
