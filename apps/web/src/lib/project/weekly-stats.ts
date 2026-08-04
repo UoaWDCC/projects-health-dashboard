@@ -185,7 +185,6 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
   const rows = await db.weeklyStats.findMany({
     where: {
       weekStart: { gte: yearStart },
-      isActive: true,
     },
     orderBy: { weekStart: 'asc' },
     select: {
@@ -198,6 +197,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
       healthScore: true,
       project: {
         select: { slug: true, name: true },
+        where: { isActive: true },
       },
     },
   })
