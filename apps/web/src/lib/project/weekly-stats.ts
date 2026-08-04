@@ -123,7 +123,26 @@ export interface ProjectWeeklyStats {
   prs: number[]
   linesChanged: number[]
   discordMessages: number[]
+  healthScore: number[]
 }
+
+export interface TeamWeeklyStats extends ProjectWeeklyStats {
+  slug: string
+  name: string
+}
+
+export type MetricKey = Extract<
+  keyof ProjectWeeklyStats,
+  'commits' | 'prs' | 'linesChanged' | 'discordMessages' | 'healthScore'
+>
+
+export const METRICS: { key: MetricKey; title: string }[] = [
+  { key: 'commits', title: 'Weekly Commits' },
+  { key: 'prs', title: 'Weekly PRs' },
+  { key: 'linesChanged', title: 'Weekly Lines Changed' },
+  { key: 'discordMessages', title: 'Weekly Discord Messages' },
+  { key: 'healthScore', title: 'Weekly Health Score' },
+]
 
 export async function getProjectWeeklyStats(projectId: string): Promise<ProjectWeeklyStats> {
   const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
@@ -141,6 +160,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
       linesAdded: true,
       linesRemoved: true,
       discordMessages: true,
+      healthScore: true,
     },
   })
 
@@ -150,5 +170,64 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
     prs: rows.map((r) => r.prsMerged),
     linesChanged: rows.map((r) => r.linesAdded + r.linesRemoved),
     discordMessages: rows.map((r) => r.discordMessages),
+    healthScore: rows.map((r) => r.healthScore ?? 0),
   }
+}
+
+/**
+ * Weekly stats for every project, for the exec comparison view.
+ * Same shape as getProjectWeeklyStats but scoped across all projects
+ * in a single query instead of N sequential calls.
+ */
+export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
+  const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
+
+  const rows = await db.weeklyStats.findMany({
+    where: {
+      weekStart: { gte: yearStart },
+      project: { isActive: true },
+    },
+    orderBy: { weekStart: 'asc' },
+    select: {
+      weekStart: true,
+      commits: true,
+      prsMerged: true,
+      linesAdded: true,
+      linesRemoved: true,
+      discordMessages: true,
+      healthScore: true,
+      project: {
+        select: { slug: true, name: true },
+      },
+    },
+  })
+
+  const byProject = new Map<string, TeamWeeklyStats>()
+
+  for (const r of rows) {
+    const slug = r.project.slug
+    let team = byProject.get(slug)
+    if (!team) {
+      team = {
+        slug,
+        name: r.project.name,
+        dates: [],
+        commits: [],
+        prs: [],
+        linesChanged: [],
+        discordMessages: [],
+        healthScore: [],
+      }
+      byProject.set(slug, team)
+    }
+
+    team.dates.push(r.weekStart.toISOString().split('T')[0])
+    team.commits.push(r.commits)
+    team.prs.push(r.prsMerged)
+    team.linesChanged.push(r.linesAdded + r.linesRemoved)
+    team.discordMessages.push(r.discordMessages)
+    team.healthScore.push(r.healthScore ?? 0)
+  }
+
+  return Array.from(byProject.values())
 }
