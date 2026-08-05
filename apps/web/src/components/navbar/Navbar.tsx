@@ -32,20 +32,20 @@ export async function Navbar() {
         <NavbarBrand />
         <div className="flex items-center gap-4 xl:gap-10 text-[16px]">
           <div className="hidden lg:flex gap-4 xl:gap-8 font-figtree">
-            <Link href={isAdmin ? "/" : "/"} className="group flex items-center">
+            <Link href={isAdmin ? '/' : '/'} className="group flex items-center">
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
                 {'('}
               </span>
-              <span className="px-1">{isAdmin ? "Metric Weighting" : "Projects"}</span>
+              <span className="px-1">{isAdmin ? 'Metric Weighting' : 'Projects'}</span>
               <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
                 {')'}
               </span>
             </Link>
-            <Link href={isAdmin ? "/" : "/leaderboard"} className="group flex items-center">
+            <Link href={isAdmin ? '/' : '/leaderboard'} className="group flex items-center">
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
                 {'('}
               </span>
-              <span className="px-1">{isAdmin ? "Authorised Users" : "Leaderboard"}</span>
+              <span className="px-1">{isAdmin ? 'Authorised Users' : 'Leaderboard'}</span>
               <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
                 {')'}
               </span>
