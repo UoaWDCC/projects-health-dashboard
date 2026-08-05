@@ -44,7 +44,6 @@ export async function getProjectWeeklyMvp(slug: string) {
       commits: true,
       prsMerged: true,
       discordMessages: true,
-      personId: true,
       projectMember: {
         select: {
           displayName: true,
@@ -60,9 +59,37 @@ export async function getProjectWeeklyMvp(slug: string) {
 
   // Iterate through contributions and determine the MVP
   for (const contribution of contributions) {
-    const score = compiledFormula.evaluate(toScope(contribution))
+    const rawScore = compiledFormula.evaluate(toScope(contribution))
+    let score: number
 
-    if (!mvp || score > mvp.score) {
+    try {
+      score = typeof rawScore === 'number' ? rawScore : math.number(rawScore)
+    } catch {
+      console.error(
+        `MVP formula produced a non-numeric score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+      )
+      continue
+    }
+
+    if (!Number.isFinite(score)) {
+      console.error(
+        `MVP formula produced a non-finite score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+      )
+      continue
+    }
+
+    if (
+      !mvp ||
+      score > mvp.score ||
+      (score === mvp.score &&
+        (contribution.linesAdded > mvp.linesAdded ||
+          (contribution.linesAdded === mvp.linesAdded && contribution.commits > mvp.commits) ||
+          (contribution.linesAdded === mvp.linesAdded &&
+            contribution.commits === mvp.commits &&
+            (contribution.projectMember.displayName ??
+              contribution.projectMember.person.displayName) <
+              (mvp.projectMember.displayName ?? mvp.projectMember.person.displayName))))
+    ) {
       mvp = { ...contribution, score }
     }
   }
