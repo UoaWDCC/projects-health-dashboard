@@ -31,21 +31,21 @@ export async function Navbar() {
       <header className="z-50 sticky top-0 flex items-center justify-between px-5 sm:px-10 lg:px-20 h-16 bg-white/65 border-b border-gray-200 backdrop-blur-sm">
         <NavbarBrand />
         <div className="flex items-center gap-4 xl:gap-10 text-[16px]">
-          <div className="hidden lg:flex gap-4 xl:gap-8 font-figtree ">
-            <Link href="/" className="group flex items-center">
+          <div className="hidden lg:flex gap-4 xl:gap-8 font-figtree">
+            <Link href={isAdmin ? "/" : "/"} className="group flex items-center">
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
                 {'('}
               </span>
-              <span className="px-1">Projects</span>
+              <span className="px-1">{isAdmin ? "Metric Weighting" : "Projects"}</span>
               <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
                 {')'}
               </span>
             </Link>
-            <Link href="/leaderboard" className="group flex items-center">
+            <Link href={isAdmin ? "/" : "/leaderboard"} className="group flex items-center">
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
                 {'('}
               </span>
-              <span className="px-1">Leaderboard</span>
+              <span className="px-1">{isAdmin ? "Authorised Users" : "Leaderboard"}</span>
               <span className="inline-block translate-x-0.5 transition-transform duration-200 ease-out group-hover:-translate-x-1">
                 {')'}
               </span>
