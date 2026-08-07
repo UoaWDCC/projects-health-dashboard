@@ -20,8 +20,11 @@ async function ensureProfileForEmail(email: string) {
   })
 
   let authUserId = data.user?.id ?? null
-  // exists in auth.users but not in profile
-  if (!authUserId && error && /already|registered|exists/i.test(error.message)) {
+
+  // The auth user exists but the Profile row doesn't — e.g. the sync trigger never ran on a
+  // local database. `email_exists` is a documented AuthError code, so we key off that rather
+  // than the message text: https://supabase.com/docs/guides/auth/debugging/error-codes
+  if (!authUserId && error?.code === 'email_exists') {
     authUserId = await findAuthUserIdByEmail(admin, email)
   }
 
