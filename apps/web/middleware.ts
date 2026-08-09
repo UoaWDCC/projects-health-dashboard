@@ -1,7 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED_PATHS = ['/admin-dashboard', '/projects', '/roles', '/exec-dashboard']
+const PROTECTED_PATHS = [
+  '/admin-dashboard',
+  '/authorised-users',
+  '/projects',
+  '/roles',
+  '/exec-dashboard',
+]
 
 /**
  * Refreshes the Supabase session on every request.

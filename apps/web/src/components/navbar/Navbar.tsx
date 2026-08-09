@@ -41,7 +41,10 @@ export async function Navbar() {
                 {')'}
               </span>
             </Link>
-            <Link href={isAdmin ? '/' : '/leaderboard'} className="group flex items-center">
+            <Link
+              href={isAdmin ? '/authorised-users' : '/leaderboard'}
+              className="group flex items-center"
+            >
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">
                 {'('}
               </span>
