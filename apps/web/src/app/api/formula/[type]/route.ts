@@ -3,6 +3,7 @@ import { db, Role } from '@repo/db'
 import { z } from 'zod'
 import { formulaSchema } from '@/lib/schemas/admin'
 import { hasRole } from '@/lib/auth'
+import { recomputeAllHealthScores } from '@/lib/admin/health-score'
 
 const VALID_TYPES = ['health', 'mvp'] as const
 type FormulaType = (typeof VALID_TYPES)[number]
@@ -73,6 +74,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
       value: validated.data,
     },
   })
+
+  if (type === 'health') {
+    await recomputeAllHealthScores(validated.data)
+  }
 
   return NextResponse.json({ formula: config.value as string, updatedAt: config.updatedAt })
 }
