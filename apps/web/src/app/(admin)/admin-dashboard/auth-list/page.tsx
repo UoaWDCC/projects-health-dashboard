@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ClientSuspense from '@/components/utils/ClientSuspense'
+import ErrorMessage from '@/components/utils/ErrorMessage'
 import FieldError from '@/components/utils/FieldError'
+import Modal from '@/components/ui/Modal'
 import { BORDER_DEFAULT, inputClass, inputErrorClass, labelClass } from '@/lib/admin/layout'
 import { rolesSchema } from '@/lib/schemas/admin'
 import z from 'zod'
@@ -25,6 +27,23 @@ type AuthUser = {
 }
 
 type Status = { ok: boolean; message: string } | null
+
+/** Which dialog is open, and the row it acts on. */
+type Dialog =
+  | { kind: 'add' }
+  | { kind: 'change'; user: AuthUser }
+  | { kind: 'remove'; user: AuthUser }
+  | null
+
+/** Roles as the API takes them: one boolean per grantable role. */
+type RoleSelection = { adminRole: boolean; execRole: boolean }
+
+/** Sends a mutation to /api/roles, returning an error message or null on success. */
+type SubmitFn = (
+  method: 'POST' | 'PATCH' | 'DELETE',
+  body: unknown,
+  successMessage: string
+) => Promise<string | null>
 
 const FILTERS: { value: RoleFilter; label: string }[] = [
   { value: 'ALL', label: 'All' },
@@ -68,15 +87,19 @@ function formatLastActive(iso: string | null) {
   return formatAdded(iso)
 }
 
+function describeRoles(roles: RoleName[]) {
+  return roles.map((role) => (role === 'ADMIN' ? 'Admin' : 'Exec')).join(' and ')
+}
+
 export default function AuthListPage() {
   const [users, setUsers] = useState<AuthUser[]>([])
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<Status>(null)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
-  const [addOpen, setAddOpen] = useState(false)
+  const [dialog, setDialog] = useState<Dialog>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const fetchList = useCallback(async () => {
     try {
@@ -99,71 +122,42 @@ export default function AuthListPage() {
     fetchList()
   }, [fetchList])
 
-  const handleAdd = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const payload = {
-      email: String(formData.get('email') ?? '').trim(),
-      adminRole: formData.get('adminRole') === 'on',
-      execRole: formData.get('execRole') === 'on',
-    }
-    const validation = rolesSchema.safeParse(payload)
+  /**
+   * Runs a mutation against /api/roles and refreshes the list on success.
+   * Resolves to an error message for the dialog to show, or null when it worked.
+   */
+  const mutate = useCallback(
+    async (
+      method: 'POST' | 'PATCH' | 'DELETE',
+      body: unknown,
+      successMessage: string
+    ): Promise<string | null> => {
+      setSubmitting(true)
+      try {
+        const res = await fetch('/api/roles', {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const data = await res.json().catch(() => null)
 
-    if (!validation.success) {
-      const errors = z.flattenError(validation.error).fieldErrors
-      setFieldErrors({
-        email: errors.email?.[0] ?? '',
-        role: errors.adminRole?.[0] ?? '',
-      })
-      return
-    }
-    setFieldErrors({})
+        if (!res.ok) {
+          return data?.error ?? 'Unknown error'
+        }
 
-    try {
-      const res = await fetch('/api/roles', {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setStatus({ ok: false, message: data?.error ?? 'Unknown error' })
-        return
+        setDialog(null)
+        setStatus({ ok: true, message: successMessage })
+        await fetchList()
+        return null
+      } catch {
+        return 'Server error or response failed to parse'
+      } finally {
+        setSubmitting(false)
       }
-      setStatus({ ok: true, message: 'User added successfully' })
-      await fetchList()
-      setAddOpen(false)
-    } catch {
-      setStatus({ ok: false, message: `Server error or response failed to parse` })
-    }
-  }
+    },
+    [fetchList]
+  )
 
-  const handleRemove = async (user: AuthUser) => {
-    if (!confirm(`Remove ${user.roles.join(' and ')} access for ${user.email}?`)) return
-
-    const payload = {
-      email: user.email,
-      adminRole: user.roles.includes('ADMIN'),
-      execRole: user.roles.includes('EXEC'),
-    }
-
-    try {
-      const res = await fetch('/api/roles', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setStatus({ ok: false, message: data?.error ?? 'Unknown error' })
-        return
-      }
-      setStatus({ ok: true, message: 'User removed successfully' })
-      await fetchList()
-    } catch {
-      setStatus({ ok: false, message: 'Server error or response failed to parse' })
-    }
-  }
   const adminCount = users.filter((user) => user.roles.includes('ADMIN')).length
   const execCount = users.filter((user) => user.roles.includes('EXEC')).length
 
@@ -198,7 +192,7 @@ export default function AuthListPage() {
 
           <button
             type="button"
-            onClick={() => setAddOpen((open) => !open)}
+            onClick={() => setDialog({ kind: 'add' })}
             className="flex items-center gap-2 rounded-full bg-wdcc-blue text-white font-sans text-base font-bold px-7 py-3.5 hover:bg-wdcc-blue/85 transition-colors duration-150 shrink-0"
           >
             <span className="text-lg leading-none">+</span>
@@ -218,75 +212,6 @@ export default function AuthListPage() {
             }`}
           >
             {status.ok ? '✓' : '✗'}&nbsp;{status.message}
-          </div>
-        )}
-
-        {/* Add user form — toggled by the header button */}
-        {addOpen && (
-          <div className="rounded-3xl border-[1.5px] border-wdcc-purple bg-white px-7 pt-6 pb-7">
-            <p className="font-mono text-xs text-wdcc-grey mb-5">
-              The email does not need an account yet — the role applies on their first sign-in.
-            </p>
-
-            <form onSubmit={handleAdd} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
-                <div className="flex flex-col gap-1.5 flex-1">
-                  <label htmlFor="email" className={labelClass}>
-                    Email <span className="text-wdcc-kelvin">*</span>
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    placeholder="user@wdcc.co.nz"
-                    onChange={() => setFieldErrors((prev) => ({ ...prev, email: '' }))}
-                    className={`${fieldErrors.email ? inputErrorClass : inputClass} w-full`}
-                  />
-                  <FieldError message={fieldErrors.email} />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <span className={labelClass}>Roles</span>
-                  <div className="flex gap-4 items-center h-[42px]">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="adminRole"
-                        onChange={() => setFieldErrors((prev) => ({ ...prev, role: '' }))}
-                        className="w-4 h-4 rounded accent-[#077CF1]"
-                      />
-                      <span className="font-mono text-sm text-wdcc-grey">Admin</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="execRole"
-                        onChange={() => setFieldErrors((prev) => ({ ...prev, role: '' }))}
-                        className="w-4 h-4 rounded accent-[#077CF1]"
-                      />
-                      <span className="font-mono text-sm text-wdcc-grey">Exec</span>
-                    </label>
-                  </div>
-                  <FieldError message={fieldErrors.role} />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="rounded-xl bg-wdcc-oshan text-white font-mono text-sm font-semibold px-6 py-2.5 hover:bg-wdcc-oshan/80 transition-colors duration-150"
-                >
-                  Add user
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(false)}
-                  className="rounded-xl border-[1.5px] border-wdcc-purple text-wdcc-grey font-mono text-sm font-semibold px-6 py-2.5 hover:bg-wdcc-grey-light/10 transition-colors duration-150"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
           </div>
         )}
 
@@ -413,11 +338,19 @@ export default function AuthListPage() {
                             <div className="flex items-center justify-end gap-2.5">
                               <button
                                 type="button"
-                                disabled={isSelfAdmin}
+                                disabled={submitting}
+                                onClick={() => setDialog({ kind: 'change', user })}
+                                className="rounded-lg border-[1.5px] border-wdcc-blue text-wdcc-blue font-mono text-[13px] px-4 py-2 hover:bg-wdcc-blue/5 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                change role
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isSelfAdmin || submitting}
                                 title={
                                   isSelfAdmin ? 'You cannot remove your own admin role' : undefined
                                 }
-                                onClick={() => handleRemove(user)}
+                                onClick={() => setDialog({ kind: 'remove', user })}
                                 className="rounded-lg bg-red-700 text-white font-mono text-[13px] px-4 py-2 hover:bg-red-800 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-700"
                               >
                                 remove
@@ -434,6 +367,27 @@ export default function AuthListPage() {
           </div>
         </ClientSuspense>
       </div>
+
+      {dialog?.kind === 'add' && (
+        <AddUserDialog busy={submitting} onClose={() => setDialog(null)} onSubmit={mutate} />
+      )}
+      {dialog?.kind === 'change' && (
+        <ChangeRoleDialog
+          user={dialog.user}
+          isSelf={dialog.user.email === currentUserEmail}
+          busy={submitting}
+          onClose={() => setDialog(null)}
+          onSubmit={mutate}
+        />
+      )}
+      {dialog?.kind === 'remove' && (
+        <RemoveUserDialog
+          user={dialog.user}
+          busy={submitting}
+          onClose={() => setDialog(null)}
+          onSubmit={mutate}
+        />
+      )}
     </>
   )
 }
@@ -453,5 +407,297 @@ function RolePill({ role }: { role: RoleName }) {
       <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-wdcc-blue' : 'bg-wdcc-amber'}`} />
       {isAdmin ? 'Admin' : 'Exec'}
     </span>
+  )
+}
+
+// --- Dialogs ----------------------------------------------------------------
+
+/**
+ * Admin and Exec are independent grants — an account can hold both — so roles are
+ * picked with checkboxes rather than a single-choice control.
+ */
+function RoleCheckboxes({
+  idPrefix,
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  idPrefix: string
+  value: RoleSelection
+  onChange: (next: RoleSelection) => void
+  disabled?: boolean
+  error?: string
+}) {
+  const rows: { key: keyof RoleSelection; label: string }[] = [
+    { key: 'adminRole', label: 'Admin' },
+    { key: 'execRole', label: 'Exec' },
+  ]
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className={labelClass}>
+        Roles <span className="text-wdcc-kelvin">*</span>
+      </span>
+      <div className="flex gap-4 items-center h-[42px]">
+        {rows.map((row) => (
+          <label
+            key={row.key}
+            htmlFor={`${idPrefix}-${row.key}`}
+            className={`flex items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          >
+            <input
+              id={`${idPrefix}-${row.key}`}
+              type="checkbox"
+              name={row.key}
+              checked={value[row.key]}
+              disabled={disabled}
+              onChange={(event) => onChange({ ...value, [row.key]: event.target.checked })}
+              className="w-4 h-4 rounded accent-[#077CF1]"
+            />
+            <span className="font-mono text-sm text-wdcc-grey">{row.label}</span>
+          </label>
+        ))}
+      </div>
+      <FieldError message={error} />
+    </div>
+  )
+}
+
+function DialogActions({
+  onCancel,
+  confirmLabel,
+  busy,
+  danger = false,
+}: {
+  onCancel: () => void
+  confirmLabel: string
+  busy: boolean
+  danger?: boolean
+}) {
+  return (
+    <div className="flex justify-end gap-3 mt-6">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={busy}
+        className="font-mono text-sm text-wdcc-grey border-[1.5px] border-wdcc-purple rounded-xl px-5 py-2.5 hover:bg-[#f8f8fc] transition-colors disabled:opacity-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={busy}
+        className={`font-mono text-sm font-semibold text-white rounded-xl px-6 py-2.5 transition-colors disabled:opacity-50 ${
+          danger ? 'bg-red-700 hover:bg-red-800' : 'bg-wdcc-blue hover:bg-wdcc-blue/85'
+        }`}
+      >
+        {busy ? 'Working…' : confirmLabel}
+      </button>
+    </div>
+  )
+}
+
+function AddUserDialog({
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  busy: boolean
+  onClose: () => void
+  onSubmit: SubmitFn
+}) {
+  const [email, setEmail] = useState('')
+  const [roles, setRoles] = useState<RoleSelection>({ adminRole: false, execRole: false })
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    const payload = { email: email.trim(), ...roles }
+    const validation = rolesSchema.safeParse(payload)
+
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      setFieldErrors({ email: errors.email?.[0] ?? '', role: errors.adminRole?.[0] ?? '' })
+      return
+    }
+
+    setFieldErrors({})
+    const message = await onSubmit('POST', validation.data, 'User added successfully')
+    if (message) setError(message)
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Add user"
+      description="The email does not need an account yet — the role applies on their first sign-in."
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="add-user-email" className={labelClass}>
+            Email <span className="text-wdcc-kelvin">*</span>
+          </label>
+          <input
+            id="add-user-email"
+            type="email"
+            name="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value)
+              setFieldErrors((prev) => ({ ...prev, email: '' }))
+            }}
+            placeholder="user@wdcc.co.nz"
+            className={`w-full ${fieldErrors.email ? inputErrorClass : inputClass}`}
+          />
+          <FieldError message={fieldErrors.email} />
+        </div>
+
+        <RoleCheckboxes
+          idPrefix="add-user"
+          value={roles}
+          onChange={(next) => {
+            setRoles(next)
+            setFieldErrors((prev) => ({ ...prev, role: '' }))
+          }}
+          error={fieldErrors.role}
+        />
+
+        {error && <ErrorMessage message={error} />}
+
+        <DialogActions onCancel={onClose} confirmLabel="Add user" busy={busy} />
+      </form>
+    </Modal>
+  )
+}
+
+function ChangeRoleDialog({
+  user,
+  isSelf,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  user: AuthUser
+  isSelf: boolean
+  busy: boolean
+  onClose: () => void
+  onSubmit: SubmitFn
+}) {
+  // Pre-filled with what they hold now, so the form starts as a no-op edit.
+  const [roles, setRoles] = useState<RoleSelection>({
+    adminRole: user.roles.includes('ADMIN'),
+    execRole: user.roles.includes('EXEC'),
+  })
+  const [fieldError, setFieldError] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    const payload = { email: user.email, ...roles }
+    const validation = rolesSchema.safeParse(payload)
+
+    if (!validation.success) {
+      const errors = z.flattenError(validation.error).fieldErrors
+      // Removing every role would be a removal, not a role change.
+      setFieldError(errors.adminRole?.[0] ?? 'Select at least one role')
+      return
+    }
+
+    setFieldError('')
+    const message = await onSubmit('PATCH', validation.data, 'Roles updated successfully')
+    if (message) setError(message)
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Change role"
+      description={
+        <>
+          {user.displayName ?? user.email} is currently {describeRoles(user.roles)}. Saving replaces
+          their access with exactly what is ticked below.
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <RoleCheckboxes
+          idPrefix="change-role"
+          value={roles}
+          onChange={(next) => {
+            setRoles(next)
+            setFieldError('')
+          }}
+          // The API rejects self-demotion, so the box that would cause it is held on.
+          disabled={isSelf && roles.adminRole}
+          error={fieldError}
+        />
+
+        {isSelf && (
+          <p className="font-mono text-xs text-wdcc-grey">
+            You cannot remove your own admin role, so your roles are locked here.
+          </p>
+        )}
+
+        {error && <ErrorMessage message={error} />}
+
+        <DialogActions onCancel={onClose} confirmLabel="Save" busy={busy} />
+      </form>
+    </Modal>
+  )
+}
+
+function RemoveUserDialog({
+  user,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  user: AuthUser
+  busy: boolean
+  onClose: () => void
+  onSubmit: SubmitFn
+}) {
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    const payload = {
+      email: user.email,
+      adminRole: user.roles.includes('ADMIN'),
+      execRole: user.roles.includes('EXEC'),
+    }
+
+    const message = await onSubmit('DELETE', payload, 'User removed successfully')
+    if (message) setError(message)
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Remove access"
+      description={
+        <>
+          {user.displayName ?? user.email} ({user.email}) will lose their{' '}
+          {describeRoles(user.roles)} access. Their account and contribution history are not
+          affected, and you can add them back later.
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {error && <ErrorMessage message={error} />}
+        <DialogActions onCancel={onClose} confirmLabel="Remove" busy={busy} danger />
+      </form>
+    </Modal>
   )
 }
