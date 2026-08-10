@@ -42,7 +42,7 @@ export async function Navbar() {
               </span>
             </Link>
             <Link
-              href={isAdmin ? '/authorised-users' : '/leaderboard'}
+              href={isAdmin ? '/admin-dashboard/auth-list' : '/leaderboard'}
               className="group flex items-center"
             >
               <span className="inline-block -translate-x-0.5 transition-transform duration-200 ease-out group-hover:translate-x-1">

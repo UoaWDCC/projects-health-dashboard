@@ -183,6 +183,78 @@ export async function POST(request: Request) {
   }
 }
 
+// API route for replacing a user's admin/exec grants with exactly the roles supplied.
+// POST only ever adds, so changing someone from admin to exec (or vice versa) needs this.
+export async function PATCH(request: Request) {
+  if (!(await hasRole('ADMIN'))) {
+    return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  try {
+    const body = await request.json()
+
+    const parsed = rolesSchema.safeParse({
+      email: String(body.email ?? '').trim(),
+      adminRole: Boolean(body.adminRole),
+      execRole: Boolean(body.execRole),
+    })
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? 'Invalid request'
+      return Response.json({ error: message }, { status: 400 })
+    }
+
+    const { email, adminRole: keepAdmin, execRole: keepExec } = parsed.data
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    // Reaching here means the caller is an admin, so dropping ADMIN from their own
+    // row is a self-demotion — same guard DELETE applies.
+    if (user?.email === email && !keepAdmin) {
+      return Response.json({ error: 'You cannot remove your own admin role' }, { status: 403 })
+    }
+
+    const profile = await db.profile.findUnique({ where: { email } })
+
+    if (!profile) {
+      return Response.json({ error: 'Email does not exist' }, { status: 404 })
+    }
+
+    const target: Role[] = []
+    if (keepAdmin) {
+      target.push(Role.ADMIN)
+    }
+    if (keepExec) {
+      target.push(Role.EXEC)
+    }
+
+    // Delete only the grants that are going away, so a role they keep holds its
+    // original createdAt — that is what the list renders as "Added".
+    await db.$transaction([
+      db.userRole.deleteMany({
+        where: {
+          userId: profile.id,
+          role: { in: [Role.ADMIN, Role.EXEC] },
+          NOT: { role: { in: target } },
+        },
+      }),
+      db.userRole.createMany({
+        data: target.map((role) => ({ userId: profile.id, role })),
+        skipDuplicates: true,
+      }),
+    ])
+
+    return Response.json({ email, roles: target }, { status: 200 })
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Failed to update user roles' },
+      { status: 500 }
+    )
+  }
+}
+
 // API route for removing admin and/or exec roles
 export async function DELETE(request: Request) {
   if (!(await hasRole('ADMIN'))) {
