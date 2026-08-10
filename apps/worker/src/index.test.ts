@@ -6,6 +6,9 @@ vi.mock('./jobs/github', () => ({
 vi.mock('./jobs/discord', () => ({
   runDiscordIngestion: vi.fn(),
 }))
+vi.mock('./lib/health-score', () => ({
+  computeHealthScoresForActiveProjects: vi.fn(() => Promise.resolve()),
+}))
 vi.mock('./lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))

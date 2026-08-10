@@ -2,6 +2,7 @@
 // import { runLlmAnalysis } from './jobs/llm'
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
+import { computeHealthScoresForActiveProjects } from './lib/health-score'
 import { logger } from './lib/logger'
 import { getCollectionWindow } from './lib/date-utils'
 
@@ -42,6 +43,13 @@ export async function main() {
 
   // TODO: await runLlmAnalysis(discordMessages)
   void discordMessages // placeholder to avoid unused variable error until LLM analysis is implemented
+
+  // Runs after both collection jobs have settled so it never scores against a
+  // discordMessages value that Discord ingestion hasn't written yet.
+  const [prevWeekStart] = getCollectionWindow(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))
+  await computeHealthScoresForActiveProjects([prevWeekStart, weekStart]).catch((err: unknown) => {
+    logger.error(`Health score computation failed: ${err}`)
+  })
 
   if (githubResult === GITHUB_INGESTION_FAILED) {
     logger.error('Weekly ingestion completed with errors: GitHub ingestion failed')
