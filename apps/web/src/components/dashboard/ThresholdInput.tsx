@@ -26,6 +26,7 @@ const FIELDS: { key: ThresholdKey; label: string; help: string }[] = [
 export default function ThresholdInput() {
   const [values, setValues] = useState<Record<ThresholdKey, string>>({ week: '', avg4w: '' })
   const [saved, setSaved] = useState<ThresholdValues | null>(null)
+  const [loadingInitial, setLoadingInitial] = useState(true)
   const [errors, setErrors] = useState<Record<ThresholdKey, string | null>>({
     week: null,
     avg4w: null,
@@ -43,6 +44,8 @@ export default function ThresholdInput() {
         setSaved(data)
       } catch (e) {
         console.error('Failed to load thresholds', e)
+      } finally {
+        setLoadingInitial(false)
       }
     }
     load()
@@ -96,6 +99,19 @@ export default function ThresholdInput() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loadingInitial) {
+    return (
+      <div className="font-mono flex flex-col gap-6 w-full mx-auto px-5 sm:px-10 lg:px-20 py-10 animate-pulse">
+        <div className="h-4 w-56 rounded bg-white/10" />
+        <div className="h-3 w-full rounded bg-white/5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="h-20 rounded-2xl bg-white/5" />
+          <div className="h-20 rounded-2xl bg-white/5" />
+        </div>
+      </div>
+    )
   }
 
   return (
