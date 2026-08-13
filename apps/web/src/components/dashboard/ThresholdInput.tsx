@@ -33,6 +33,7 @@ export default function ThresholdInput() {
   })
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -54,6 +55,7 @@ export default function ThresholdInput() {
   const handleChange = (key: ThresholdKey, raw: string) => {
     setValues((v) => ({ ...v, [key]: raw }))
     setJustSaved(false)
+    setSaveError(null)
     const result = healthScoreThresholdInputSchema.safeParse(raw)
     setErrors((e) => ({ ...e, [key]: result.success ? null : result.error.issues[0].message }))
   }
@@ -75,6 +77,7 @@ export default function ThresholdInput() {
     }
 
     setSaving(true)
+    setSaveError(null)
     try {
       const res = await fetch('/api/threshold', {
         method: 'PUT',
@@ -92,10 +95,7 @@ export default function ThresholdInput() {
       setValues({ week: String(data.week), avg4w: String(data.avg4w) })
       setJustSaved(true)
     } catch (e) {
-      setErrors((prev) => ({
-        ...prev,
-        week: e instanceof Error ? e.message : 'Failed to save',
-      }))
+      setSaveError(e instanceof Error ? e.message : 'Failed to save')
     } finally {
       setSaving(false)
     }
@@ -222,6 +222,8 @@ export default function ThresholdInput() {
             Saved
           </span>
         )}
+
+        {saveError && <span className="text-[#E333A3] text-xs">{saveError}</span>}
       </div>
     </div>
   )
