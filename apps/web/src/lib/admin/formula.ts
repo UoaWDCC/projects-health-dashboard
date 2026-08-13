@@ -151,7 +151,10 @@ export function highlightFormula(formula: string): string {
   return tokens
     .map((tok) => {
       if (varColorMap[tok]) {
-        return `<span style="color:${varColorMap[tok]};font-weight:600">${escape(tok)}</span>`
+        // No font-weight change here: the overlay must stay glyph-for-glyph the same
+        // width as the real (invisible) textarea text, or the native caret drifts
+        // away from the visible character it's actually sitting next to.
+        return `<span style="color:${varColorMap[tok]}">${escape(tok)}</span>`
       }
       if (/^\d+(?:\.\d+)?$/.test(tok)) {
         return `<span style="color:#0FAAA0">${tok}</span>`
