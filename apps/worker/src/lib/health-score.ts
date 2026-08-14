@@ -85,7 +85,11 @@ export async function computeHealthScoreForWeek(
   try {
     await db.weeklyStats.update({
       where: { projectId_weekStart: { projectId, weekStart } },
-      data: { healthScore, algorithmVersion: healthScore !== null ? formula : null },
+      data: {
+        healthScore,
+        algorithmVersion: healthScore !== null ? formula : null,
+        computedAt: new Date(),
+      },
     })
   } catch (err) {
     logger.error(

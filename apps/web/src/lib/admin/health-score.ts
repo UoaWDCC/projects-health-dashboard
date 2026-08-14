@@ -52,7 +52,11 @@ export async function recomputeAllHealthScores(formula: string): Promise<void> {
     try {
       await db.weeklyStats.update({
         where: { id: stats.id },
-        data: { healthScore, algorithmVersion: healthScore !== null ? formula : null },
+        data: {
+          healthScore,
+          algorithmVersion: healthScore !== null ? formula : null,
+          computedAt: new Date(),
+        },
       })
       succeeded++
     } catch (err) {
