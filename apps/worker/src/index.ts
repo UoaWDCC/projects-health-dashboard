@@ -20,8 +20,9 @@ import { getCollectionWindow } from './lib/date-utils'
 //      sentimentParagraph, and summaryText to WeeklySummary. Dependency enforced
 //      in code, not by wall-clock timing.
 
-// Sentinel returned by the GitHub ingestion catch handler.
+// Sentinels returned by the ingestion catch handlers.
 export const GITHUB_INGESTION_FAILED = 'github-ingestion-failed' as const
+export const DISCORD_INGESTION_FAILED = 'discord-ingestion-failed' as const
 
 export async function main() {
   const [weekStart, weekEnd] = getCollectionWindow()
@@ -30,30 +31,42 @@ export async function main() {
     `Starting weekly ingestion jobs (GitHub + Discord in parallel) - week of ${weekStart.toISOString()}`
   )
 
-  const [githubResult, discordMessages] = await Promise.all([
+  const [githubResult, discordResult] = await Promise.all([
     runGitHubIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`GitHub ingestion failed: ${err}`)
       return GITHUB_INGESTION_FAILED
     }),
     runDiscordIngestion(weekStart, weekEnd).catch((err: unknown) => {
       logger.error(`Discord ingestion failed: ${err}`)
-      return []
+      return DISCORD_INGESTION_FAILED
     }),
   ])
+
+  const discordMessages = discordResult === DISCORD_INGESTION_FAILED ? [] : discordResult
 
   // TODO: await runLlmAnalysis(discordMessages)
   void discordMessages // placeholder to avoid unused variable error until LLM analysis is implemented
 
-  // Runs after both collection jobs have settled so it never scores against a
-  // discordMessages value that Discord ingestion hasn't written yet.
-  const [prevWeekStart] = getCollectionWindow(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))
-  await computeHealthScoresForActiveProjects([prevWeekStart, weekStart]).catch((err: unknown) => {
-    logger.error(`Health score computation failed: ${err}`)
-  })
+  // Only score once both collection jobs have succeeded, so scores are never computed
+  // against stats that this week's ingestion failed to write.
+  if (githubResult === GITHUB_INGESTION_FAILED || discordResult === DISCORD_INGESTION_FAILED) {
+    logger.error('Skipping health score computation: one or more ingestion jobs failed')
+  } else {
+    const [prevWeekStart] = getCollectionWindow(
+      new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000)
+    )
+    await computeHealthScoresForActiveProjects([prevWeekStart, weekStart]).catch((err: unknown) => {
+      logger.error(`Health score computation failed: ${err}`)
+    })
+  }
 
   if (githubResult === GITHUB_INGESTION_FAILED) {
     logger.error('Weekly ingestion completed with errors: GitHub ingestion failed')
-  } else {
+  }
+  if (discordResult === DISCORD_INGESTION_FAILED) {
+    logger.error('Weekly ingestion completed with errors: Discord ingestion failed')
+  }
+  if (githubResult !== GITHUB_INGESTION_FAILED && discordResult !== DISCORD_INGESTION_FAILED) {
     logger.info('Weekly ingestion complete')
   }
 }
