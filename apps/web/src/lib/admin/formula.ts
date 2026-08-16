@@ -6,6 +6,13 @@ export const math = create(all)
 
 export const FORMULA_VARIABLES = [
   {
+    key: 'commits',
+    label: 'Commits',
+    description: 'Commits pushed this week',
+    color: '#0FAAA0',
+    bg: 'rgba(15,170,160,0.10)',
+  },
+  {
     key: 'prs',
     label: 'Pull Requests',
     description: 'Total open/merged PRs this week',
@@ -23,23 +30,32 @@ export const FORMULA_VARIABLES = [
     key: 'discord_messages',
     label: 'Discord Messages',
     description: 'Messages sent in linked channels',
-    color: '#5B8AF0',
-    bg: 'rgba(91,138,240,0.10)',
-  },
-  {
-    key: 'commits',
-    label: 'Commits',
-    description: 'Commits pushed this week',
-    color: '#0FAAA0',
-    bg: 'rgba(15,170,160,0.10)',
+    color: '#8B5CF6',
+    bg: 'rgba(139,92,246,0.10)',
   },
 ] as const
 
 const VALID_VARIABLE_KEYS = FORMULA_VARIABLES.map((v) => v.key)
 
+const VAR_COLOR_MAP: Record<string, string> = Object.fromEntries(
+  FORMULA_VARIABLES.map((v) => [v.key, v.color])
+)
+
+const TOKEN_RE = new RegExp(
+  [
+    ...VALID_VARIABLE_KEYS,
+    String.raw`\d+(?:\.\d+)?`,
+    String.raw`[+\-*/%^(),]`,
+    String.raw`[a-zA-Z_][a-zA-Z0-9_]*`,
+    String.raw`\s+`,
+    String.raw`[\s\S]`,
+  ].join('|'),
+  'g'
+)
+
 // #endregion
 
-type FormulaVariable = (typeof FORMULA_VARIABLES)[number]['key']
+export type FormulaVariable = (typeof FORMULA_VARIABLES)[number]['key']
 
 // #region Util functions for Zod schema
 
@@ -126,32 +142,12 @@ export function highlightFormula(formula: string): string {
   // Tokenise the plain-text formula first, then wrap each token in a coloured span - avoids regex running over already-injected HTML tag characters.
   const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-  const varKeys = FORMULA_VARIABLES.map((v) => v.key)
-  const varColorMap: Record<string, string> = Object.fromEntries(
-    FORMULA_VARIABLES.map((v) => [v.key, v.color])
-  )
-
-  // Build tokeniser: known vars | numbers | operators | identifiers | whitespace | single-char fallback
-  // IMPORTANT: fallback must NOT be \S+ as it greedily eats "sqrt(discord_messages)" as one token.
-  // Instead use an identifier pattern so "sqrt" tokenises separately from the "(" that follows it.
-  const tokenRe = new RegExp(
-    [
-      ...varKeys,
-      String.raw`\d+(?:\.\d+)?`,
-      String.raw`[+\-*/%^(),]`,
-      String.raw`[a-zA-Z_][a-zA-Z0-9_]*`,
-      String.raw`\s+`,
-      String.raw`[\s\S]`,
-    ].join('|'),
-    'g'
-  )
-
-  const tokens = formula.match(tokenRe) ?? (formula ? [formula] : [])
+  const tokens = formula.match(TOKEN_RE) ?? (formula ? [formula] : [])
 
   return tokens
     .map((tok) => {
-      if (varColorMap[tok]) {
-        return `<span style="color:${varColorMap[tok]};font-weight:600">${escape(tok)}</span>`
+      if (VAR_COLOR_MAP[tok]) {
+        return `<span style="color:${VAR_COLOR_MAP[tok]}">${escape(tok)}</span>`
       }
       if (/^\d+(?:\.\d+)?$/.test(tok)) {
         return `<span style="color:#0FAAA0">${tok}</span>`

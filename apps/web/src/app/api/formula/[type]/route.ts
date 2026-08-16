@@ -27,6 +27,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ type: stri
 
   return NextResponse.json({
     formula: typeof config?.value === 'string' ? config.value : null,
+    updatedAt: config?.updatedAt ?? null,
   })
 }
 
@@ -73,5 +74,5 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
     },
   })
 
-  return NextResponse.json({ formula: config.value as string })
+  return NextResponse.json({ formula: config.value as string, updatedAt: config.updatedAt })
 }

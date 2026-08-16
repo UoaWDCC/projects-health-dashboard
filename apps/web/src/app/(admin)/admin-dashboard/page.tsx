@@ -12,8 +12,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ClientSuspense from '@/components/utils/ClientSuspense'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
-import FormulaInput from '@/components/dashboard/FormulaInput'
-import ThresholdInput from '@/components/dashboard/ThresholdInput'
 
 const fetchProjects = async (): Promise<Project[]> => {
   try {
@@ -86,7 +84,6 @@ export default function AdminDashboardPage() {
           {projects.map((project) => (
             <li key={project.id} className="h-full">
               <Link href={`/projects/${project.slug}`} className="block h-full">
-                {/* Single element gradient border using background-clip trick */}
                 <div
                   className="h-full flex flex-col font-sans transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1"
                   style={{
@@ -218,10 +215,6 @@ export default function AdminDashboardPage() {
           ))}
         </ClientSuspense>
       </ul>
-
-      <FormulaInput type="Health" />
-      <ThresholdInput />
-      <FormulaInput type="MVP" />
     </>
   )
 }
