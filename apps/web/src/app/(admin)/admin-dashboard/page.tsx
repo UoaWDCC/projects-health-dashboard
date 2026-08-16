@@ -13,6 +13,7 @@ import Image from 'next/image'
 import ClientSuspense from '@/components/utils/ClientSuspense'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 import FormulaInput from '@/components/dashboard/FormulaInput'
+import ThresholdInput from '@/components/dashboard/ThresholdInput'
 
 const fetchProjects = async (): Promise<Project[]> => {
   try {
@@ -219,6 +220,7 @@ export default function AdminDashboardPage() {
       </ul>
 
       <FormulaInput type="Health" />
+      <ThresholdInput />
       <FormulaInput type="MVP" />
     </>
   )
