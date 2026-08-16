@@ -3,6 +3,7 @@
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
 import { computeHealthScoresForActiveProjects } from './lib/health-score'
+import { computeVelocityForActiveProjects } from './lib/velocity'
 import { logger } from './lib/logger'
 import { getCollectionWindow } from './lib/date-utils'
 
@@ -57,6 +58,12 @@ export async function main() {
     )
     await computeHealthScoresForActiveProjects([prevWeekStart, weekStart]).catch((err: unknown) => {
       logger.error(`Health score computation failed: ${err}`)
+    })
+
+    // Velocity compares each week's health score against preceding weeks', so it
+    // must run after health scores are written above.
+    await computeVelocityForActiveProjects([prevWeekStart, weekStart]).catch((err: unknown) => {
+      logger.error(`Velocity computation failed: ${err}`)
     })
   }
 
