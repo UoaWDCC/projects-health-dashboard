@@ -11,10 +11,19 @@
 -- function instead of granting `authenticated` direct SELECT on "UserRole" — that would expose every
 -- user's roles through PostgREST.
 
--- Guarded so Prisma's shadow database (plain Postgres, no auth/storage schemas) can apply this cleanly.
+-- Guarded so environments without Supabase's auth/storage objects skip this cleanly: Prisma's
+-- shadow database, and the worker's integration-test container. Note the guard checks for
+-- auth.uid() itself, not the auth schema — apps/worker/src/test-config/integration.global-setup.ts
+-- scaffolds `auth` and `auth.users` to exercise the on_auth_user_created trigger, so the schema
+-- exists there while auth.uid() does not. Guard on the object you actually depend on.
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'auth' AND p.proname = 'uid'
+  ) THEN
 
     -- Runs as the function owner, so it can read "UserRole" without that table being readable by
     -- `authenticated`. Callers can only ask about themselves — auth.uid() is not a parameter.
@@ -39,9 +48,21 @@ BEGIN
 END
 $$;
 
+-- Same reasoning: guard on storage.objects and on is_admin() (created above, and skipped in the
+-- same environments), since the policies below reference both.
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'storage' AND c.relname = 'objects'
+  ) AND EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'is_admin'
+  ) THEN
 
     DROP POLICY IF EXISTS "Admins can upload entity images" ON storage.objects;
     DROP POLICY IF EXISTS "Admins can replace entity images" ON storage.objects;
