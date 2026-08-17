@@ -132,4 +132,23 @@ describe('AI client', () => {
     await expect(client.request(request)).rejects.toThrow(message)
     await expect(client.request(request)).rejects.toBeInstanceOf(AiResponseError)
   })
+
+  it('wraps an invalid JSON response body in an AiResponseError', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ...response(undefined),
+      json: async () => {
+        throw new SyntaxError('Unexpected token')
+      },
+    } as Response)
+    const client = createAiClient(
+      { baseUrl: 'http://localhost:11434/v1', model: 'llama3.1', maxRetries: 2 },
+      { fetch: fetchMock }
+    )
+
+    const result = client.request(request)
+
+    await expect(result).rejects.toThrow('AI response body was not valid JSON')
+    await expect(result).rejects.toBeInstanceOf(AiResponseError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })

@@ -156,9 +156,16 @@ export function createAiClient(
           })
 
           if (response.ok) {
-            const body = (await response.json()) as {
+            let body: {
               choices?: Array<{ message?: { content?: string } }>
             }
+
+            try {
+              body = (await response.json()) as typeof body
+            } catch {
+              throw new AiResponseError('AI response body was not valid JSON')
+            }
+
             const content = body.choices?.[0]?.message?.content
 
             if (!content) throw new AiResponseError('AI response did not contain message content')
