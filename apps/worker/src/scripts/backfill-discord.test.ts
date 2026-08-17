@@ -137,7 +137,6 @@ describe('bucketByWeek', () => {
   it('returns an empty map for no messages', () => {
     expect(bucketByWeek([])).toEqual(new Map())
   })
-
   it('groups messages from the same week into one bucket with correct author counts', () => {
     const messages = [
       { authorId: 'u1', timestamp: new Date('2026-05-06T10:00:00Z') }, // Wed May 6 → week of May 4
