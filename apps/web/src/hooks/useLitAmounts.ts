@@ -21,16 +21,33 @@ export function useLitAmounts<K>(computeAmount: (rect: DOMRect, key: K) => numbe
       rafIdRef.current = null
 
       const last = lastLitAmountsRef.current
-      const next = new Map<K, number>()
-      let changed = false
 
+      // Compute every card's raw amount first, then keep only the single
+      // closest (highest) card lit and zero out the rest — prevents two
+      // adjacent cards both glowing when the cursor sits between them.
+      const entries: Array<[K, number]> = []
       cardRefs.current.forEach((el, key) => {
         const raw = computeAmountRef.current(el.getBoundingClientRect(), key)
         const litAmount = Math.round(clamp01(raw) * LIT_AMOUNT_PRECISION) / LIT_AMOUNT_PRECISION
+        entries.push([key, litAmount])
+      })
 
+      let winnerKey: K | null = null
+      let winnerAmount = 0
+      for (const [key, amount] of entries) {
+        if (amount > winnerAmount) {
+          winnerAmount = amount
+          winnerKey = key
+        }
+      }
+
+      const next = new Map<K, number>()
+      let changed = false
+      for (const [key] of entries) {
+        const litAmount = key === winnerKey ? winnerAmount : 0
         next.set(key, litAmount)
         if (last.get(key) !== litAmount) changed = true
-      })
+      }
 
       if (changed || next.size !== last.size) {
         lastLitAmountsRef.current = next
