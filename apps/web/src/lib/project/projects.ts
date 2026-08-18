@@ -11,6 +11,9 @@ const projectHeaderSelect = {
       members: true,
     },
   },
+  repositories: true,
+  channels: true,
+  slug: true,
 } satisfies Prisma.ProjectSelect
 
 const projectCardSelect = {
