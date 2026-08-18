@@ -56,7 +56,11 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
             </span>
           ))}
         <span className="text-xs font-sans font-semibold">
-          {user ? <span className="hidden lg:inline">{user.displayName}</span> : 'Sign In'}
+          {user ? (
+            <span className="hidden lg:inline whitespace-nowrap">{user.displayName}</span>
+          ) : (
+            'Sign In'
+          )}
         </span>
       </button>
 
