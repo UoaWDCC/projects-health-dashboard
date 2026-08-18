@@ -100,9 +100,9 @@ const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function Projec
           className={`pointer-events-none absolute ${BORDER_TRANSITION}`}
           style={borderStyle(litAmount, 1, '16px')}
         />
-        <div className="absolute inset-[2px] bg-white rounded-[14px]" />
+        <div className="absolute inset-[3px] bg-white rounded-[13px]" />
 
-        <div className="absolute inset-[2px] z-10 flex flex-col p-3 overflow-hidden">
+        <div className="absolute inset-[3px] z-10 flex flex-col p-[clamp(12px,4vw,16px)] overflow-hidden">
           <div className="w-[34%] aspect-square max-w-[52px] rounded-[16px] bg-[#d9d9d9] overflow-hidden shrink-0">
             {imageUrl && (
               <Image
