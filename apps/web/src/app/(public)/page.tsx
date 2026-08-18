@@ -33,7 +33,7 @@ export default async function PublicDashboardPage() {
       <div className="lg:hidden h-10">
         <LiveCommitMarquee />
       </div>
-      <div className="flex flex-col lg:gap-y-40">
+      <div className="flex flex-col lg:gap-y-20">
         {/* PAGE HEADER */}
         <div className="bg-[#D4E5FD] lg:bg-inherit">
           <HomeHeader
