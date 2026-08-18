@@ -78,14 +78,14 @@ export default function TeamHeader({
             <div className="flex gap-3 mt-6">
               <Link
                 href={`/project/${project.slug}`}
-                className="flex-1 text-center rounded-full bg-black text-white text-sm font-semibold px-5 py-2.5"
+                className="flex-1 text-center rounded-full bg-black text-white text-sm font-semibold px-5 py-2.5 whitespace-nowrap"
               >
                 Edit details
               </Link>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex-1 rounded-full bg-white text-red-500 text-sm font-semibold px-5 py-2.5 border border-[#e5e7eb]"
+                className="flex-1 rounded-full bg-white text-red-500 text-sm font-semibold px-5 py-2.5 border border-[#e5e7eb] whitespace-nowrap"
               >
                 Delete project
               </button>
