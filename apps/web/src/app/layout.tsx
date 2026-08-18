@@ -18,6 +18,7 @@ const dmMono = DM_Mono({
 const cartographMonoCf = localFont({
   src: '../fonts/cartograph-mono-cf.otf',
   variable: '--font-cartograph-mono-cf',
+  display: 'swap',
 })
 
 const figtree = Figtree({
