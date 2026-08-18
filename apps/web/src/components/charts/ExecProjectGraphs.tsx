@@ -83,7 +83,7 @@ export default function ExecProjectGraphs() {
   }
 
   return (
-    <div className="mx-4 mt-6 flex w-full flex-col gap-6">
+    <div className="mt-6 flex w-full flex-col gap-6">
       {/* Toggle bar */}
       <div className="flex flex-wrap gap-2">
         {teamMeta.map((team) => {
