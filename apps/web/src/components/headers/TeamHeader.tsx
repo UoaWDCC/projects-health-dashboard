@@ -156,6 +156,16 @@ export default function TeamHeader({
             </div>
           )}
         </div>
+
+        {!isAdmin && (
+          <Image
+            src="/webster-team-header.svg"
+            width={190}
+            height={249}
+            alt="Team Header Image"
+            className="absolute right-[20px] md:right-[60px] xl:right-[110px] bottom-[-90px] w-[120px] md:w-[160px] xl:w-[190px] h-auto z-10 shrink-0"
+          />
+        )}
       </div>
 
       {/* DELETE CONFIRMATION MODAL */}
