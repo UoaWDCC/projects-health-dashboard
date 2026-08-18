@@ -31,7 +31,7 @@ export function NavbarBrand() {
         className={`items-center gap-4 xl:gap-6 ${isProjectDetail ? 'hidden lg:flex' : 'flex'}`}
       >
         <Image src="/logo.svg" alt="WDCC Logo" width={60} height={40} />
-        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase">
+        <span className="text-[16px] xl:text-[24px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase whitespace-nowrap">
           Projects Health Dashboard
         </span>
       </Link>
