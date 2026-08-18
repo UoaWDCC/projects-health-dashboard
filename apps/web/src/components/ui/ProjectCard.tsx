@@ -20,6 +20,11 @@ interface ProjectCardProps {
   litAmount?: number
 }
 
+// Cards ease toward their new litAmount instead of snapping — keep this in
+// sync with anything else animating the same border (e.g. duration used by
+// other lit-border components) if that ever becomes shared.
+const BORDER_TRANSITION = 'transition-[background,inset,border-radius] duration-300 ease-out'
+
 function borderStyle(amount: number, maxInsetPx: number, baseRadius: string): React.CSSProperties {
   const clamped = clamp01(amount)
   const alpha = 0.4 + clamped * 0.6
@@ -42,7 +47,10 @@ const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function Projec
   if (viewMode === 'rows') {
     return (
       <div ref={ref} className="relative w-full rounded-2xl overflow-visible font-sans">
-        <div className="pointer-events-none absolute" style={borderStyle(litAmount, 2, '16px')} />
+        <div
+          className={`pointer-events-none absolute ${BORDER_TRANSITION}`}
+          style={borderStyle(litAmount, 1, '16px')}
+        />
         <div className="absolute inset-[2px] bg-white rounded-[14px]" />
 
         <div className="relative z-10 flex flex-row items-center gap-3 p-2.5">
@@ -88,7 +96,10 @@ const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function Projec
         ref={ref}
         className="relative w-full aspect-square rounded-2xl overflow-visible font-sans"
       >
-        <div className="pointer-events-none absolute" style={borderStyle(litAmount, 2, '16px')} />
+        <div
+          className={`pointer-events-none absolute ${BORDER_TRANSITION}`}
+          style={borderStyle(litAmount, 1, '16px')}
+        />
         <div className="absolute inset-[2px] bg-white rounded-[14px]" />
 
         <div className="absolute inset-[2px] z-10 flex flex-col p-3 overflow-hidden">
@@ -140,8 +151,8 @@ const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function Projec
       "
     >
       <div
-        className="pointer-events-none absolute"
-        style={borderStyle(litAmount, 4, 'clamp(18px,2.5vw,31px)')}
+        className={`pointer-events-none absolute ${BORDER_TRANSITION}`}
+        style={borderStyle(litAmount, 2, 'clamp(18px,2.5vw,31px)')}
       />
       <div className="absolute inset-[3px] md:inset-[4px] bg-white rounded-[clamp(15px,2.2vw,28px)]" />
 
