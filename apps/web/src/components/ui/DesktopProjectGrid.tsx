@@ -11,10 +11,16 @@ interface DesktopProjectGridProps {
 }
 
 const HOVER_RADIUS_PX = 500
+const TOUCH_LIT_DURATION_MS = 600
 
 export default function DesktopProjectGrid({ projects }: DesktopProjectGridProps) {
   const cursorRef = useRef<{ x: number; y: number } | null>(null)
-  const computeAmount = useCallback((rect: DOMRect) => {
+  const touchLitKeyRef = useRef<number | null>(null)
+  const touchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const computeAmount = useCallback((rect: DOMRect, key: number) => {
+    if (touchLitKeyRef.current === key) return 1
+
     const cursor = cursorRef.current
     if (!cursor) return 0
 
@@ -26,6 +32,22 @@ export default function DesktopProjectGrid({ projects }: DesktopProjectGridProps
   }, [])
 
   const { litAmounts, setCardRef, scheduleRecompute } = useLitAmounts<number>(computeAmount)
+
+  const handleTouchStart = useCallback(
+    (index: number) => {
+      touchLitKeyRef.current = index
+      scheduleRecompute()
+
+      if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current)
+      touchTimeoutRef.current = setTimeout(() => {
+        if (touchLitKeyRef.current === index) {
+          touchLitKeyRef.current = null
+          scheduleRecompute()
+        }
+      }, TOUCH_LIT_DURATION_MS)
+    },
+    [scheduleRecompute]
+  )
 
   return (
     <div
@@ -41,7 +63,12 @@ export default function DesktopProjectGrid({ projects }: DesktopProjectGridProps
     >
       {projects.map((project, index) =>
         project ? (
-          <Link key={project.id} href={`/project/${project.slug}`} className="block w-full">
+          <Link
+            key={project.id}
+            href={`/project/${project.slug}`}
+            className="block w-full"
+            onTouchStart={() => handleTouchStart(index)}
+          >
             <ProjectCard
               ref={setCardRef(index)}
               project={project}
