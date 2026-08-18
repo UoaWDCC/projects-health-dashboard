@@ -40,7 +40,7 @@ export default function LiveCommitRow({
           )}
           <Link
             href={`/project/${projectSlug}`}
-            className={`font-mono font-medium text-wdcc-blue text-[clamp(0.5rem,2vw,1rem)] bg-olive-200 hover:bg-wdcc-amber hover:text-white transition-colors duration-200 rounded-lg px-3 h-fit place-self-center truncate`}
+            className={`font-mono font-medium text-wdcc-blue text-[clamp(0.5rem,2vw,1rem)] bg-olive-200 hover:bg-wdcc-amber hover:text-white transition-colors duration-200 rounded-lg px-3 py-1 h-fit place-self-center truncate`}
           >
             {repoName}
           </Link>

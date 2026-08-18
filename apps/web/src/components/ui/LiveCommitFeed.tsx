@@ -8,7 +8,7 @@ export default function LiveCommitFeed() {
 
   return (
     <div className="flex rounded-3xl border-2 border-wdcc-grey/10 lg:border lg:border-white/50 w-full mx-auto flex-col bg-[#FAFBFC] lg:bg-white/70">
-      <div className="flex flex-row items-center gap-2 lg:gap-5 pl-5 lg:pl-8 py-3 lg:py-4 ">
+      <div className="flex flex-row items-center gap-2 lg:gap-5 pl-5 lg:pl-8 py-3 lg:py-4">
         <svg
           width="12"
           height="12"
