@@ -40,7 +40,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       />
 
       {isAdmin && (
-        <div className="px-5 sm:px-10 lg:px-20 sm:mt-12 lg:mt-20">
+        <div className="px-5 sm:px-10 lg:px-20 mt-6 sm:mt-12 lg:mt-20">
           <ConnectedSources
             repositories={project.repositories}
             channels={project.channels}
