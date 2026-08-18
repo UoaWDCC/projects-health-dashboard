@@ -13,7 +13,7 @@ export default function DesktopLeaderboardSections({
 }: DesktopLeaderboardSectionsProps) {
   return (
     <div className="flex justify-between px-5 sm:px-10 lg:px-20 gap-[21px] my-20 w-full">
-      <section className="flex flex-col gap-3 w-[415px]">
+      <section className="flex flex-col gap-3 flex-1 min-w-0 max-w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-kelvin" />
           Lines of Code Changed
@@ -25,7 +25,7 @@ export default function DesktopLeaderboardSections({
         </ClientSuspense>
       </section>
 
-      <section className="flex flex-col gap-3 w-[415px]">
+      <section className="flex flex-col gap-3 flex-1 min-w-0 max-w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-blue" />
           Commits Made
@@ -37,7 +37,7 @@ export default function DesktopLeaderboardSections({
         </ClientSuspense>
       </section>
 
-      <section className="flex flex-col gap-3 w-[415px]">
+      <section className="flex flex-col gap-3 flex-1 min-w-0 max-w-[415px]">
         <h2 className="flex items-center gap-3 text-lg font-semibold">
           <span className="w-[4.9px] h-5 rounded-full bg-wdcc-amber" />
           Pull Requests Merged
