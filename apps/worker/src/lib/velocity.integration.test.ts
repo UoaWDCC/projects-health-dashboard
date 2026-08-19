@@ -44,6 +44,27 @@ describe('velocity (integration)', () => {
       expect(stats!.velocityScore).toBeNull()
     })
 
+    it("clears a stale velocityScore when the current week's health score becomes null", async () => {
+      const { project } = await seedProjectWithRepo()
+      await seedWeeklyStats(project.id, weeksBefore(WEEK_START, 1), 40)
+      const current = await seedWeeklyStats(project.id, WEEK_START, 50)
+      await db.weeklyStats.update({
+        where: { id: current.id },
+        data: { velocityScore: 25 },
+      })
+      await db.weeklyStats.update({
+        where: { id: current.id },
+        data: { healthScore: null },
+      })
+
+      await computeVelocityForWeek(project.id, WEEK_START)
+
+      const stats = await db.weeklyStats.findUnique({
+        where: { projectId_weekStart: { projectId: project.id, weekStart: WEEK_START } },
+      })
+      expect(stats!.velocityScore).toBeNull()
+    })
+
     it('sets velocityScore to null when there are no preceding weeks to compare against', async () => {
       const { project } = await seedProjectWithRepo()
       await seedWeeklyStats(project.id, WEEK_START, 50)

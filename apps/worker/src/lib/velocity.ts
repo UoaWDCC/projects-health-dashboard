@@ -16,27 +16,35 @@ export async function computeVelocityForWeek(projectId: string, weekStart: Date)
     where: { projectId_weekStart: { projectId, weekStart } },
     select: { id: true, healthScore: true },
   })
-  if (!current || current.healthScore === null) return
+  if (!current) return
 
-  const previousWeeks = await db.weeklyStats.findMany({
-    where: {
-      projectId,
-      weekStart: { lt: weekStart },
-      healthScore: { not: null },
-    },
-    orderBy: { weekStart: 'desc' },
-    take: ROLLING_WINDOW_WEEKS,
-    select: { healthScore: true },
-  })
+  // If the health score was cleared (e.g. by a recompute), velocity must be cleared
+  // too — otherwise a stale value would linger for a week with no score to derive it from.
+  let velocityScore: number | null = null
 
-  // No prior weeks to compare against — there's nothing to measure velocity relative to.
-  const baseline =
-    previousWeeks.length > 0
-      ? average(previousWeeks.map((week) => week.healthScore as number))
-      : null
+  if (current.healthScore !== null) {
+    const previousWeeks = await db.weeklyStats.findMany({
+      where: {
+        projectId,
+        weekStart: { lt: weekStart },
+        healthScore: { not: null },
+      },
+      orderBy: { weekStart: 'desc' },
+      take: ROLLING_WINDOW_WEEKS,
+      select: { healthScore: true },
+    })
 
-  const velocityScore =
-    baseline === null || baseline === 0 ? null : ((current.healthScore - baseline) / baseline) * 100
+    // No prior weeks to compare against — there's nothing to measure velocity relative to.
+    const baseline =
+      previousWeeks.length > 0
+        ? average(previousWeeks.map((week) => week.healthScore as number))
+        : null
+
+    velocityScore =
+      baseline === null || baseline === 0
+        ? null
+        : ((current.healthScore - baseline) / baseline) * 100
+  }
 
   try {
     await db.weeklyStats.update({
