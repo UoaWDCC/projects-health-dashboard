@@ -53,14 +53,16 @@ describe('main', () => {
     )
   })
 
-  it('still logs success when only Discord fails (completion signal is GitHub-specific)', async () => {
+  it('completion log reflects the failure when only Discord fails (both jobs must succeed)', async () => {
     vi.mocked(runGitHubIngestion).mockResolvedValue(undefined)
     vi.mocked(runDiscordIngestion).mockRejectedValue(new Error('discord down'))
 
     await main()
 
-    expect(logger.info).toHaveBeenCalledWith(SUCCESS_LOG)
-    expect(logger.error).not.toHaveBeenCalledWith(
+    // The success completion log must not fire when Discord fails...
+    expect(logger.info).not.toHaveBeenCalledWith(SUCCESS_LOG)
+    // ...and the completion log must clearly surface the failure.
+    expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Weekly ingestion completed with errors')
     )
   })
