@@ -45,6 +45,7 @@ describe('recomputeAllHealthScores', () => {
       data: {
         healthScore: 50,
         algorithmVersion: 'commits + prs * 2 + lines_changed / 10 + discord_messages',
+        computedAt: expect.any(Date),
       },
     })
   })
@@ -59,11 +60,11 @@ describe('recomputeAllHealthScores', () => {
 
     expect(db.weeklyStats.update).toHaveBeenCalledWith({
       where: { id: 'zero-commits' },
-      data: { healthScore: null, algorithmVersion: null },
+      data: { healthScore: null, algorithmVersion: null, computedAt: expect.any(Date) },
     })
     expect(db.weeklyStats.update).toHaveBeenCalledWith({
       where: { id: 'has-commits' },
-      data: { healthScore: 0.25, algorithmVersion: '1 / commits' },
+      data: { healthScore: 0.25, algorithmVersion: '1 / commits', computedAt: expect.any(Date) },
     })
   })
 
@@ -76,7 +77,7 @@ describe('recomputeAllHealthScores', () => {
 
     expect(db.weeklyStats.update).toHaveBeenCalledWith({
       where: { id: 'row-1' },
-      data: { healthScore: null, algorithmVersion: null },
+      data: { healthScore: null, algorithmVersion: null, computedAt: expect.any(Date) },
     })
   })
 
@@ -94,7 +95,7 @@ describe('recomputeAllHealthScores', () => {
 
     expect(db.weeklyStats.update).toHaveBeenCalledWith({
       where: { id: 'writes-fine' },
-      data: { healthScore: 2, algorithmVersion: 'commits' },
+      data: { healthScore: 2, algorithmVersion: 'commits', computedAt: expect.any(Date) },
     })
   })
 })
