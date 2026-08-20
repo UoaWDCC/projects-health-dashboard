@@ -11,7 +11,7 @@ export interface ProjectMemberSummary {
 
 export async function getProjectMembers(slug: string): Promise<ProjectMemberSummary[]> {
   'use cache'
-  unstable_cacheLife('days')
+  unstable_cacheLife('minutes')
   unstable_cacheTag('projects')
 
   const members = await db.projectMember.findMany({
