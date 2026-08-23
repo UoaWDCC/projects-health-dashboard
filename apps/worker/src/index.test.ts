@@ -9,6 +9,9 @@ vi.mock('./jobs/discord', () => ({
 vi.mock('./lib/health-score', () => ({
   computeHealthScoresForActiveProjects: vi.fn(() => Promise.resolve()),
 }))
+vi.mock('./lib/velocity', () => ({
+  computeVelocityForActiveProjects: vi.fn(() => Promise.resolve()),
+}))
 vi.mock('./lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
@@ -22,6 +25,7 @@ vi.mock('./lib/date-utils', () => ({
 import { main } from './index'
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
+import { computeVelocityForActiveProjects } from './lib/velocity'
 import { logger } from './lib/logger'
 
 const SUCCESS_LOG = 'Weekly ingestion complete'
@@ -65,5 +69,26 @@ describe('main', () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Weekly ingestion completed with errors')
     )
+  })
+
+  it('computes velocity for the previous and current week once ingestion succeeds', async () => {
+    vi.mocked(runGitHubIngestion).mockResolvedValue(undefined)
+
+    await main()
+
+    // getCollectionWindow is mocked to always return the same fixed week regardless
+    // of its argument, so both prevWeekStart and weekStart resolve to that week here.
+    expect(computeVelocityForActiveProjects).toHaveBeenCalledWith([
+      new Date('2026-05-04T00:00:00Z'),
+      new Date('2026-05-04T00:00:00Z'),
+    ])
+  })
+
+  it('skips velocity computation when GitHub ingestion fails', async () => {
+    vi.mocked(runGitHubIngestion).mockRejectedValue(new Error('boom'))
+
+    await main()
+
+    expect(computeVelocityForActiveProjects).not.toHaveBeenCalled()
   })
 })

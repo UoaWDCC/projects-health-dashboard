@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { formulaSchema } from '@/lib/schemas/admin'
 import { hasRole } from '@/lib/auth'
 import { recomputeAllHealthScores } from '@/lib/admin/health-score'
+import { recomputeAllVelocity } from '@/lib/admin/velocity'
 
 const VALID_TYPES = ['health', 'mvp'] as const
 type FormulaType = (typeof VALID_TYPES)[number]
@@ -77,6 +78,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
 
   if (type === 'health') {
     await recomputeAllHealthScores(validated.data)
+    // Health scores just changed for every week, so velocity (which is derived from
+    // them) must be recalculated too.
+    await recomputeAllVelocity()
   }
 
   return NextResponse.json({ formula: config.value as string, updatedAt: config.updatedAt })
