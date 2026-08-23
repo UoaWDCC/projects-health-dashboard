@@ -130,3 +130,23 @@ export const formulaSchema = z
     },
     { message: 'Formula must evaluate to a finite number' }
   )
+
+// -- Struggling-Project Thresholds --
+
+export const HEALTH_SCORE_THRESHOLD_MIN = 0
+export const HEALTH_SCORE_THRESHOLD_MAX = 100_000
+
+// threshold must be between specified range
+export const healthScoreThresholdSchema = z
+  .number({ error: 'Must be a number' })
+  .finite('Must be a finite number')
+  .min(HEALTH_SCORE_THRESHOLD_MIN, `Must be at least ${HEALTH_SCORE_THRESHOLD_MIN}`)
+  .max(HEALTH_SCORE_THRESHOLD_MAX, `Must be at most ${HEALTH_SCORE_THRESHOLD_MAX.toLocaleString()}`)
+
+// threshold input must be a string that can be coerced to a number and validated against the threshold schema
+export const healthScoreThresholdInputSchema = z
+  .string()
+  .trim()
+  .min(1, 'Threshold is required')
+  .pipe(z.coerce.number({ error: 'Must be a number' }))
+  .pipe(healthScoreThresholdSchema)

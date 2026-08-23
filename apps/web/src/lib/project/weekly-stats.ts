@@ -1,4 +1,19 @@
 import { db } from '@repo/db'
+import { math } from '../admin/formula'
+
+// Maps DB field names to the variables in the score formula.
+const toScope = (contribution: {
+  commits: number
+  prsMerged: number
+  discordMessages: number
+  linesAdded: number
+  linesRemoved: number
+}) => ({
+  prs: contribution.prsMerged,
+  lines_changed: contribution.linesAdded + contribution.linesRemoved,
+  discord_messages: contribution.discordMessages,
+  commits: contribution.commits,
+})
 
 export async function getProjectWeeklyMvp(slug: string) {
   const latest = await db.memberWeeklyContribution.findFirst({
@@ -7,6 +22,17 @@ export async function getProjectWeeklyMvp(slug: string) {
   })
   if (!latest) return null
 
+  const formula = await db.config.findFirst({
+    where: { key: 'mvpFormula' },
+    select: { value: true },
+  })
+
+  if (!formula || typeof formula.value !== 'string') {
+    return null
+  }
+
+  const compiledFormula = math.compile(formula.value)
+
   const contributions = await db.memberWeeklyContribution.findMany({
     where: {
       weekStart: latest.weekStart,
@@ -14,7 +40,10 @@ export async function getProjectWeeklyMvp(slug: string) {
     },
     select: {
       linesAdded: true,
+      linesRemoved: true,
       commits: true,
+      prsMerged: true,
+      discordMessages: true,
       projectMember: {
         select: {
           displayName: true,
@@ -26,18 +55,46 @@ export async function getProjectWeeklyMvp(slug: string) {
 
   if (contributions.length === 0) return null
 
-  return contributions.reduce((mvp, c) => {
-    const displayName = c.projectMember.displayName ?? c.projectMember.person.displayName
-    const mvpName = mvp.projectMember.displayName ?? mvp.projectMember.person.displayName
-    if (
-      c.linesAdded > mvp.linesAdded ||
-      (c.linesAdded === mvp.linesAdded && c.commits > mvp.commits) ||
-      (c.linesAdded === mvp.linesAdded && c.commits === mvp.commits && displayName < mvpName)
-    ) {
-      return c
+  let mvp: ((typeof contributions)[number] & { score: number }) | null = null
+
+  // Iterate through contributions and determine the MVP
+  for (const contribution of contributions) {
+    const rawScore = compiledFormula.evaluate(toScope(contribution))
+    let score: number
+
+    try {
+      score = typeof rawScore === 'number' ? rawScore : math.number(rawScore)
+    } catch {
+      console.error(
+        `MVP formula produced a non-numeric score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+      )
+      continue
     }
-    return mvp
-  })
+
+    if (!Number.isFinite(score)) {
+      console.error(
+        `MVP formula produced a non-finite score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+      )
+      continue
+    }
+
+    if (
+      !mvp ||
+      score > mvp.score ||
+      (score === mvp.score &&
+        (contribution.linesAdded > mvp.linesAdded ||
+          (contribution.linesAdded === mvp.linesAdded && contribution.commits > mvp.commits) ||
+          (contribution.linesAdded === mvp.linesAdded &&
+            contribution.commits === mvp.commits &&
+            (contribution.projectMember.displayName ??
+              contribution.projectMember.person.displayName) <
+              (mvp.projectMember.displayName ?? mvp.projectMember.person.displayName))))
+    ) {
+      mvp = { ...contribution, score }
+    }
+  }
+
+  return mvp
 }
 
 export interface TeamMemberStats {

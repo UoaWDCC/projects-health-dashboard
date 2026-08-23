@@ -16,7 +16,8 @@ import { getLatestLiveCommits } from '@/actions/live-commits'
 
 const DESKTOP_SIDE_PADDING = 'max(0px, calc(136px - 5vw))'
 
-const CARD_GROUP_INSET = 'max(0px, calc(((100% - 32px) / 3 - 420px) / 2))'
+// 420px card width * 3 + 16px gap-4 * 2 — keep in sync with ProjectCard.tsx's max-w-[420px].
+const DESKTOP_GRID_MAX_WIDTH = 'max-w-[1292px]'
 
 export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
@@ -54,11 +55,8 @@ export default async function PublicDashboardPage() {
             style={{ paddingLeft: DESKTOP_SIDE_PADDING, paddingRight: DESKTOP_SIDE_PADDING }}
           >
             {/* ACTIVE PROJECTS */}
-            <div className="w-full">
-              <div
-                className="w-full flex flex-row items-baseline gap-6"
-                style={{ paddingLeft: CARD_GROUP_INSET }}
-              >
+            <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
+              <div className="w-full flex flex-row items-baseline gap-6">
                 <h1 className="text-wdcc-oshan font-extrabold tracking-tight !leading-none m-0 text-[2.25rem]">
                   Active Projects
                 </h1>
@@ -71,10 +69,7 @@ export default async function PublicDashboardPage() {
               <DesktopProjectGrid projects={projectGridItems} />
             </div>
             {/* LIVE COMMIT FEED */}
-            <div
-              className="w-full"
-              style={{ paddingLeft: CARD_GROUP_INSET, paddingRight: CARD_GROUP_INSET }}
-            >
+            <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
               <LiveCommitFeed />
             </div>
           </div>
