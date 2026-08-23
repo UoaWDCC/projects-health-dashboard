@@ -16,6 +16,7 @@
   "dependencies": {
     "@repo/db": "workspace:*",
     "@repo/github": "workspace:*",
+    "mathjs": "^15.2.0",
     "octokit": "^5.0.5"
   },
   "devDependencies": {
