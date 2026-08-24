@@ -181,6 +181,7 @@ export interface ProjectWeeklyStats {
   linesChanged: number[]
   discordMessages: number[]
   healthScore: number[]
+  velocity: number[]
 }
 
 export interface TeamWeeklyStats extends ProjectWeeklyStats {
@@ -218,6 +219,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
       linesRemoved: true,
       discordMessages: true,
       healthScore: true,
+      velocityScore: true,
     },
   })
 
@@ -228,6 +230,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
     linesChanged: rows.map((r) => r.linesAdded + r.linesRemoved),
     discordMessages: rows.map((r) => r.discordMessages),
     healthScore: rows.map((r) => r.healthScore ?? 0),
+    velocity: rows.map((r) => r.velocityScore ?? 0),
   }
 }
 
@@ -253,6 +256,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
       linesRemoved: true,
       discordMessages: true,
       healthScore: true,
+      velocityScore: true,
       project: {
         select: { slug: true, name: true },
       },
@@ -274,6 +278,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
         linesChanged: [],
         discordMessages: [],
         healthScore: [],
+        velocity: [],
       }
       byProject.set(slug, team)
     }
@@ -284,6 +289,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
     team.linesChanged.push(r.linesAdded + r.linesRemoved)
     team.discordMessages.push(r.discordMessages)
     team.healthScore.push(r.healthScore ?? 0)
+    team.velocity.push(r.velocityScore ?? 0)
   }
 
   return Array.from(byProject.values())
