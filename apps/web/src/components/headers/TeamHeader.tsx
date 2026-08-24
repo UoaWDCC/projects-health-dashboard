@@ -8,16 +8,10 @@ import type { ProjectHeaderData } from '@/lib/project/projects'
 interface TeamHeaderProps {
   project: ProjectHeaderData
   isAdmin?: boolean
-  activeProjectCount?: number
   onDeleteProject?: () => void
 }
 
-export default function TeamHeader({
-  project,
-  isAdmin = false,
-  activeProjectCount,
-  onDeleteProject,
-}: TeamHeaderProps) {
+export default function TeamHeader({ project, isAdmin = false, onDeleteProject }: TeamHeaderProps) {
   const memberCount = project._count.members
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -38,13 +32,6 @@ export default function TeamHeader({
       {/* MOBILE*/}
       <div className="lg:hidden bg-wdcc-blue-light rounded-2xl mx-5 sm:mx-10 mt-4 overflow-hidden">
         <div className="p-6 sm:p-8">
-          {isAdmin && activeProjectCount !== undefined && (
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 mb-4 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-              {activeProjectCount} active project{activeProjectCount !== 1 ? 's' : ''}
-            </div>
-          )}
-
           <div className="flex flex-row items-center gap-5">
             <div className="w-[72px] h-[72px] bg-[#d9d9d9] overflow-hidden rounded-[20px] shrink-0">
               {project.imageUrl && (
@@ -114,47 +101,49 @@ export default function TeamHeader({
               </span>
             </div>
 
-            <div className="flex items-start">
-              <div className="xl:w-[127px] xl:h-[127px] lg:w-[96px] lg:h-[96px] w-[72px] h-[72px] bg-[#d9d9d9] overflow-hidden rounded-[20px] shrink-0">
-                {project.imageUrl && (
-                  <Image
-                    src={project.imageUrl}
-                    alt={project.name}
-                    width={127}
-                    height={127}
-                    className="w-full h-full object-cover"
-                  />
-                )}
+            <div className="flex items-start justify-between gap-8">
+              <div className="flex items-start">
+                <div className="xl:w-[127px] xl:h-[127px] lg:w-[96px] lg:h-[96px] w-[72px] h-[72px] bg-[#d9d9d9] overflow-hidden rounded-[20px] shrink-0">
+                  {project.imageUrl && (
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.name}
+                      width={127}
+                      height={127}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+
+                <div className="ml-[49px] flex-1 min-w-0">
+                  <h1 className="font-extrabold xl:text-[48px] lg:text-[36px] text-[28px] font-sans leading-none">
+                    {project.name}
+                  </h1>
+                  <p className="xl:text-[20px] lg:text-[16px] text-[14px] xl:mt-[20px] md:mt-[16px] font-mono text-wdcc-grey max-w-[70%]">
+                    {project.description && <span>{project.description}</span>}
+                  </p>
+                </div>
               </div>
 
-              <div className="ml-[49px] flex-1 min-w-0">
-                <h1 className="font-extrabold xl:text-[64px] lg:text-[48px] text-[36px] font-sans leading-tight">
-                  {project.name}
-                </h1>
-                <p className="xl:text-[20px] lg:text-[16px] text-[14px] xl:mt-[20px] md:mt-[16px] font-mono text-wdcc-grey max-w-[70%]">
-                  {project.description && <span>{project.description}</span>}
-                </p>
-              </div>
+              {isAdmin && (
+                <div className="flex flex-col gap-3 shrink-0">
+                  <Link
+                    href={`/project/${project.slug}`}
+                    className="text-center rounded-full bg-gradient-to-b from-[#252C48] to-[#161B30] text-white text-sm font-semibold px-10 py-4 hover:brightness-200 transition-colors"
+                  >
+                    Edit details
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="rounded-full bg-white/50 text-red-700 text-sm font-bold px-10 py-4 border border-[#DAA5A5] hover:bg-red-50 transition-colors"
+                  >
+                    Delete project
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-
-          {isAdmin && (
-            <div className="flex flex-col gap-3 shrink-0 ml-8 mt-1">
-              <Link
-                href={`/project/${project.slug}`}
-                className="text-center rounded-full bg-gradient-to-b from-[#252C48] to-[#161B30] text-white text-sm font-semibold px-10 py-4 hover:brightness-200 transition-colors"
-              >
-                Edit details
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="rounded-full bg-white/50 text-red-700 text-sm font-bold px-10 py-4 border border-[#DAA5A5] hover:bg-red-50 transition-colors"
-              >
-                Delete project
-              </button>
-            </div>
-          )}
         </div>
 
         {!isAdmin && (

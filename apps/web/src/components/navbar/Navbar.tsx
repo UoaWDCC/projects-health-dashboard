@@ -63,7 +63,7 @@ export async function Navbar() {
             {(isExec || isAdmin) && (
               <Link
                 href="/exec-dashboard"
-                className="hidden lg:block rounded-full bg-wdcc-oshan text-white hover:bg-gray-300 px-4 py-1.5 whitespace-nowrap"
+                className="hidden lg:block rounded-full bg-wdcc-oshan text-white hover:bg-gray-600 px-4 py-1.5 whitespace-nowrap"
               >
                 Exec dashboard
               </Link>
@@ -71,7 +71,7 @@ export async function Navbar() {
             {isAdmin && (
               <Link
                 href="/admin-dashboard"
-                className="hidden lg:block rounded-full bg-wdcc-oshan text-white hover:bg-gray-300 px-4 py-1.5 whitespace-nowrap"
+                className="hidden lg:block rounded-full bg-wdcc-oshan text-white hover:bg-gray-600 px-4 py-1.5 whitespace-nowrap"
               >
                 Admin dashboard
               </Link>
