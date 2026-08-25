@@ -20,6 +20,7 @@ export default function CreateProjectPage() {
   const [repoInputError, setRepoInputError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageName, setImageName] = useState<string | null>(null)
+  const [hasImage, setHasImage] = useState<boolean>(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -53,8 +54,17 @@ export default function CreateProjectPage() {
     if (!file) return
     setImageName(file.name)
     const reader = new FileReader()
-    reader.onload = (ev) => setImagePreview(ev.target?.result as string)
+    reader.onload = (ev) => {
+      setImagePreview(ev.target?.result as string)
+      setHasImage(true)
+    }
     reader.readAsDataURL(file)
+  }
+
+  const handleClearImage = () => {
+    setImageName(null)
+    setImagePreview(null)
+    setHasImage(false)
   }
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
@@ -331,42 +341,57 @@ export default function CreateProjectPage() {
             <SectionLabel color="pink" icon="image">
               Project Image
             </SectionLabel>
-
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-[1.5px] border-dashed border-wdcc-kelvin/40 rounded-2xl p-6 text-center cursor-pointer hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70 transition-all"
-            >
-              {imagePreview ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+            <div className="flex gap-2 w-full">
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 border-[1.5px] border-dashed border-wdcc-kelvin/40 rounded-2xl p-6 text-center cursor-pointer hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70 transition-all"
+              >
+                {imagePreview ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-mono text-sm font-semibold text-wdcc-oshan">{imageName}</p>
+                      <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
+                        Click to change
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-mono text-sm font-semibold text-wdcc-oshan">{imageName}</p>
-                    <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
-                      Click to change
+                ) : (
+                  <>
+                    <p className="font-mono text-sm text-wdcc-grey-light">
+                      Click to upload project image
                     </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="font-mono text-sm text-wdcc-grey-light">
-                    Click to upload project image
-                  </p>
-                  <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
-                    PNG, JPG, WEBP — max 4MB
-                  </p>
-                </>
+                    <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
+                      PNG, JPG, WEBP — max 4MB
+                    </p>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  name="image"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </div>
+              {hasImage && (
+                <button
+                  type="button"
+                  onClick={handleClearImage}
+                  disabled={!hasImage}
+                  className="shrink-0 self-stretch font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 disabled:opacity-40 disabled:cursor-not-allowed border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
+                >
+                  Clear Image
+                </button>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                name="image"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
-              />
             </div>
 
             {/* Status */}
