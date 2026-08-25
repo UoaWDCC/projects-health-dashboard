@@ -16,6 +16,11 @@ export const discordSnowflake = z
   .min(1, 'Snowflake ID is required')
   .regex(/^\d{17,19}$/, 'Must be a 17-19 digit snowflake ID')
 
+// --- Image upload ---
+
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 // --- Project ---
 
 export const createProjectSchema = z.object({
