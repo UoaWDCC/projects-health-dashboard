@@ -62,7 +62,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
   }
 
   const config = await db.config.upsert({
-    where: {  
+    where: {
       scope_key: { scope: GLOBAL_SCOPE, key: formulaKey(type) },
     },
     update: {
@@ -75,6 +75,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ type
       value: validated.data,
     },
   })
+
+  if (type === 'health') {
+    await recomputeAllHealthScores(validated.data)
+    await recomputeAllVelocity()
+  }
 
   return NextResponse.json({ formula: config.value as string, updatedAt: config.updatedAt })
 }
