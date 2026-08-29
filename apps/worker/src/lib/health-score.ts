@@ -3,63 +3,9 @@
 
 import { db } from '@repo/db'
 import { logger } from './logger'
+import { buildFormulaScope, evaluateFormula, getFormula } from './formula'
 
-// Dynamic import avoids a static `require('mathjs')` under this project's CJS/node16
-// module resolution — mathjs is ESM-only. Mirrors the same workaround already used
-// for octokit in packages/github/src/index.ts.
-type MathInstance = ReturnType<
-  typeof import('mathjs', { with: { 'resolution-mode': 'import' } }).create
->
-
-let mathInstance: MathInstance | null = null
-
-async function getMath(): Promise<MathInstance> {
-  if (!mathInstance) {
-    const { create, all } = await import('mathjs')
-    mathInstance = create(all)
-  }
-  return mathInstance
-}
-
-const GLOBAL_SCOPE = 'GLOBAL'
 const HEALTH_FORMULA_KEY = 'healthFormula'
-
-type WeeklyStatsCounts = {
-  commits: number
-  prsMerged: number
-  linesAdded: number
-  linesRemoved: number
-  discordMessages: number
-}
-
-function buildFormulaScope(stats: WeeklyStatsCounts): Record<string, number> {
-  return {
-    commits: stats.commits,
-    prs: stats.prsMerged,
-    lines_changed: stats.linesAdded + stats.linesRemoved,
-    discord_messages: stats.discordMessages,
-  }
-}
-
-async function evaluateFormula(
-  formula: string,
-  scope: Record<string, number>
-): Promise<number | null> {
-  try {
-    const math = await getMath()
-    const result = math.compile(formula).evaluate(scope)
-    return typeof result === 'number' && Number.isFinite(result) ? result : null
-  } catch {
-    return null
-  }
-}
-
-export async function getHealthFormula(): Promise<string | null> {
-  const config = await db.config.findUnique({
-    where: { scope_key: { scope: GLOBAL_SCOPE, key: HEALTH_FORMULA_KEY } },
-  })
-  return typeof config?.value === 'string' ? config.value : null
-}
 
 export async function computeHealthScoreForWeek(
   projectId: string,
@@ -99,7 +45,7 @@ export async function computeHealthScoreForWeek(
 }
 
 export async function computeHealthScoresForActiveProjects(weekStarts: Date[]): Promise<void> {
-  const formula = await getHealthFormula()
+  const formula = await getFormula(HEALTH_FORMULA_KEY)
   if (!formula) {
     logger.info('No health formula configured; skipping health score computation')
     return
