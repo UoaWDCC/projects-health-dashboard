@@ -62,6 +62,7 @@ export default function CreateProjectPage() {
   }
 
   const handleClearImage = () => {
+    fileInputRef.current = null
     setImageName(null)
     setImagePreview(null)
     setHasImage(false)
@@ -386,7 +387,6 @@ export default function CreateProjectPage() {
                 <button
                   type="button"
                   onClick={handleClearImage}
-                  disabled={!hasImage}
                   className="shrink-0 self-stretch font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 disabled:opacity-40 disabled:cursor-not-allowed border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
                 >
                   Clear Image
