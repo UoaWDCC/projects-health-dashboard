@@ -62,7 +62,7 @@ export default function CreateProjectPage() {
   }
 
   const handleClearImage = () => {
-    fileInputRef.current = null
+    fileInputRef.current!.value = ''
     setImageName(null)
     setImagePreview(null)
     setHasImage(false)
