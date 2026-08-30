@@ -1,9 +1,11 @@
 import { hasRole } from '@/lib/auth'
-import { createProjectSchema } from '@/lib/schemas/admin'
+import { createProjectSchema, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import { db } from '@repo/db'
 import { getInstallationOctokit } from '@repo/github'
 import { revalidateTag } from 'next/cache'
 import { uploadImage } from '@/lib/storage'
+
+const MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
 
 export interface ValidatedRepo {
   owner: string
@@ -120,6 +122,16 @@ export async function validateSnowflakeExists(snowflakeId: string) {
 export async function POST(request: Request) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  // Prevent accidentl OOM's since formData() bufferes incoming into memory.
+  // Won't do anything against requests without the content-length header.
+  const contentLength = Number(request.headers.get('content-length') ?? 0)
+  if (contentLength > MAX_REQUEST_BYTES) {
+    return Response.json(
+      { error: `Request too large. Maximum image size is ${MAX_IMAGE_BYTES / 1024 / 1024}MB` },
+      { status: 413 }
+    )
   }
 
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
@@ -268,6 +280,7 @@ export async function POST(request: Request) {
 
     return Response.json(newProject, { status: 201 })
   } catch (error) {
+    console.error('Project creation failed:', error)
     return Response.json(
       { error: error instanceof Error ? error.message : 'Failed to create project' },
       { status: 500 }
