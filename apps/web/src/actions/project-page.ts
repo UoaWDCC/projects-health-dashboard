@@ -39,6 +39,13 @@ export async function updateRepository(
     throw new Error(await responseErrorMessage(githubError, `Failed to validate ${link}`))
   }
 
+  const currentRepo = await db.gitHubRepository.findUnique({
+    where: { id: repositoryId },
+  })
+  if (!currentRepo) {
+    throw new Error('Repository not found')
+  }
+
   const existingRepo = await db.gitHubRepository.findFirst({
     where: {
       owner: data.owner,
@@ -53,11 +60,41 @@ export async function updateRepository(
     )
   }
 
-  const repo = await db.gitHubRepository.update({
-    where: { id: repositoryId },
-    data,
-    include: { project: { select: { slug: true } } },
+  // owner/name is globally unique (@@unique([owner, name])) — an inactive row
+  // left behind by another project (or this project's own history) must be
+  // reclaimed, not updated onto in place, or this throws a P2002
+  // unique-constraint violation. Mirrors the reclaim logic in the PATCH
+  // route's repo-create branch.
+  const orphanedRepo = await db.gitHubRepository.findFirst({
+    where: {
+      owner: data.owner,
+      name: data.name,
+      isActive: false,
+      id: { not: repositoryId },
+    },
   })
+
+  const repo = orphanedRepo
+    ? await db.$transaction(async (tx) => {
+        await tx.gitHubRepository.update({
+          where: { id: repositoryId },
+          data: { isActive: false },
+        })
+        return tx.gitHubRepository.update({
+          where: { id: orphanedRepo.id },
+          data: {
+            projectId: currentRepo.projectId,
+            installationId: currentRepo.installationId,
+            isActive: true,
+          },
+          include: { project: { select: { slug: true } } },
+        })
+      })
+    : await db.gitHubRepository.update({
+        where: { id: repositoryId },
+        data,
+        include: { project: { select: { slug: true } } },
+      })
 
   revalidatePath(`/${repo.project.slug}`)
 }
@@ -77,6 +114,13 @@ export async function updateChannel(channelId: string, data: { externalId: strin
     )
   }
 
+  const currentChannel = await db.discordChannel.findUnique({
+    where: { id: channelId },
+  })
+  if (!currentChannel) {
+    throw new Error('Channel not found')
+  }
+
   const existingChannel = await db.discordChannel.findUnique({
     where: { externalId: data.externalId },
   })
@@ -86,11 +130,32 @@ export async function updateChannel(channelId: string, data: { externalId: strin
     )
   }
 
-  const channel = await db.discordChannel.update({
-    where: { id: channelId },
-    data,
-    include: { project: { select: { slug: true } } },
-  })
+  const orphanedChannel =
+    existingChannel && !existingChannel.isActive && existingChannel.id !== channelId
+      ? existingChannel
+      : null
+
+  const channel = orphanedChannel
+    ? await db.$transaction(async (tx) => {
+        await tx.discordChannel.update({
+          where: { id: channelId },
+          data: { isActive: false },
+        })
+        return tx.discordChannel.update({
+          where: { id: orphanedChannel.id },
+          data: {
+            projectId: currentChannel.projectId,
+            name: currentChannel.name,
+            isActive: true,
+          },
+          include: { project: { select: { slug: true } } },
+        })
+      })
+    : await db.discordChannel.update({
+        where: { id: channelId },
+        data,
+        include: { project: { select: { slug: true } } },
+      })
 
   revalidatePath(`/${channel.project.slug}`)
 }

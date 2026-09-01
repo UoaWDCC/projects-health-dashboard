@@ -101,7 +101,7 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
               </span>
             </div>
 
-            <div className="flex items-start justify-between gap-8">
+            <div className="mt-10 flex items-start justify-between gap-8">
               <div className="flex items-start">
                 <div className="xl:w-[127px] xl:h-[127px] lg:w-[96px] lg:h-[96px] w-[72px] h-[72px] bg-[#d9d9d9] overflow-hidden rounded-[20px] shrink-0">
                   {project.imageUrl && (
@@ -144,24 +144,6 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
               )}
             </div>
           </div>
-
-          {isAdmin && (
-            <div className="flex flex-col gap-3 shrink-0 ml-8 mt-1">
-              <Link
-                href={`/project/${project.slug}`}
-                className="text-center rounded-full bg-gradient-to-b from-[#252C48] to-[#161B30] text-white text-sm font-semibold px-10 py-4 hover:brightness-200 transition-colors"
-              >
-                Edit details
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="rounded-full bg-white/50 text-red-700 text-sm font-bold px-10 py-4 border border-[#DAA5A5] hover:bg-red-50 transition-colors"
-              >
-                Delete project
-              </button>
-            </div>
-          )}
         </div>
 
         {!isAdmin && (
