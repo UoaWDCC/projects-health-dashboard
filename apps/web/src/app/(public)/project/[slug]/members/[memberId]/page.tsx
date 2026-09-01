@@ -26,7 +26,8 @@ export default async function MemberContributionPage({
   // Exec-only page — everyone else goes back to the team members page.
   // ADMIN is treated as a superset of EXEC, matching the (exec) route group.
   const roles = await getUserRoles()
-  if (!roles.includes(Role.EXEC) && !roles.includes(Role.ADMIN)) {
+  const isAdmin = roles.includes(Role.ADMIN)
+  if (!roles.includes(Role.EXEC) && !isAdmin) {
     redirect(`/project/${slug}/members`)
   }
 
@@ -75,9 +76,19 @@ export default async function MemberContributionPage({
             className="w-14 h-14 lg:w-20 lg:h-20 shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="font-extrabold tracking-tight !leading-none text-[clamp(1.75rem,4vw,3rem)]">
-              {member.name}
-            </h1>
+            <div className="flex items-end gap-3">
+              <h1 className="font-extrabold tracking-tight !leading-none text-[clamp(1.75rem,4vw,3rem)]">
+                {member.name}
+              </h1>
+              {isAdmin && (
+                <Link
+                  href={`/projects/${slug}/members/${memberId}/edit`}
+                  className="shrink-0 rounded-full bg-wdcc-oshan px-4 py-1.5 text-sm text-white hover:bg-gray-300 transition-colors"
+                >
+                  Edit Details
+                </Link>
+              )}
+            </div>
             <p className="mt-2 font-mono text-sm lg:text-base text-wdcc-grey truncate">
               {member.username ? `@${member.username} · ` : ''}
               {project.name}
