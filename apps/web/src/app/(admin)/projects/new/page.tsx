@@ -6,8 +6,43 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
 import { z } from 'zod'
-import { createProjectSchema, githubRepoUrl } from '@/lib/schemas/admin'
+import {
+  ALLOWED_IMAGE_TYPES,
+  createProjectSchema,
+  githubRepoUrl,
+  MAX_IMAGE_BYTES,
+} from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
+
+const FIELD_ERROR_SLOTS = new Set(['projectName', 'githubLinks', 'discordSnowflakeIds'])
+
+async function readErrorMessage(response: Response): Promise<string> {
+  const fallback = `Request failed (${response.status} ${response.statusText})`.trim()
+
+  let body: string
+  try {
+    body = await response.text()
+  } catch (err) {
+    console.error('Could not read error response body:', err)
+    return fallback
+  }
+
+  if (!body.trim()) {
+    console.error(`Empty error response (${response.status})`)
+    return fallback
+  }
+
+  try {
+    const data = JSON.parse(body)
+    const message = data?.error ?? data?.message
+    if (typeof message === 'string' && message.trim()) return message
+    console.error(`Unexpected JSON error shape (${response.status}):`, data)
+    return fallback
+  } catch {
+    console.error(`Non-JSON error response (${response.status}):`, body.slice(0, 500))
+    return fallback
+  }
+}
 
 export default function CreateProjectPage() {
   const router = useRouter()
@@ -20,9 +55,12 @@ export default function CreateProjectPage() {
   const [repoInputError, setRepoInputError] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageName, setImageName] = useState<string | null>(null)
+  const [hasImage, setHasImage] = useState<boolean>(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const addRepo = () => {
     const trimmed = repoInput.trim()
@@ -51,14 +89,47 @@ export default function CreateProjectPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError(
+        `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB - maximum is ${MAX_IMAGE_BYTES / 1024 / 1024}MB`
+      )
+      setImagePreview(null)
+      setImageName(null)
+      e.target.value = ''
+      return
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageError('Unsupported file type - use PNG, JPG or WEBP')
+      setHasImage(false)
+      setImagePreview(null)
+      setImageName(null)
+      e.target.value = ''
+      return
+    }
+
+    setImageError(null)
     setImageName(file.name)
     const reader = new FileReader()
-    reader.onload = (ev) => setImagePreview(ev.target?.result as string)
+    reader.onload = (ev) => {
+      setImagePreview(ev.target?.result as string)
+      setHasImage(true)
+    }
     reader.readAsDataURL(file)
+  }
+
+  const handleClearImage = () => {
+    fileInputRef.current!.value = ''
+    setImageName(null)
+    setImagePreview(null)
+    setHasImage(false)
   }
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (isSubmitting || success) return
+
     setError(null)
 
     const formData = new FormData(event.currentTarget)
@@ -81,6 +152,10 @@ export default function CreateProjectPage() {
         githubLinks: errors.githubLinks?.[0] ?? '',
         discordSnowflakeIds: errors.discordSnowflakeIds?.[0] ?? '',
       })
+      const unmapped = validation.error.issues.find(
+        (issue) => !FIELD_ERROR_SLOTS.has(String(issue.path[0] ?? ''))
+      )
+      if (unmapped) setError(unmapped.message)
       return
     }
 
@@ -91,17 +166,23 @@ export default function CreateProjectPage() {
       formData.append('discordChannelNames', c.name)
     })
 
-    const response = await fetch('/api/project', { method: 'POST', body: formData })
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/project', { method: 'POST', body: formData })
 
-    if (!response.ok) {
-      const text = await response.text()
-      const data = JSON.parse(text)
-      setError(data?.error ?? data?.message ?? text)
-      return
+      if (!response.ok) {
+        setError(await readErrorMessage(response))
+        return
+      }
+
+      setSuccess(true)
+      setTimeout(() => router.replace('/admin-dashboard'), 1200)
+    } catch (err) {
+      console.error('Project creation request failed:', err)
+      setError('Could not reach the server. Check your connection and try again.')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setSuccess(true)
-    setTimeout(() => router.replace('/admin-dashboard'), 1200)
   }
 
   return (
@@ -238,8 +319,6 @@ export default function CreateProjectPage() {
                   Add
                 </button>
               </div>
-              {/* Hidden input for first/required repo */}
-              <input type="hidden" name="githubLink" value={repos[0] ?? ''} />
               <FieldError message={fieldErrors.githubLinks} />
 
               {repos.length > 0 && (
@@ -329,44 +408,68 @@ export default function CreateProjectPage() {
 
             {/* Project Image */}
             <SectionLabel color="pink" icon="image">
-              Project Image
+              Project Image{' '}
+              <span className="text-wdcc-grey-light normal-case tracking-normal">(4MB max)</span>
             </SectionLabel>
-
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-[1.5px] border-dashed border-wdcc-kelvin/40 rounded-2xl p-6 text-center cursor-pointer hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70 transition-all"
-            >
-              {imagePreview ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-mono text-sm font-semibold text-wdcc-oshan">{imageName}</p>
-                    <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
-                      Click to change
-                    </p>
-                  </div>
+            <div className="flex gap-2 w-full">
+              <div className="w-full">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-[1.5px] border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                    imageError
+                      ? 'border-wdcc-kelvin bg-wdcc-kelvin/5'
+                      : 'border-wdcc-kelvin/40 hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70'
+                  }`}
+                >
+                  {imagePreview ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-mono text-sm font-semibold text-wdcc-oshan">
+                          {imageName}
+                        </p>
+                        <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
+                          Click to change
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-mono text-sm text-wdcc-grey-light">
+                        Click to upload project image
+                      </p>
+                      <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
+                        PNG, JPG, WEBP — max 4MB
+                      </p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    name="image"
+                    accept={ALLOWED_IMAGE_TYPES.join(',')}
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
                 </div>
-              ) : (
-                <>
-                  <p className="font-mono text-sm text-wdcc-grey-light">
-                    Click to upload project image
-                  </p>
-                  <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
-                    PNG, JPG, WEBP — max 4MB
-                  </p>
-                </>
+                <FieldError message={imageError ?? undefined} />
+              </div>
+              {hasImage && (
+                <button
+                  type="button"
+                  onClick={handleClearImage}
+                  className="shrink-0 self-stretch font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 disabled:opacity-40 disabled:cursor-not-allowed border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
+                >
+                  Clear Image
+                </button>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                name="image"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
-              />
             </div>
 
             {/* Status */}
@@ -391,10 +494,11 @@ export default function CreateProjectPage() {
               </Link>
               <button
                 type="submit"
-                className="flex items-center gap-2 font-mono text-sm font-semibold text-white bg-wdcc-oshan hover:bg-wdcc-oshan/80 transition-all duration-150 rounded-xl px-6 py-2.5"
+                disabled={isSubmitting || success}
+                className="flex items-center gap-2 font-mono text-sm font-semibold text-white bg-wdcc-oshan hover:bg-wdcc-oshan/80 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-wdcc-oshan transition-all duration-150 rounded-xl px-6 py-2.5"
               >
-                <span>→</span>
-                Create Project
+                <span>{isSubmitting ? '⋯' : '→'}</span>
+                {isSubmitting ? 'Creating…' : 'Create Project'}
               </button>
             </div>
           </div>

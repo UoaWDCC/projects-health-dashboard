@@ -1,4 +1,4 @@
-import { db } from '@repo/db'
+import { db, pickMVP } from '@repo/db'
 import { math } from '../admin/formula'
 
 // Maps DB field names to the variables in the score formula.
@@ -55,46 +55,32 @@ export async function getProjectWeeklyMvp(slug: string) {
 
   if (contributions.length === 0) return null
 
-  let mvp: ((typeof contributions)[number] & { score: number }) | null = null
-
-  // Iterate through contributions and determine the MVP
-  for (const contribution of contributions) {
+  const memberScores = contributions.map((contribution) => {
+    const displayName =
+      contribution.projectMember.displayName ?? contribution.projectMember.person.displayName
     const rawScore = compiledFormula.evaluate(toScope(contribution))
-    let score: number
 
+    let score: number | null
     try {
       score = typeof rawScore === 'number' ? rawScore : math.number(rawScore)
     } catch {
       console.error(
-        `MVP formula produced a non-numeric score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+        `MVP formula produced a non-numeric score (${rawScore}) for person ${displayName} in project ${slug}`
       )
-      continue
+      score = null
     }
 
-    if (!Number.isFinite(score)) {
+    if (score !== null && !Number.isFinite(score)) {
       console.error(
-        `MVP formula produced a non-finite score (${rawScore}) for person ${contribution.projectMember.displayName ?? contribution.projectMember.person.displayName} in project ${slug}`
+        `MVP formula produced a non-finite score (${rawScore}) for person ${displayName} in project ${slug}`
       )
-      continue
+      score = null
     }
 
-    if (
-      !mvp ||
-      score > mvp.score ||
-      (score === mvp.score &&
-        (contribution.linesAdded > mvp.linesAdded ||
-          (contribution.linesAdded === mvp.linesAdded && contribution.commits > mvp.commits) ||
-          (contribution.linesAdded === mvp.linesAdded &&
-            contribution.commits === mvp.commits &&
-            (contribution.projectMember.displayName ??
-              contribution.projectMember.person.displayName) <
-              (mvp.projectMember.displayName ?? mvp.projectMember.person.displayName))))
-    ) {
-      mvp = { ...contribution, score }
-    }
-  }
+    return { ...contribution, displayName, score }
+  })
 
-  return mvp
+  return pickMVP(memberScores) as (typeof memberScores)[number] | null
 }
 
 export interface TeamMemberStats {
@@ -181,6 +167,7 @@ export interface ProjectWeeklyStats {
   linesChanged: number[]
   discordMessages: number[]
   healthScore: number[]
+  velocity: number[]
 }
 
 export interface TeamWeeklyStats extends ProjectWeeklyStats {
@@ -218,6 +205,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
       linesRemoved: true,
       discordMessages: true,
       healthScore: true,
+      velocityScore: true,
     },
   })
 
@@ -228,6 +216,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
     linesChanged: rows.map((r) => r.linesAdded + r.linesRemoved),
     discordMessages: rows.map((r) => r.discordMessages),
     healthScore: rows.map((r) => r.healthScore ?? 0),
+    velocity: rows.map((r) => r.velocityScore ?? 0),
   }
 }
 
@@ -253,6 +242,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
       linesRemoved: true,
       discordMessages: true,
       healthScore: true,
+      velocityScore: true,
       project: {
         select: { slug: true, name: true },
       },
@@ -274,6 +264,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
         linesChanged: [],
         discordMessages: [],
         healthScore: [],
+        velocity: [],
       }
       byProject.set(slug, team)
     }
@@ -284,6 +275,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
     team.linesChanged.push(r.linesAdded + r.linesRemoved)
     team.discordMessages.push(r.discordMessages)
     team.healthScore.push(r.healthScore ?? 0)
+    team.velocity.push(r.velocityScore ?? 0)
   }
 
   return Array.from(byProject.values())

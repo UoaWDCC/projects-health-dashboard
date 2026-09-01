@@ -1,5 +1,4 @@
-// TODO: Uncomment imports as jobs are implemented
-// import { runLlmAnalysis } from './jobs/llm'
+import { runLlmAnalysis } from './jobs/llm'
 import { runGitHubIngestion } from './jobs/github'
 import { runDiscordIngestion } from './jobs/discord'
 import { computeHealthScoresForActiveProjects } from './lib/health-score'
@@ -45,14 +44,15 @@ export async function main() {
 
   const discordMessages = discordResult === DISCORD_INGESTION_FAILED ? [] : discordResult
 
-  // TODO: await runLlmAnalysis(discordMessages)
-  void discordMessages // placeholder to avoid unused variable error until LLM analysis is implemented
-
   // Only score once both collection jobs have succeeded, so scores are never computed
   // against stats that this week's ingestion failed to write.
   if (githubResult === GITHUB_INGESTION_FAILED || discordResult === DISCORD_INGESTION_FAILED) {
     logger.error('Skipping health score computation: one or more ingestion jobs failed')
   } else {
+    await runLlmAnalysis(weekStart, weekEnd, discordMessages).catch((err: unknown) => {
+      logger.error(`LLM analysis failed: ${err}`)
+    })
+
     const [prevWeekStart] = getCollectionWindow(
       new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000)
     )

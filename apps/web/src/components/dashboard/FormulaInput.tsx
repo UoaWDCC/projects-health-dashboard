@@ -11,7 +11,7 @@ import { formulaSchema } from '@/lib/schemas/admin'
 
 interface MvpApiEntry {
   projectId: string
-  mvp: { displayName: string; linesAdded: number; commits: number }
+  mvp: { displayName: string; linesAdded: number; commits: number; score: number }
 }
 
 const formulaTypography = 'px-4 py-3.5 font-mono text-[0.88rem] leading-[1.7]'
@@ -108,6 +108,9 @@ export default function FormulaInput({
         const entries = (await res.json()) as MvpApiEntry[]
         const best = entries.reduce<MvpApiEntry | null>((top, cur) => {
           if (!top) return cur
+          if (cur.mvp.score !== top.mvp.score) {
+            return cur.mvp.score > top.mvp.score ? cur : top
+          }
           if (cur.mvp.linesAdded !== top.mvp.linesAdded) {
             return cur.mvp.linesAdded > top.mvp.linesAdded ? cur : top
           }

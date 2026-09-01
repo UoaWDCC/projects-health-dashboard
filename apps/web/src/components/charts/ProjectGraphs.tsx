@@ -38,6 +38,11 @@ export default function ProjectGraphs({
         dates={dates}
         dataPoints={stats?.discordMessages ?? []}
       />
+      <LineGraph
+        title="Weekly Velocity"
+        dates={dates}
+        dataPoints={(stats?.velocity ?? []).map(Math.round)}
+      />
     </div>
   )
 }

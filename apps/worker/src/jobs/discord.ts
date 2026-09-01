@@ -47,7 +47,7 @@ interface FetchedMessage {
  * Project data structure for a single project
  * to be returned by the ingestion job.
  */
-interface ProjectData {
+export interface ProjectData {
   projectId: string
   messages: string[]
 }
