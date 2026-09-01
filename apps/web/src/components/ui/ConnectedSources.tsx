@@ -27,28 +27,26 @@ function SourceRow({
 }) {
   const router = useRouter()
 
-  // displayValue is what's actually rendered when not editing. It starts as
-  // `value` but is updated optimistically the moment a save succeeds, since
-  // the `value` prop itself won't change until the parent Server Component
-  // re-renders (which router.refresh() below triggers, but that's async).
   const [displayValue, setDisplayValue] = useState(value)
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Keep in sync if the parent eventually re-renders with fresh server data
-  // (e.g. after router.refresh() resolves, or a full page reload).
   useEffect(() => {
     setDisplayValue(value)
   }, [value])
 
   const handleSave = async () => {
     setIsSaving(true)
+    setError(null)
     try {
       await onSave(draft)
       setDisplayValue(draft)
       setIsEditing(false)
       router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
       setIsSaving(false)
     }
@@ -109,6 +107,7 @@ function SourceRow({
             onClick={() => {
               setDraft(displayValue)
               setIsEditing(true)
+              setError(null)
             }}
             className="text-xs font-mono rounded-lg px-3 py-1.5 shrink-0 bg-white text-wdcc-blue border-2 border-wdcc-blue-light hover:bg-gray-50"
           >
@@ -116,6 +115,8 @@ function SourceRow({
           </button>
         )}
       </div>
+
+      {error && <p className="text-xs font-mono text-red-500 mt-1">{error}</p>}
     </div>
   )
 }
@@ -142,17 +143,15 @@ export default function ConnectedSources({
               label="GITHUB REPOSITORY"
               value={`github.com/${repo.owner}/${repo.name}`}
               onSave={async (newValue) => {
-                // Strips an optional protocol and an optional "github.com/" prefix,
-                // so "github.com/owner/name", "https://github.com/owner/name",
-                // and bare "owner/name" all resolve to the same owner/name pair.
                 const cleaned = newValue
                   .trim()
                   .replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '')
                   .replace(/\/+$/, '')
                 const [owner, name] = cleaned.split('/')
-                if (owner && name) {
-                  await onSaveRepository(repo.id, { owner, name })
+                if (!owner || !name) {
+                  throw new Error('Please enter a valid GitHub URL')
                 }
+                await onSaveRepository(repo.id, { owner, name })
               }}
             />
           ))}

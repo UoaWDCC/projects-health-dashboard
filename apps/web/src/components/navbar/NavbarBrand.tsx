@@ -28,10 +28,10 @@ export function NavbarBrand() {
       {/* Logo + wordmark */}
       <Link
         href="/"
-        className={`items-center gap-4 xl:gap-6 ${isProjectDetail ? 'hidden xl:flex' : 'flex'}`}
+        className={`items-center gap-2 ${isProjectDetail ? 'hidden xl:flex' : 'flex'}`}
       >
         <Image src="/logo.svg" alt="WDCC Logo" width={60} height={40} />
-        <span className="hidden lg:inline-block text-[16px] xl:text-[24px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase whitespace-nowrap">
+        <span className="hidden xl:inline-block text-[16px] mb-0.5 xl:text-[20px] text-wdcc-blue leading-none font-cartograph-mono-cf uppercase whitespace-nowrap">
           Projects Health Dashboard
         </span>
       </Link>

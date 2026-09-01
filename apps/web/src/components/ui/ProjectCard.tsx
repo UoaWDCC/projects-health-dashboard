@@ -139,7 +139,7 @@ const ProjectCard = forwardRef<HTMLDivElement, ProjectCardProps>(function Projec
   }
 
   return (
-    // 420px is also hardcoded into page.tsx's CARD_GROUP_INSET — keep both in sync.
+    // 420px is also hardcoded into page.tsx's DESKTOP_GRID_MAX_WIDTH — keep both in sync.
     <div
       ref={ref}
       className="

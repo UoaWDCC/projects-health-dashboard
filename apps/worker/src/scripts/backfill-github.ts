@@ -265,6 +265,7 @@ export async function main() {
       id: true,
       name: true,
       repositories: {
+        where: { isActive: true },
         select: { id: true, owner: true, name: true, installationId: true },
       },
     },

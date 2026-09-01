@@ -152,7 +152,12 @@ export async function main() {
 
   const projects = await db.project.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, channels: true, repositories: { select: { id: true } } },
+    select: {
+      id: true,
+      name: true,
+      channels: { where: { isActive: true } },
+      repositories: { where: { isActive: true }, select: { id: true } },
+    },
   })
 
   logger.info(

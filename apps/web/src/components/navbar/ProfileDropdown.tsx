@@ -39,7 +39,7 @@ export function ProfileDropdown({ user }: { user: ProfileUser | null }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="rounded-full flex items-center lg:gap-2 lg:px-3 lg:py-2 lg:bg-white/60 lg:border lg:border-wdcc-oshan/[18%] lg:hover:bg-gray-200 transition-all duration-200 ease-in-out"
+        className="rounded-full min-w-max flex items-center lg:gap-2 lg:px-3 lg:py-2 lg:bg-white/60 lg:border lg:border-wdcc-oshan/[18%] lg:hover:bg-gray-200 transition-all duration-200 ease-in-out"
       >
         {user &&
           (user.avatarUrl ? (
