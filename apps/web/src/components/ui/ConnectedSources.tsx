@@ -72,7 +72,8 @@ function SourceRow({
             autoFocus
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="flex-1 min-w-0 text-sm font-mono text-wdcc-blue bg-transparent outline-none border-b border-wdcc-blue/40"
+            disabled={isSaving}
+            className="flex-1 min-w-0 text-sm font-mono text-wdcc-blue bg-transparent outline-none border-b border-wdcc-blue/40 disabled:opacity-50"
           />
         ) : (
           <span className="flex-1 min-w-0 truncate text-sm font-mono text-wdcc-blue">
@@ -96,7 +97,8 @@ function SourceRow({
                 setDraft(displayValue)
                 setIsEditing(false)
               }}
-              className="text-xs font-mono rounded-md border-2 border-[#e5e7eb] bg-white text-wdcc-blue px-3 py-1.5"
+              disabled={isSaving}
+              className="text-xs font-mono rounded-md border-2 border-[#e5e7eb] bg-white text-wdcc-blue px-3 py-1.5 disabled:opacity-50"
             >
               Cancel
             </button>
