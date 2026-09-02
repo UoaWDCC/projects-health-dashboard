@@ -6,11 +6,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Project } from '@/lib/project/types'
 import Link from 'next/link'
 import Image from 'next/image'
 import ClientSuspense from '@/components/utils/ClientSuspense'
+import NewProjectButton from '@/components/ui/NewProjectButton'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
 
 const fetchProjects = async (): Promise<Project[]> => {
@@ -30,7 +30,6 @@ const fetchProjects = async (): Promise<Project[]> => {
 export default function AdminDashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
@@ -70,13 +69,7 @@ export default function AdminDashboardPage() {
         <p className="font-mono text-sm text-wdcc-grey-light">
           {projects.length} project{projects.length !== 1 ? 's' : ''}
         </p>
-        <button
-          onClick={() => router.push('/projects/new')}
-          className="flex items-center gap-2 bg-wdcc-oshan text-white font-mono text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-wdcc-oshan/80 transition-colors duration-150"
-        >
-          <span className="text-base leading-none">+</span>
-          New project
-        </button>
+        <NewProjectButton />
       </div>
 
       <ul className="px-5 sm:px-10 lg:px-20 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 pb-20">
