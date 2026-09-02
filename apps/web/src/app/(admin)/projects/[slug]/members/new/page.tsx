@@ -235,6 +235,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                 onChange={(e) => {
                   setSelectedPersonId(e.target.value)
                   setFieldErrors({})
+                  handleClearImage()
                 }}
                 name="personIdSelector"
                 className={inputClass}
