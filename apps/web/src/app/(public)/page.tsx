@@ -7,6 +7,7 @@ import HomeHeader from '@/components/headers/HomeHeader'
 import { hasRole } from '@/lib/auth'
 import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 import { getLatestLiveCommits } from '@/actions/live-commits'
+import NewProjectButton from '@/components/ui/NewProjectButton'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -63,6 +64,7 @@ export default async function PublicDashboardPage() {
                 <span className="text-wdcc-grey/50 text-xl font-medium whitespace-nowrap">
                   {teamCount}&nbsp;&nbsp;team{teamCount !== 1 ? 's' : ''}
                 </span>
+                {isAdmin && <NewProjectButton className="ml-auto" />}
               </div>
 
               {/* PROJECTS GRID */}
