@@ -89,7 +89,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       }
 
       const existingRepo = await db.gitHubRepository.findFirst({
-        where: { owner: repoInfo.owner, name: repoInfo.repo, projectId: { not: projectId } },
+        where: {
+          owner: repoInfo.owner,
+          name: repoInfo.repo,
+          projectId: { not: projectId },
+          isActive: true,
+        },
       })
       if (existingRepo) {
         return Response.json(
@@ -121,7 +126,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       const existingChannel = await db.discordChannel.findUnique({
         where: { externalId: snowflakeId },
       })
-      if (existingChannel && existingChannel.projectId !== projectId) {
+      if (existingChannel && existingChannel.projectId !== projectId && existingChannel.isActive) {
         return Response.json(
           {
             error: `Discord Channel with Snowflake ID ${snowflakeId} has already been linked to another project`,
@@ -180,15 +185,32 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
         (nr) => !currentRepos.some((cr) => cr.owner === nr.owner && cr.name === nr.name)
       )
       for (const nr of reposToCreate) {
-        await tx.gitHubRepository.create({
-          data: {
-            projectId,
-            owner: nr.owner,
-            name: nr.name,
-            installationId: installationId,
-            isActive: true,
-          },
+        // owner/name is globally unique (@@unique([owner, name])) — an inactive
+        // row left behind by another project must be reclaimed, not inserted
+        // fresh, or this throws a P2002 unique-constraint violation.
+        const orphanedRepo = await tx.gitHubRepository.findFirst({
+          where: { owner: nr.owner, name: nr.name },
         })
+        if (orphanedRepo) {
+          await tx.gitHubRepository.update({
+            where: { id: orphanedRepo.id },
+            data: {
+              projectId,
+              installationId: installationId,
+              isActive: true,
+            },
+          })
+        } else {
+          await tx.gitHubRepository.create({
+            data: {
+              projectId,
+              owner: nr.owner,
+              name: nr.name,
+              installationId: installationId,
+              isActive: true,
+            },
+          })
+        }
       }
 
       // Soft delete, reactivate, or create Discord channels
@@ -224,15 +246,28 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       const channelsToCreate = Array.from(discordChannels.entries()).filter(
         ([id]) => !currentChannels.some((cc) => cc.externalId === id)
       )
-      if (channelsToCreate.length > 0) {
-        await tx.discordChannel.createMany({
-          data: channelsToCreate.map(([id, name]) => ({
-            projectId,
-            externalId: id,
-            name,
-            isActive: true,
-          })),
+      for (const [id, name] of channelsToCreate) {
+        // externalId is globally unique (@unique) — an inactive channel left
+        // behind by another project must be reclaimed, not inserted fresh,
+        // or this throws a P2002 unique-constraint violation.
+        const orphanedChannel = await tx.discordChannel.findUnique({
+          where: { externalId: id },
         })
+        if (orphanedChannel) {
+          await tx.discordChannel.update({
+            where: { id: orphanedChannel.id },
+            data: { projectId, name, isActive: true },
+          })
+        } else {
+          await tx.discordChannel.create({
+            data: {
+              projectId,
+              externalId: id,
+              name,
+              isActive: true,
+            },
+          })
+        }
       }
 
       return await tx.project.findUnique({

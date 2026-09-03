@@ -209,7 +209,7 @@ export async function POST(request: Request) {
       }
 
       const existingRepo = await db.gitHubRepository.findFirst({
-        where: { owner: repoInfo.owner, name: repoInfo.repo },
+        where: { owner: repoInfo.owner, name: repoInfo.repo, isActive: true },
       })
       if (existingRepo) {
         return Response.json(
@@ -235,7 +235,7 @@ export async function POST(request: Request) {
       const existingChannel = await db.discordChannel.findUnique({
         where: { externalId: snowflakeId },
       })
-      if (existingChannel) {
+      if (existingChannel && existingChannel.isActive) {
         return Response.json(
           {
             error: `Discord Channel with Snowflake ID ${snowflakeId} has already been linked to another project`,
