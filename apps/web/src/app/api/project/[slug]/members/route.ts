@@ -5,8 +5,11 @@ import {
   resolveDiscordIdentity,
   IdentityResolutionError,
 } from '@/lib/identity/resolve'
-import { addMemberSchema } from '@/lib/schemas/admin'
+import { addMemberSchema, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
+import { uploadImage } from '@/lib/storage'
 import type { AddProjectMemberResponse } from '@/lib/project-members/types'
+
+const MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
 
 // API route for getting all members of a project
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -166,6 +169,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
   }
 
+  const contentLength = Number(request.headers.get('content-length') ?? 0)
+  if (contentLength > MAX_REQUEST_BYTES) {
+    return Response.json(
+      { error: `Request too large. Maximum image size is ${MAX_IMAGE_BYTES / 1024 / 1024}MB` },
+      { status: 413 }
+    )
+  }
+
   try {
     const { slug } = await params
     const formData = await request.formData()
@@ -188,7 +199,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     let targetDisplayName = parsed.data.displayName ?? ''
     const discordId = parsed.data.discordId ?? ''
     const githubId = parsed.data.githubId ?? ''
-    const imageUrl = parsed.data.imageUrl ?? ''
+    const imageUrlFromCsv = parsed.data.imageUrl ?? ''
 
     if (targetPersonId) {
       const existingPerson = await db.person.findUnique({ where: { id: targetPersonId } })
@@ -231,11 +242,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const { githubExternalId, githubUsername, discordSnowflake, discordUsername } =
       await resolveIdentities(githubId, discordId)
 
+    // Only handle a new photo when we're actually creating a new person;
+    // existing persons keep whatever photo they already have.
+    let personImageUrl: string | null = null
+    if (!targetPersonId) {
+      const imageFile = formData.get('image')
+      if (imageFile instanceof File && imageFile.size > 0) {
+        personImageUrl = await uploadImage('person-images', crypto.randomUUID(), imageFile)
+      } else if (imageUrlFromCsv) {
+        personImageUrl = imageUrlFromCsv
+      }
+    }
+
     const newMemberResult = await db.$transaction(async (tx) => {
       if (!targetPersonId) {
         targetPersonId = await createPersonWithIdentities(tx, {
           displayName: targetDisplayName,
-          imageUrl: imageUrl || null,
+          imageUrl: personImageUrl,
           discordSnowflake,
           discordUsername,
           githubExternalId,

@@ -9,13 +9,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { use, useState, useEffect } from 'react'
+import { use, useState, useEffect, useRef } from 'react'
 import { IdentityProvider } from '@repo/db'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
 import { z } from 'zod'
-import { addMemberSchema } from '@/lib/schemas/admin'
+import { addMemberSchema, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
 import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
@@ -36,11 +36,16 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
   const router = useRouter()
   const { slug } = use(params)
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [existingPeople, setExistingPeople] = useState<Person[]>([])
   const [selectedPersonId, setSelectedPersonId] = useState<string>('NEW')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageName, setImageName] = useState<string | null>(null)
+  const [hasImage, setHasImage] = useState<boolean>(false)
+  const [imageError, setImageError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/people')
@@ -48,6 +53,48 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       .then(setExistingPeople)
       .catch((e) => console.error('Failed to fetch people', e))
   }, [])
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError(
+        `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB - maximum is ${MAX_IMAGE_BYTES / 1024 / 1024}MB`
+      )
+      setImagePreview(null)
+      setImageName(null)
+      setHasImage(false)
+      e.target.value = ''
+      return
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageError('Unsupported file type - use PNG, JPG or WEBP')
+      setImagePreview(null)
+      setImageName(null)
+      setHasImage(false)
+      e.target.value = ''
+      return
+    }
+
+    setImageError(null)
+    setImageName(file.name)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setImagePreview(ev.target?.result as string)
+      setHasImage(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleClearImage = () => {
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setImageName(null)
+    setImagePreview(null)
+    setHasImage(false)
+    setImageError(null)
+  }
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -61,7 +108,6 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
           displayName: String(formData.get('displayName') ?? '').trim() || undefined,
           discordId: String(formData.get('discordId') ?? '').trim() || undefined,
           githubId: String(formData.get('githubId') ?? '').trim() || undefined,
-          imageUrl: String(formData.get('imageUrl') ?? '').trim() || undefined,
         }
       : { personId: selectedPersonId }
 
@@ -70,7 +116,6 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       const errors = z.flattenError(validation.error).fieldErrors
       setFieldErrors({
         displayName: errors.displayName?.[0] ?? '',
-        imageUrl: errors.imageUrl?.[0] ?? '',
       })
       return
     }
@@ -190,6 +235,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                 onChange={(e) => {
                   setSelectedPersonId(e.target.value)
                   setFieldErrors({})
+                  handleClearImage()
                 }}
                 name="personIdSelector"
                 className={inputClass}
@@ -283,15 +329,71 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
                 <div className="flex flex-col gap-1.5 md:col-span-2">
                   <label className="font-mono text-[10px] uppercase tracking-widest text-wdcc-grey font-semibold">
-                    Profile photo URL
+                    Profile photo{' '}
+                    <span className="text-wdcc-grey-light normal-case tracking-normal">
+                      ({MAX_IMAGE_BYTES / 1024 / 1024}MB max)
+                    </span>
                   </label>
-                  <input
-                    type="url"
-                    name="imageUrl"
-                    placeholder="https://..."
-                    className={fieldErrors.imageUrl ? inputErrorClass : inputClass}
-                  />
-                  <FieldError message={fieldErrors.imageUrl} />
+                  <div className="flex gap-2 w-full">
+                    <div className="w-full">
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-[1.5px] border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                          imageError
+                            ? 'border-wdcc-kelvin bg-wdcc-kelvin/5'
+                            : 'border-wdcc-kelvin/40 hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70'
+                        }`}
+                      >
+                        {imagePreview ? (
+                          <div className="flex items-center gap-3">
+                            <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="text-left">
+                              <p className="font-mono text-sm font-semibold text-wdcc-oshan">
+                                {imageName}
+                              </p>
+                              <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
+                                Click to change
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="font-mono text-sm text-wdcc-grey-light">
+                              Click to upload profile photo
+                            </p>
+                            <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
+                              PNG, JPG, WEBP — max {MAX_IMAGE_BYTES / 1024 / 1024}MB
+                            </p>
+                          </>
+                        )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          name="image"
+                          accept={ALLOWED_IMAGE_TYPES.join(',')}
+                          className="hidden"
+                          onChange={handleImageChange}
+                        />
+                      </div>
+                      <FieldError message={imageError ?? undefined} />
+                    </div>
+                    {hasImage && (
+                      <button
+                        type="button"
+                        onClick={handleClearImage}
+                        className="shrink-0 self-stretch font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
+                      >
+                        Clear Image
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
