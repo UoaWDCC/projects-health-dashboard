@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BORDER_DEFAULT, BORDER_HOVER } from '@/lib/admin/layout'
+import { MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
+import ImageUploadField from '@/components/dashboard/ImageUploadField'
 
 // Minimal type definition to accept the project from the server component
 type ProjectWithRelations = {
@@ -13,6 +15,7 @@ type ProjectWithRelations = {
   name: string
   slug: string
   description: string | null
+  imageUrl: string | null
   repositories: { owner: string; name: string }[]
   channels: { externalId: string; name: string }[]
 }
@@ -310,6 +313,18 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
                 </div>
               )}
             </div>
+
+            {/* Project Image */}
+            <SectionLabel color="pink" icon="image">
+              Project Image{' '}
+              <span className="text-wdcc-grey-light normal-case tracking-normal">
+                ({MAX_IMAGE_BYTES / 1024 / 1024}MB max)
+              </span>
+            </SectionLabel>
+            <ImageUploadField
+              currentImageUrl={project.imageUrl}
+              uploadText="Click to upload new project image"
+            />
 
             {/* Status */}
             {error && (
