@@ -29,7 +29,7 @@ export default async function PublicDashboardPage() {
   const lastCommitAt = latestCommits[0]?.committedAt ?? null
 
   return (
-    <div className="relative">
+    <div className="relative lg:-mt-16">
       <div className="absolute inset-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
       {/* LIVE COMMIT BANNER SCROLL */}
       <div className="lg:hidden h-10">
