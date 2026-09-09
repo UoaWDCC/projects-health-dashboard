@@ -30,8 +30,8 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
   return (
     <>
       {/* MOBILE*/}
-      <div className="lg:hidden bg-wdcc-blue-light rounded-2xl mx-5 sm:mx-10 mt-4 overflow-hidden">
-        <div className="p-6 sm:p-8">
+      <div className="lg:hidden bg-wdcc-blue-light w-full overflow-hidden">
+        <div className="px-6 pt-32 pb-6 sm:px-8 sm:pt-36 sm:pb-8">
           <div className="flex flex-row items-center gap-5">
             <div className="w-[72px] h-[72px] bg-[#d9d9d9] overflow-hidden rounded-[20px] shrink-0">
               {project.imageUrl && (
@@ -83,7 +83,7 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
 
       {/* DESKTOP */}
       <div className="hidden lg:block relative bg-wdcc-blue-light w-full">
-        <div className="flex pt-[80px] pl-[80px] pr-[80px] pb-[80px]">
+        <div className="flex pt-[144px] pl-[80px] pr-[80px] pb-[80px]">
           <div className="flex-1 min-w-0">
             <div className="xl:ml-[176px] lg:ml-[145px] ml-[121px] backdrop-blur-xl rounded-full border-2 border-white font-mono px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex gap-2 sm:gap-3 items-center w-fit bg-white/60 hover:brightness-95 cursor-default transition-all duration-500 ease-in-out mb-4">
               <svg

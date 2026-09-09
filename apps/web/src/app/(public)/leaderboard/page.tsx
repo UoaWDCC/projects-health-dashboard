@@ -27,10 +27,10 @@ export default async function Leaderboard() {
   const leaderboardLastUpdated = await getLeaderboardLastUpdated()
 
   return (
-    <>
+    <div className="relative -mt-16">
       <LeaderboardHeader lastUpdated={leaderboardLastUpdated} />
 
       <LeaderboardSections />
-    </>
+    </div>
   )
 }

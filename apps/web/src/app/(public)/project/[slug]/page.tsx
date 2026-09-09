@@ -32,7 +32,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const mvpName = mvp?.projectMember.displayName ?? mvp?.projectMember.person.displayName
 
   return (
-    <>
+    <div className="relative -mt-16">
       <TeamHeader
         project={project}
         isAdmin={isAdmin}
@@ -68,6 +68,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
         <GraphViewToggle slug={slug} />
       </div>
-    </>
+    </div>
   )
 }

@@ -14,7 +14,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   return (
     // On desktop, match the Active Projects grid box in page.tsx: the same side
     // padding plus a centred max-w-[1292px] content column.
-    <div className="px-5 sm:px-10 lg:px-[max(0px,calc(136px_-_5vw))] pt-6 sm:pt-8 relative w-full lg:min-h-[calc(100dvh-4rem)] lg:flex lg:flex-col lg:justify-center lg:py-0">
+    <div className="px-5 sm:px-10 lg:px-[max(0px,calc(136px_-_5vw))] pt-24 sm:pt-28 relative w-full lg:min-h-[calc(100dvh-4rem)] lg:flex lg:flex-col lg:justify-center lg:py-0">
       <div className="w-full lg:max-w-[1292px] lg:mx-auto">
         {/* Status pill */}
         {activeProjectCount > 0 && (
