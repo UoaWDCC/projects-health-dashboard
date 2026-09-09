@@ -22,6 +22,16 @@ export default function ProjectGraphs({
 
   const dates = stats?.dates ?? []
 
+  // Weeks with no computed health score (e.g. ingestion failed that week) are
+  // dropped entirely rather than plotted as a gap or a fake zero.
+  const healthScorePoints = stats
+    ? stats.dates.reduce<{ date: string; value: number }[]>((acc, date, i) => {
+        const score = stats.healthScore[i]
+        if (score !== null) acc.push({ date, value: Math.round(score) })
+        return acc
+      }, [])
+    : []
+
   return (
     <div
       className={`grid gap-6 mx-4 mt-6 w-full transition-all duration-500 ease-in-out ${isRowView ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}
@@ -43,6 +53,13 @@ export default function ProjectGraphs({
         dates={dates}
         dataPoints={(stats?.velocity ?? []).map(Math.round)}
       />
+      {stats?.healthScoreEnabled && (
+        <LineGraph
+          title="Weekly Health Score"
+          dates={healthScorePoints.map((p) => p.date)}
+          dataPoints={healthScorePoints.map((p) => p.value)}
+        />
+      )}
     </div>
   )
 }

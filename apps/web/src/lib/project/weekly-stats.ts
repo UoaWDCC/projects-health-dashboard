@@ -167,6 +167,7 @@ export interface ProjectWeeklyStats {
   linesChanged: number[]
   discordMessages: number[]
   healthScore: number[]
+  healthScoreEnabled: boolean
   velocity: number[]
 }
 
@@ -188,26 +189,37 @@ export const METRICS: { key: MetricKey; title: string }[] = [
   { key: 'healthScore', title: 'Weekly Health Score' },
 ]
 
+export async function isHealthScoreFormulaConfigured(): Promise<boolean> {
+  const formula = await db.config.findFirst({
+    where: { key: 'healthFormula' },
+    select: { value: true },
+  })
+  return typeof formula?.value === 'string'
+}
+
 export async function getProjectWeeklyStats(projectId: string): Promise<ProjectWeeklyStats> {
   const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
 
-  const rows = await db.weeklyStats.findMany({
-    where: {
-      projectId,
-      weekStart: { gte: yearStart },
-    },
-    orderBy: { weekStart: 'asc' },
-    select: {
-      weekStart: true,
-      commits: true,
-      prsMerged: true,
-      linesAdded: true,
-      linesRemoved: true,
-      discordMessages: true,
-      healthScore: true,
-      velocityScore: true,
-    },
-  })
+  const [rows, healthScoreEnabled] = await Promise.all([
+    db.weeklyStats.findMany({
+      where: {
+        projectId,
+        weekStart: { gte: yearStart },
+      },
+      orderBy: { weekStart: 'asc' },
+      select: {
+        weekStart: true,
+        commits: true,
+        prsMerged: true,
+        linesAdded: true,
+        linesRemoved: true,
+        discordMessages: true,
+        healthScore: true,
+        velocityScore: true,
+      },
+    }),
+    isHealthScoreFormulaConfigured(),
+  ])
 
   return {
     dates: rows.map((r) => r.weekStart.toISOString().split('T')[0]),
@@ -216,6 +228,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
     linesChanged: rows.map((r) => r.linesAdded + r.linesRemoved),
     discordMessages: rows.map((r) => r.discordMessages),
     healthScore: rows.map((r) => r.healthScore ?? 0),
+    healthScoreEnabled,
     velocity: rows.map((r) => r.velocityScore ?? 0),
   }
 }
@@ -228,26 +241,29 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
 export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
   const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1))
 
-  const rows = await db.weeklyStats.findMany({
-    where: {
-      weekStart: { gte: yearStart },
-      project: { isActive: true },
-    },
-    orderBy: { weekStart: 'asc' },
-    select: {
-      weekStart: true,
-      commits: true,
-      prsMerged: true,
-      linesAdded: true,
-      linesRemoved: true,
-      discordMessages: true,
-      healthScore: true,
-      velocityScore: true,
-      project: {
-        select: { slug: true, name: true },
+  const [rows, healthScoreEnabled] = await Promise.all([
+    db.weeklyStats.findMany({
+      where: {
+        weekStart: { gte: yearStart },
+        project: { isActive: true },
       },
-    },
-  })
+      orderBy: { weekStart: 'asc' },
+      select: {
+        weekStart: true,
+        commits: true,
+        prsMerged: true,
+        linesAdded: true,
+        linesRemoved: true,
+        discordMessages: true,
+        healthScore: true,
+        velocityScore: true,
+        project: {
+          select: { slug: true, name: true },
+        },
+      },
+    }),
+    isHealthScoreFormulaConfigured(),
+  ])
 
   const byProject = new Map<string, TeamWeeklyStats>()
 
@@ -264,6 +280,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
         linesChanged: [],
         discordMessages: [],
         healthScore: [],
+        healthScoreEnabled,
         velocity: [],
       }
       byProject.set(slug, team)
