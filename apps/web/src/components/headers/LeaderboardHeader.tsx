@@ -9,7 +9,7 @@ const LeaderboardHeader: React.FC<LeaderboardHeaderProps> = ({
 }: LeaderboardHeaderProps): React.JSX.Element => {
   return (
     <div
-      className="w-full bg-wdcc-mint flex flex-col justify-center items-start gap-y-3 sm:gap-y-4 lg:gap-y-5 pt-16 sm:pt-20 lg:pt-24 pb-8 sm:pb-10 px-5 sm:px-10 lg:px-20"
+      className="w-full bg-wdcc-mint flex flex-col justify-center items-start gap-y-3 sm:gap-y-4 lg:gap-y-5 pt-32 sm:pt-36 lg:pt-40 pb-8 sm:pb-10 px-5 sm:px-10 lg:px-20"
       style={{ boxShadow: 'inset 0 0 5px rgba(0, 0, 0, 0.2)' }}
     >
       <h1 className="text-wdcc-oshan uppercase font-extrabold tracking-tight !leading-none m-0 text-[clamp(1.75rem,5vw,4rem)]">

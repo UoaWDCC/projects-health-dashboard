@@ -30,12 +30,12 @@ export default async function PublicDashboardPage() {
 
   return (
     <div className="relative">
-      <div className="absolute inset-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
-      {/* LIVE COMMIT BANNER SCROLL */}
-      <div className="lg:hidden h-10">
+      <div className="absolute inset-x-0 -top-16 bottom-0 -z-10 lg:bg-gradient-to-b lg:from-[#B6D8FB] lg:to-white" />
+
+      <div className="lg:hidden h-10 relative z-20">
         <LiveCommitMarquee />
       </div>
-      <div className="flex flex-col lg:gap-y-20">
+      <div className="flex flex-col lg:gap-y-20 -mt-16">
         {/* PAGE HEADER */}
         <div className="bg-[#D4E5FD] lg:bg-inherit">
           <HomeHeader
