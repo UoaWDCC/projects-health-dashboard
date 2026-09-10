@@ -1,6 +1,8 @@
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
+import { MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
+import { copyImage, deleteImage, uploadImage } from '@/lib/storage'
 import {
   validateGitHubExists,
   validateGitHubLinkFormat,
@@ -9,10 +11,20 @@ import {
   ValidatedRepo,
 } from '../route'
 
+const MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
+
 // API route for editing project details
 export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await hasRole('ADMIN'))) {
     return Response.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 })
+  }
+
+  const contentLength = Number(request.headers.get('content-length') ?? 0)
+  if (contentLength > MAX_REQUEST_BYTES) {
+    return Response.json(
+      { error: `Request too large. Maximum image size is ${MAX_IMAGE_BYTES / 1024 / 1024}MB` },
+      { status: 413 }
+    )
   }
 
   const installationId = process.env.GITHUB_APP_INSTALLATION_ID
@@ -35,7 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     const projectSlug = projectName.toLowerCase().trim().replace(/\s+/g, '-')
     // Ensure slug is unique
     const clashingProjects = await db.project.findMany({
-      where: { slug: projectSlug },
+      where: { slug: projectSlug, id: { not: projectId } },
     })
     if (clashingProjects.length > 0) {
       return Response.json({ error: `Project slug ${projectSlug} already in use` }, { status: 409 })
@@ -136,6 +148,38 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
       }
     }
 
+    const imageFile = formData.get('image')
+    const removeImage = String(formData.get('removeImage')) === 'true'
+    let imageUrl: string | null | undefined
+    let deleteOldImage = false
+
+    try {
+      if (imageFile instanceof File && imageFile.size > 0) {
+        imageUrl = await uploadImage('project-images', projectSlug, imageFile)
+        if (projectSlug !== slug && existingProject.imageUrl) {
+          deleteOldImage = true
+        }
+      } else if (removeImage) {
+        imageUrl = null
+        if (existingProject.imageUrl) {
+          deleteOldImage = true
+        }
+      } else if (projectSlug !== slug && existingProject.imageUrl) {
+        try {
+          imageUrl = await copyImage('project-images', slug, projectSlug)
+          deleteOldImage = true
+        } catch (error) {
+          console.error('Could not align project image with new slug:', error)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update project image:', error)
+      return Response.json(
+        { error: error instanceof Error ? error.message : 'Failed to update project image' },
+        { status: 500 }
+      )
+    }
+
     const updatedProject = await db.$transaction(async (tx) => {
       // Update basic project details
       await tx.project.update({
@@ -144,6 +188,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
           name: projectName,
           slug: projectSlug,
           description: projectDescription || null,
+          ...(imageUrl !== undefined ? { imageUrl } : {}),
         },
       })
 
@@ -278,6 +323,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
         },
       })
     })
+
+    if (deleteOldImage) {
+      try {
+        await deleteImage('project-images', slug)
+      } catch (error) {
+        console.error('Failed to remove the previous project image:', error)
+      }
+    }
 
     revalidateTag('projects')
 

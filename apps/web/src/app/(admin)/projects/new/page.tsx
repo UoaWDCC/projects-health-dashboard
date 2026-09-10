@@ -1,18 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BORDER_DEFAULT, BORDER_HOVER, inputClass, inputErrorClass } from '@/lib/admin/layout'
 import { z } from 'zod'
-import {
-  ALLOWED_IMAGE_TYPES,
-  createProjectSchema,
-  githubRepoUrl,
-  MAX_IMAGE_BYTES,
-} from '@/lib/schemas/admin'
+import { createProjectSchema, githubRepoUrl, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
+import ImageUploadField from '@/components/dashboard/ImageUploadField'
 
 const FIELD_ERROR_SLOTS = new Set(['projectName', 'githubLinks', 'discordSnowflakeIds'])
 
@@ -46,17 +42,12 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 export default function CreateProjectPage() {
   const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [repos, setRepos] = useState<string[]>([])
   const [repoInput, setRepoInput] = useState('')
   const [channels, setChannels] = useState<{ snowflakeId: string; name: string }[]>([])
   const [channelIdInput, setChannelIdInput] = useState('')
   const [channelNameInput, setChannelNameInput] = useState('')
   const [repoInputError, setRepoInputError] = useState<string | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageName, setImageName] = useState<string | null>(null)
-  const [hasImage, setHasImage] = useState<boolean>(false)
-  const [imageError, setImageError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -84,46 +75,6 @@ export default function CreateProjectPage() {
       setChannelNameInput('')
       setFieldErrors((prev) => ({ ...prev, discordSnowflakeIds: '' }))
     }
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      setImageError(
-        `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB - maximum is ${MAX_IMAGE_BYTES / 1024 / 1024}MB`
-      )
-      setImagePreview(null)
-      setImageName(null)
-      e.target.value = ''
-      return
-    }
-
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setImageError('Unsupported file type - use PNG, JPG or WEBP')
-      setHasImage(false)
-      setImagePreview(null)
-      setImageName(null)
-      e.target.value = ''
-      return
-    }
-
-    setImageError(null)
-    setImageName(file.name)
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      setImagePreview(ev.target?.result as string)
-      setHasImage(true)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleClearImage = () => {
-    fileInputRef.current!.value = ''
-    setImageName(null)
-    setImagePreview(null)
-    setHasImage(false)
   }
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
@@ -409,68 +360,11 @@ export default function CreateProjectPage() {
             {/* Project Image */}
             <SectionLabel color="pink" icon="image">
               Project Image{' '}
-              <span className="text-wdcc-grey-light normal-case tracking-normal">(4MB max)</span>
+              <span className="text-wdcc-grey-light normal-case tracking-normal">
+                ({MAX_IMAGE_BYTES / 1024 / 1024}MB max)
+              </span>
             </SectionLabel>
-            <div className="flex gap-2 w-full">
-              <div className="w-full">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-[1.5px] border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
-                    imageError
-                      ? 'border-wdcc-kelvin bg-wdcc-kelvin/5'
-                      : 'border-wdcc-kelvin/40 hover:bg-wdcc-kelvin/5 hover:border-wdcc-kelvin/70'
-                  }`}
-                >
-                  {imagePreview ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-[52px] h-[52px] rounded-[14px] bg-[#d9d9d9] overflow-hidden shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-mono text-sm font-semibold text-wdcc-oshan">
-                          {imageName}
-                        </p>
-                        <p className="font-mono text-[11px] text-wdcc-grey-light mt-0.5">
-                          Click to change
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="font-mono text-sm text-wdcc-grey-light">
-                        Click to upload project image
-                      </p>
-                      <p className="font-mono text-[10px] text-wdcc-grey-light/60 mt-1">
-                        PNG, JPG, WEBP — max 4MB
-                      </p>
-                    </>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    name="image"
-                    accept={ALLOWED_IMAGE_TYPES.join(',')}
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                </div>
-                <FieldError message={imageError ?? undefined} />
-              </div>
-              {hasImage && (
-                <button
-                  type="button"
-                  onClick={handleClearImage}
-                  className="shrink-0 self-stretch font-mono text-xs font-semibold text-wdcc-kelvin bg-wdcc-kelvin/10 hover:bg-wdcc-kelvin/20 disabled:opacity-40 disabled:cursor-not-allowed border-[1.5px] border-wdcc-kelvin/30 rounded-xl px-4 py-2 transition-all"
-                >
-                  Clear Image
-                </button>
-              )}
-            </div>
+            <ImageUploadField uploadText="Click to upload project image" />
 
             {/* Status */}
             {error && (

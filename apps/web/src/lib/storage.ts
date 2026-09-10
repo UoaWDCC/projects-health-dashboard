@@ -38,3 +38,35 @@ export async function uploadImage(
 
   return data.publicUrl
 }
+
+export async function deleteImage(bucket: ImageBucket, entityId: string): Promise<void> {
+  const supabase = await createClient()
+  const path = `${entityId}/image`
+
+  const { error } = await supabase.storage.from(bucket).remove([path])
+
+  if (error) {
+    console.error('Supabase storage delete failed:', { bucket, path, error })
+    throw new Error(`Failed to delete image: ${error.message}`)
+  }
+}
+
+export async function copyImage(
+  bucket: ImageBucket,
+  fromEntityId: string,
+  toEntityId: string
+): Promise<string> {
+  const supabase = await createClient()
+  const fromPath = `${fromEntityId}/image`
+  const toPath = `${toEntityId}/image`
+
+  const { error } = await supabase.storage.from(bucket).copy(fromPath, toPath)
+
+  if (error) {
+    console.error('Supabase storage copy failed:', { bucket, fromPath, toPath, error })
+    throw new Error(`Failed to copy image: ${error.message}`)
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(toPath)
+  return data.publicUrl
+}
