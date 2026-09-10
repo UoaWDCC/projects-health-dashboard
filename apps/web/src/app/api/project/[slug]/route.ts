@@ -2,7 +2,7 @@ import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
 import { MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
-import { uploadImage } from '@/lib/storage'
+import { copyImage, deleteImage, uploadImage } from '@/lib/storage'
 import {
   validateGitHubExists,
   validateGitHubLinkFormat,
@@ -151,10 +151,33 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     const imageFile = formData.get('image')
     const removeImage = String(formData.get('removeImage')) === 'true'
     let imageUrl: string | null | undefined
-    if (imageFile instanceof File && imageFile.size > 0) {
-      imageUrl = await uploadImage('project-images', projectSlug, imageFile)
-    } else if (removeImage) {
-      imageUrl = null
+    let deleteOldImage = false
+
+    try {
+      if (imageFile instanceof File && imageFile.size > 0) {
+        imageUrl = await uploadImage('project-images', projectSlug, imageFile)
+        if (projectSlug !== slug && existingProject.imageUrl) {
+          deleteOldImage = true
+        }
+      } else if (removeImage) {
+        imageUrl = null
+        if (existingProject.imageUrl) {
+          deleteOldImage = true
+        }
+      } else if (projectSlug !== slug && existingProject.imageUrl) {
+        try {
+          imageUrl = await copyImage('project-images', slug, projectSlug)
+          deleteOldImage = true
+        } catch (error) {
+          console.error('Could not align project image with new slug:', error)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update project image:', error)
+      return Response.json(
+        { error: error instanceof Error ? error.message : 'Failed to update project image' },
+        { status: 500 }
+      )
     }
 
     const updatedProject = await db.$transaction(async (tx) => {
@@ -300,6 +323,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
         },
       })
     })
+
+    if (deleteOldImage) {
+      try {
+        await deleteImage('project-images', slug)
+      } catch (error) {
+        console.error('Failed to remove the previous project image:', error)
+      }
+    }
 
     revalidateTag('projects')
 
