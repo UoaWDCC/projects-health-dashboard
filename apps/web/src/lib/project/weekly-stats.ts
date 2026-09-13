@@ -168,7 +168,7 @@ export interface ProjectWeeklyStats {
   discordMessages: number[]
   healthScore: (number | null)[]
   healthScoreEnabled: boolean
-  velocity: number[]
+  velocity: (number | null)[]
 }
 
 export interface TeamWeeklyStats extends ProjectWeeklyStats {
@@ -229,7 +229,7 @@ export async function getProjectWeeklyStats(projectId: string): Promise<ProjectW
     discordMessages: rows.map((r) => r.discordMessages),
     healthScore: rows.map((r) => r.healthScore),
     healthScoreEnabled,
-    velocity: rows.map((r) => r.velocityScore ?? 0),
+    velocity: rows.map((r) => r.velocityScore),
   }
 }
 
@@ -292,7 +292,7 @@ export async function getAllProjectsWeeklyStats(): Promise<TeamWeeklyStats[]> {
     team.linesChanged.push(r.linesAdded + r.linesRemoved)
     team.discordMessages.push(r.discordMessages)
     team.healthScore.push(r.healthScore)
-    team.velocity.push(r.velocityScore ?? 0)
+    team.velocity.push(r.velocityScore)
   }
 
   return Array.from(byProject.values())
