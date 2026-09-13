@@ -65,7 +65,7 @@ describe('velocity (integration)', () => {
       expect(stats!.velocityScore).toBeNull()
     })
 
-    it('sets velocityScore to null when there are no preceding weeks to compare against', async () => {
+    it('sets velocityScore to 0 for the first non-zero week when there are no preceding weeks', async () => {
       const { project } = await seedProjectWithRepo()
       await seedWeeklyStats(project.id, WEEK_START, 50)
 
@@ -74,7 +74,7 @@ describe('velocity (integration)', () => {
       const stats = await db.weeklyStats.findUnique({
         where: { projectId_weekStart: { projectId: project.id, weekStart: WEEK_START } },
       })
-      expect(stats!.velocityScore).toBeNull()
+      expect(stats!.velocityScore).toBe(0)
     })
 
     it('computes % difference against the average of up to 4 preceding weeks', async () => {
@@ -157,6 +157,128 @@ describe('velocity (integration)', () => {
 
       const allRows = await db.weeklyStats.findMany({ where: { projectId: project.id } })
       expect(allRows).toHaveLength(2)
+    })
+
+    it('excludes a leading run of null and zero health weeks until the first non-zero week', async () => {
+      const { project } = await seedProjectWithRepo()
+      const weeks = [
+        weeksBefore(WEEK_START, 3),
+        weeksBefore(WEEK_START, 2),
+        weeksBefore(WEEK_START, 1),
+        WEEK_START,
+      ]
+      await seedWeeklyStats(project.id, weeks[0], null)
+      await seedWeeklyStats(project.id, weeks[1], 0)
+      await seedWeeklyStats(project.id, weeks[2], 0)
+      await seedWeeklyStats(project.id, weeks[3], 50)
+
+      for (const week of weeks) {
+        await computeVelocityForWeek(project.id, week)
+      }
+
+      const rows = await db.weeklyStats.findMany({
+        where: { projectId: project.id },
+        orderBy: { weekStart: 'asc' },
+      })
+      // The null week and both zero weeks are all leading — none of them count
+      // toward history. week[3] is the first real week: 0, not null.
+      expect(rows.map((r) => r.velocityScore)).toEqual([null, null, null, 0])
+    })
+
+    it('builds up the rolling window gradually across the first four non-zero weeks', async () => {
+      const { project } = await seedProjectWithRepo()
+      const weeks = [
+        weeksBefore(WEEK_START, 4),
+        weeksBefore(WEEK_START, 3),
+        weeksBefore(WEEK_START, 2),
+        weeksBefore(WEEK_START, 1),
+        WEEK_START,
+      ]
+      const scores = [50, 60, 70, 80, 90]
+      for (const [i, week] of weeks.entries()) {
+        await seedWeeklyStats(project.id, week, scores[i])
+      }
+      for (const week of weeks) {
+        await computeVelocityForWeek(project.id, week)
+      }
+
+      const rows = await db.weeklyStats.findMany({
+        where: { projectId: project.id },
+        orderBy: { weekStart: 'asc' },
+      })
+      const velocities = rows.map((r) => r.velocityScore)
+
+      expect(velocities[0]).toBe(0) // first week: no preceding weeks
+      expect(velocities[1]).toBe(20) // baseline = avg(50) = 50
+      expect(velocities[2]).toBeCloseTo(27.27, 1) // baseline = avg(50, 60) = 55
+      expect(velocities[3]).toBeCloseTo(33.33, 1) // baseline = avg(50, 60, 70) = 60
+      expect(velocities[4]).toBeCloseTo(38.46, 1) // baseline = avg(50, 60, 70, 80) = 65
+    })
+
+    it('treats a zero health week after the first non-zero week as a normal week in the rolling window', async () => {
+      const { project } = await seedProjectWithRepo()
+      const weeks = [
+        weeksBefore(WEEK_START, 3),
+        weeksBefore(WEEK_START, 2),
+        weeksBefore(WEEK_START, 1),
+        WEEK_START,
+      ]
+      const scores = [0, 50, 0, 60]
+      for (const [i, week] of weeks.entries()) {
+        await seedWeeklyStats(project.id, week, scores[i])
+      }
+      for (const week of weeks) {
+        await computeVelocityForWeek(project.id, week)
+      }
+
+      const rows = await db.weeklyStats.findMany({
+        where: { projectId: project.id },
+        orderBy: { weekStart: 'asc' },
+      })
+      // week[0]=0 is leading (excluded); week[1]=50 is the first real week;
+      // week[2]=0 is a real, included data point once tracking has started;
+      // week[3] baseline = avg(50, 0) = 25 -> (60-25)/25*100 = 140
+      expect(rows.map((r) => r.velocityScore)).toEqual([null, 0, -100, 140])
+    })
+
+    it('recognises a project has started even when the last 4 weeks are all a real quiet stretch', async () => {
+      const { project } = await seedProjectWithRepo()
+      const priorWeeks = [7, 6, 5, 4, 3, 2, 1].map((n) => weeksBefore(WEEK_START, n))
+      const priorScores = [50, 60, 70, 0, 0, 0, 0]
+      for (const [i, week] of priorWeeks.entries()) {
+        await seedWeeklyStats(project.id, week, priorScores[i])
+      }
+      await seedWeeklyStats(project.id, WEEK_START, 80)
+
+      for (const week of [...priorWeeks, WEEK_START]) {
+        await computeVelocityForWeek(project.id, week)
+      }
+
+      // The 4 most recent preceding weeks (the rolling window) are all real
+      // zeros, but the project genuinely started 3 real weeks before that —
+      // further back than the window alone can see. baseline = avg(0,0,0,0) = 0,
+      // so this must be null (can't divide by zero), not 0 — 0 would wrongly
+      // claim this is the project's very first non-zero week, which it isn't.
+      const current = await db.weeklyStats.findUnique({
+        where: { projectId_weekStart: { projectId: project.id, weekStart: WEEK_START } },
+      })
+      expect(current!.velocityScore).toBeNull()
+    })
+
+    it('sets velocity to null for every week of a project that never has a non-zero health score', async () => {
+      const { project } = await seedProjectWithRepo()
+      const weeks = [weeksBefore(WEEK_START, 2), weeksBefore(WEEK_START, 1), WEEK_START]
+      for (const week of weeks) {
+        await seedWeeklyStats(project.id, week, 0)
+      }
+      for (const week of weeks) {
+        await computeVelocityForWeek(project.id, week)
+      }
+
+      const rows = await db.weeklyStats.findMany({ where: { projectId: project.id } })
+      for (const row of rows) {
+        expect(row.velocityScore).toBeNull()
+      }
     })
   })
 

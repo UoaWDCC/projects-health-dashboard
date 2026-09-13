@@ -11,7 +11,7 @@ function average(values: number[]): number {
 }
 
 function computeVelocity(healthScore: number, precedingScores: number[]): number | null {
-  if (precedingScores.length === 0) return null
+  if (precedingScores.length === 0) return 0
   const baseline = average(precedingScores)
   return baseline === 0 ? null : ((healthScore - baseline) / baseline) * 100
 }
@@ -41,23 +41,33 @@ export async function recomputeAllVelocity(): Promise<void> {
     // weeks is sorted ascending by weekStart, so prior scored weeks are always
     // already at the front of the sliding window by the time we reach `week`.
     const scoredHistory: number[] = []
-
+    let shouldInclude = false
     for (const week of weeks) {
       const precedingScores = scoredHistory.slice(-ROLLING_WINDOW_WEEKS)
       const velocityScore =
         week.healthScore === null ? null : computeVelocity(week.healthScore, precedingScores)
 
+      if (week.healthScore !== null && week.healthScore !== 0) {
+        shouldInclude = true
+      }
       try {
-        await db.weeklyStats.update({
-          where: { id: week.id },
-          data: { velocityScore },
-        })
+        if (!shouldInclude && week.healthScore == 0) {
+          await db.weeklyStats.update({
+            where: { id: week.id },
+            data: { velocityScore: null },
+          })
+        } else {
+          await db.weeklyStats.update({
+            where: { id: week.id },
+            data: { velocityScore },
+          })
+        }
         succeeded++
       } catch (err) {
         console.error(`WeeklyStats ${week.id}: failed to write recomputed velocity: ${err}`)
       }
 
-      if (week.healthScore !== null) {
+      if (week.healthScore !== null && shouldInclude) {
         scoredHistory.push(week.healthScore)
       }
     }
