@@ -7,7 +7,9 @@ import Image from 'next/image'
 import { IdentityProvider } from '@repo/db'
 import GradientDivider from '@/components/dashboard/GradientDivider'
 import AdminCard from '@/components/dashboard/AdminCard'
+import ImageUploadField from '@/components/dashboard/ImageUploadField'
 import { inputClass, labelClass, PROVIDER_COLORS } from '@/lib/admin/layout'
+import { MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import ErrorMessage from '@/components/utils/ErrorMessage'
 
 type PersonIdentity = {
@@ -57,7 +59,6 @@ export default function EditMemberPage({
   // ── Basic details edit ──
   const [isEditingPerson, setIsEditingPerson] = useState(false)
   const [editDisplayName, setEditDisplayName] = useState('')
-  const [editImageUrl, setEditImageUrl] = useState('')
   const [forceCascade, setForceCascade] = useState(false)
   const [editPersonError, setEditPersonError] = useState<string | null>(null)
 
@@ -96,7 +97,6 @@ export default function EditMemberPage({
         const data: Person = await personRes.json()
         setPerson(data)
         setEditDisplayName(data.displayName)
-        setEditImageUrl(data.imageUrl || '')
         setForceCascade(false)
         const m = data.memberships.find((m: ProjectMember) => m.id === memberId)
         if (m) {
@@ -120,18 +120,18 @@ export default function EditMemberPage({
 
   // ── Handlers ──
 
-  const handleUpdatePerson = async (e: FormEvent) => {
+  const handleUpdatePerson = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!person) return
     setEditPersonError(null)
+
+    const formData = new FormData(e.currentTarget)
+    formData.set('displayName', editDisplayName)
+    formData.set('forceCascade', String(forceCascade))
+
     const res = await fetch(`/api/people/${person.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        displayName: editDisplayName,
-        imageUrl: editImageUrl.trim() || null,
-        forceCascade,
-      }),
+      body: formData,
     })
     if (res.ok) {
       setIsEditingPerson(false)
@@ -305,27 +305,28 @@ export default function EditMemberPage({
 
           {isEditingPerson ? (
             <form onSubmit={handleUpdatePerson} className="flex flex-col gap-5 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>
-                    Display name <span className="text-wdcc-kelvin">*</span>
-                  </label>
-                  <input
-                    value={editDisplayName}
-                    onChange={(e) => setEditDisplayName(e.target.value)}
-                    required
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Profile photo URL</label>
-                  <input
-                    value={editImageUrl}
-                    onChange={(e) => setEditImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>
+                  Display name <span className="text-wdcc-kelvin">*</span>
+                </label>
+                <input
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>
+                  Profile photo{' '}
+                  <span className="text-wdcc-grey-light normal-case tracking-normal">
+                    ({MAX_IMAGE_BYTES / 1024 / 1024}MB max)
+                  </span>
+                </label>
+                <ImageUploadField
+                  currentImageUrl={person.imageUrl}
+                  uploadText="Click to upload new profile photo"
+                />
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
