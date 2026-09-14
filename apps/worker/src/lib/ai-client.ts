@@ -16,6 +16,7 @@ export interface AiRequest {
     content: string
   }>
   promptVersion: string
+  temperature?: number
 }
 
 export interface AiResult<T> {
@@ -152,6 +153,7 @@ export function createAiClient(
               model: config.model,
               messages: request.messages,
               response_format: { type: 'json_object' },
+              temperature: request.temperature ?? 0,
             }),
           })
 

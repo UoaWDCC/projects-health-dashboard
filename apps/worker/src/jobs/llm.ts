@@ -35,7 +35,8 @@ export function isLowActivity(commitMessageCount: number, discordMessageCount: n
 // Defends the fixed -1.0..1.0 contract even if the model returns something out of range.
 export function clampSentimentScore(score: unknown): number | null {
   if (typeof score !== 'number' || !Number.isFinite(score)) return null
-  return Math.min(1, Math.max(-1, score))
+  const clamped = Math.min(1, Math.max(-1, score))
+  return Math.round(clamped * 10) / 10
 }
 
 // Hash the LLM input to detect changes in the prompt or input data.
@@ -142,6 +143,7 @@ export async function runLlmAnalysis(
       const { data, provenance } = await aiClient.request<ProjectSummaryResult>({
         messages,
         promptVersion: PROMPT_VERSION,
+        temperature: 0,
       })
 
       const sentimentScore = clampSentimentScore(data.sentimentScore)
