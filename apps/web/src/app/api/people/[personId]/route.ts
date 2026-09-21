@@ -1,7 +1,13 @@
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
 import { MAX_IMAGE_BYTES, updatePersonSchema } from '@/lib/schemas/admin'
-import { deleteImage, uploadImage } from '@/lib/storage'
+import {
+  ImageValidationError,
+  assertValidImage,
+  deleteImage,
+  getImageUrl,
+  uploadImage,
+} from '@/lib/storage'
 
 const MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 1024 * 1024
 
@@ -64,6 +70,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ pers
     let forceCascade = false
     let imageUrl: string | null | undefined
     let deleteOldImage = false
+    // Held back until the transaction commits — see the comment where it is assigned.
+    let pendingImage: File | null = null
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
@@ -80,24 +88,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ pers
       const imageFile = formData.get('image')
       const removeImage = String(formData.get('removeImage')) === 'true'
 
-      try {
-        if (imageFile instanceof File && imageFile.size > 0) {
-          imageUrl = await uploadImage('person-images', personId, imageFile)
-        } else if (removeImage) {
-          imageUrl = null
-          if (oldPerson.imageUrl) {
-            deleteOldImage = true
+      if (imageFile instanceof File && imageFile.size > 0) {
+        // Reject an unusable file before anything else happens, so a bad upload never reaches
+        // storage and never reports as a server error.
+        try {
+          assertValidImage(imageFile)
+        } catch (error) {
+          if (error instanceof ImageValidationError) {
+            return Response.json({ error: error.message }, { status: error.status })
           }
+          throw error
         }
-      } catch (error) {
-        console.error('Failed to update person image:', error)
-        return Response.json(
-          { error: error instanceof Error ? error.message : 'Failed to update person image' },
-          { status: 500 }
-        )
+
+        // Uploading overwrites the existing object at a fixed path, so doing it here would
+        // destroy the current image even if the transaction below fails. The public URL is
+        // derivable from the path, so persist the URL first and upload once the write commits.
+        pendingImage = imageFile
+        imageUrl = await getImageUrl('person-images', personId)
+      } else if (removeImage) {
+        imageUrl = null
+        if (oldPerson.imageUrl) {
+          deleteOldImage = true
+        }
       }
     } else {
-      const body = await request.json()
+      let body: unknown
+      try {
+        body = await request.json()
+      } catch {
+        return Response.json({ error: 'Request body is not valid JSON' }, { status: 400 })
+      }
+
       const parsed = updatePersonSchema.safeParse(body)
       if (!parsed.success) {
         const message = parsed.error.issues[0]?.message ?? 'Invalid request'
@@ -150,6 +171,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ pers
       return person
     })
 
+    if (pendingImage) {
+      try {
+        await uploadImage('person-images', personId, pendingImage)
+      } catch (error) {
+        // The row now points at an image that was never written. Put the previous URL back so the
+        // record still matches what is actually in storage.
+        console.error('Failed to store person image, reverting imageUrl:', error)
+        try {
+          await db.person.update({
+            where: { id: personId },
+            data: { imageUrl: oldPerson.imageUrl },
+          })
+        } catch (revertError) {
+          console.error('Failed to revert person imageUrl after a failed upload:', revertError)
+        }
+
+        return Response.json(
+          {
+            error:
+              'The person details were saved, but the image could not be stored. Please try uploading the image again.',
+          },
+          { status: 502 }
+        )
+      }
+    }
+
     if (deleteOldImage) {
       try {
         await deleteImage('person-images', personId)
@@ -161,9 +208,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ pers
     return Response.json(updatedPerson, { status: 200 })
   } catch (error) {
     console.error('Error updating person:', error)
-    return Response.json(
-      { error: error instanceof Error ? error.message : 'Failed to update person' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Failed to update person' }, { status: 500 })
   }
 }
