@@ -22,15 +22,19 @@ export default function ProjectGraphs({
 
   const dates = stats?.dates ?? []
 
-  // Weeks with no computed health score (e.g. ingestion failed that week) are
-  // dropped entirely rather than plotted as a gap or a fake zero.
-  const healthScorePoints = stats
-    ? stats.dates.reduce<{ date: string; value: number }[]>((acc, date, i) => {
-        const score = stats.healthScore[i]
-        if (score !== null) acc.push({ date, value: Math.round(score) })
-        return acc
-      }, [])
-    : []
+  // Weeks with no value for a metric (e.g. ingestion failed that week, or —
+  // for velocity — no baseline to compare against yet) are dropped entirely
+  // rather than plotted as a gap or a fake zero.
+  function buildPoints(values: (number | null)[]): { date: string; value: number }[] {
+    return dates.reduce<{ date: string; value: number }[]>((acc, date, i) => {
+      const value = values[i]
+      if (value !== null && value !== undefined) acc.push({ date, value: Math.round(value) })
+      return acc
+    }, [])
+  }
+
+  const healthScorePoints = stats ? buildPoints(stats.healthScore) : []
+  const velocityPoints = stats ? buildPoints(stats.velocity) : []
 
   return (
     <div
@@ -50,8 +54,8 @@ export default function ProjectGraphs({
       />
       <LineGraph
         title="Weekly Velocity"
-        dates={dates}
-        dataPoints={(stats?.velocity ?? []).map(Math.round)}
+        dates={velocityPoints.map((p) => p.date)}
+        dataPoints={velocityPoints.map((p) => p.value)}
       />
       {stats?.healthScoreEnabled && (
         <LineGraph

@@ -3,18 +3,7 @@
 // the same rolling-average logic as the weekly worker job.
 
 import { db } from '@repo/db'
-
-const ROLLING_WINDOW_WEEKS = 4
-
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length
-}
-
-function computeVelocity(healthScore: number, precedingScores: number[]): number | null {
-  if (precedingScores.length === 0) return null
-  const baseline = average(precedingScores)
-  return baseline === 0 ? null : ((healthScore - baseline) / baseline) * 100
-}
+import { buildVelocitySeries } from '@repo/velocity'
 
 export async function recomputeAllVelocity(): Promise<void> {
   const allStats = await db.weeklyStats.findMany({
@@ -38,27 +27,19 @@ export async function recomputeAllVelocity(): Promise<void> {
 
   let succeeded = 0
   for (const weeks of byProject.values()) {
-    // weeks is sorted ascending by weekStart, so prior scored weeks are always
-    // already at the front of the sliding window by the time we reach `week`.
-    const scoredHistory: number[] = []
+    // weeks is sorted ascending by weekStart, so buildVelocitySeries sees each
+    // project's history in the order it actually happened.
+    const velocities = buildVelocitySeries(weeks)
 
-    for (const week of weeks) {
-      const precedingScores = scoredHistory.slice(-ROLLING_WINDOW_WEEKS)
-      const velocityScore =
-        week.healthScore === null ? null : computeVelocity(week.healthScore, precedingScores)
-
+    for (const [i, week] of weeks.entries()) {
       try {
         await db.weeklyStats.update({
           where: { id: week.id },
-          data: { velocityScore },
+          data: { velocityScore: velocities[i] },
         })
         succeeded++
       } catch (err) {
         console.error(`WeeklyStats ${week.id}: failed to write recomputed velocity: ${err}`)
-      }
-
-      if (week.healthScore !== null) {
-        scoredHistory.push(week.healthScore)
       }
     }
   }

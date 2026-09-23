@@ -3,13 +3,8 @@
 // health scores — and persists it to WeeklyStats.velocityScore.
 
 import { db } from '@repo/db'
+import { buildVelocitySeries } from '@repo/velocity'
 import { logger } from './logger'
-
-const ROLLING_WINDOW_WEEKS = 4
-
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length
-}
 
 export async function computeVelocityForWeek(projectId: string, weekStart: Date): Promise<void> {
   const current = await db.weeklyStats.findUnique({
@@ -23,27 +18,19 @@ export async function computeVelocityForWeek(projectId: string, weekStart: Date)
   let velocityScore: number | null = null
 
   if (current.healthScore !== null) {
-    const previousWeeks = await db.weeklyStats.findMany({
-      where: {
-        projectId,
-        weekStart: { lt: weekStart },
-        healthScore: { not: null },
-      },
-      orderBy: { weekStart: 'desc' },
-      take: ROLLING_WINDOW_WEEKS,
+    // Fetch the project's full history up to and including this week. This is
+    // deliberately unbounded rather than limited to the rolling window,
+    // because buildVelocitySeries needs to see any leading run of zeros
+    // (project hasn't started yet) to correctly exclude it from the baseline,
+    // no matter how far back it goes.
+    const history = await db.weeklyStats.findMany({
+      where: { projectId, weekStart: { lte: weekStart } },
+      orderBy: { weekStart: 'asc' },
       select: { healthScore: true },
     })
 
-    // No prior weeks to compare against — there's nothing to measure velocity relative to.
-    const baseline =
-      previousWeeks.length > 0
-        ? average(previousWeeks.map((week) => week.healthScore as number))
-        : null
-
-    velocityScore =
-      baseline === null || baseline === 0
-        ? null
-        : ((current.healthScore - baseline) / baseline) * 100
+    const series = buildVelocitySeries(history)
+    velocityScore = series.at(-1) ?? null
   }
 
   try {
