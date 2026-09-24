@@ -64,10 +64,10 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
           {isAdmin && (
             <div className="flex gap-3 mt-6">
               <Link
-                href={`/project/${project.slug}`}
+                href={`/admin-dashboard/projects/${project.slug}/edit`}
                 className="flex-1 text-center rounded-full bg-black text-white text-sm font-semibold px-5 py-2.5 whitespace-nowrap"
               >
-                Edit details
+                Edit project
               </Link>
               <button
                 type="button"
@@ -128,10 +128,10 @@ export default function TeamHeader({ project, isAdmin = false, onDeleteProject }
               {isAdmin && (
                 <div className="flex flex-col gap-3 shrink-0">
                   <Link
-                    href={`/project/${project.slug}`}
+                    href={`/admin-dashboard/projects/${project.slug}/edit`}
                     className="text-center rounded-full bg-gradient-to-b from-[#252C48] to-[#161B30] text-white text-sm font-semibold px-10 py-4 hover:brightness-200 transition-colors"
                   >
-                    Edit details
+                    Edit project
                   </Link>
                   <button
                     type="button"
