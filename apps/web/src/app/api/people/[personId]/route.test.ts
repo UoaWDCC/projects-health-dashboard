@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GET, PUT } from './route'
 import { db } from '@repo/db'
 import { hasRole } from '@/lib/auth'
@@ -20,11 +21,15 @@ vi.mock('@/lib/auth', () => ({
   hasRole: vi.fn(),
 }))
 
-vi.mock('@/lib/schemas/admin', () => ({
-  updatePersonSchema: {
-    safeParse: vi.fn(),
-  },
-}))
+vi.mock('@/lib/schemas/admin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/schemas/admin')>()
+  return {
+    ...actual,
+    updatePersonSchema: {
+      safeParse: vi.fn(),
+    },
+  }
+})
 
 const mockDb = db as unknown as {
   person: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> }
@@ -46,11 +51,19 @@ function makeRequest(body?: unknown) {
 
 // $transaction in the real code receives a callback and runs it with a tx
 // object shaped like db itself. This wires that up for tests that need the
-// cascade logic to actually execute.
+// cascade logic to actually execute. Called inline inside each test (not in
+// a beforeEach) so it can't be undone by a global clearMocks/mockReset/
+// restoreMocks config running between hooks and the test body.
 function wireTransaction() {
   mockDb.$transaction.mockImplementation(async (cb: (tx: typeof mockDb) => unknown) => {
     return cb(mockDb)
   })
+}
+
+function wirePersonUpdate(oldPerson: { imageUrl: string | null; displayName: string }) {
+  mockDb.person.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+    Promise.resolve({ ...oldPerson, ...data })
+  )
 }
 
 beforeEach(() => {
@@ -84,13 +97,13 @@ describe('GET /api/people/[personId]', () => {
     mockHasRole.mockResolvedValue(true)
     const person = {
       id: 'person-1',
-      displayName: 'Oshan Paki',
+      displayName: 'Ada Lovelace',
       identities: [{ id: 'identity-1', provider: 'github' }],
       memberships: [
         {
           id: 'membership-1',
-          displayName: 'Oshan P',
-          project: { id: 'project-1', name: 'Oshnap' },
+          displayName: 'Ada L',
+          project: { id: 'project-1', name: 'Analytical Engine' },
         },
       ],
     }
@@ -129,7 +142,7 @@ describe('GET /api/people/[personId]', () => {
 describe('PUT /api/people/[personId]', () => {
   const oldPerson = {
     id: 'person-1',
-    displayName: 'Oshan Paki',
+    displayName: 'Ada Lovelace',
     imageUrl: 'https://example.com/old.png',
   }
 
@@ -174,59 +187,63 @@ describe('PUT /api/people/[personId]', () => {
     beforeEach(() => {
       mockHasRole.mockResolvedValue(true)
       mockDb.person.findUnique.mockResolvedValue(oldPerson)
-      wireTransaction()
-      mockDb.person.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...oldPerson, ...data })
-      )
       mockDb.projectMember.updateMany.mockResolvedValue({ count: 1 })
     })
 
     it('without forceCascade, only updates memberships with a null, empty, or old display name', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
-        data: { displayName: 'Oshan Paki', forceCascade: false },
+        data: { displayName: 'Ada King', forceCascade: false },
       })
 
-      const res = await PUT(makeRequest({ displayName: 'Oshan Paki' }), makeParams())
+      const res = await PUT(makeRequest({ displayName: 'Ada King' }), makeParams())
 
       expect(res.status).toBe(200)
       expect(mockDb.projectMember.updateMany).toHaveBeenCalledWith({
         where: {
           personId: 'person-1',
-          OR: [{ displayName: null }, { displayName: '' }, { displayName: 'Oshan Paki' }],
+          OR: [{ displayName: null }, { displayName: '' }, { displayName: 'Ada Lovelace' }],
         },
-        data: { displayName: 'Oshan Paki' },
+        data: { displayName: 'Ada King' },
       })
     })
 
     it('with forceCascade, updates every membership regardless of its current display name', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
-        data: { displayName: 'Oshan Paki', forceCascade: true },
+        data: { displayName: 'Ada King', forceCascade: true },
       })
 
-      const res = await PUT(makeRequest({ displayName: 'Oshan Paki' }), makeParams())
+      const res = await PUT(makeRequest({ displayName: 'Ada King' }), makeParams())
 
       expect(res.status).toBe(200)
       expect(mockDb.projectMember.updateMany).toHaveBeenCalledWith({
         where: { personId: 'person-1' },
-        data: { displayName: 'Oshan Paki' },
+        data: { displayName: 'Ada King' },
       })
     })
 
     it('leaves memberships alone when the display name is unchanged', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
-        data: { displayName: 'Oshan Paki', forceCascade: false },
+        data: { displayName: 'Ada Lovelace', forceCascade: false },
       })
 
-      const res = await PUT(makeRequest({ displayName: 'Oshan Paki' }), makeParams())
+      const res = await PUT(makeRequest({ displayName: 'Ada Lovelace' }), makeParams())
 
       expect(res.status).toBe(200)
       expect(mockDb.projectMember.updateMany).not.toHaveBeenCalled()
     })
 
     it('leaves memberships alone when displayName is missing from the request', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
         data: { imageUrl: 'https://example.com/new.png' },
@@ -239,18 +256,20 @@ describe('PUT /api/people/[personId]', () => {
     })
 
     it('trims the display name before saving and cascading', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
-        data: { displayName: '  Oshan Paki  ', forceCascade: false },
+        data: { displayName: '  Ada King  ', forceCascade: false },
       })
 
-      await PUT(makeRequest({ displayName: '  Oshan Paki  ' }), makeParams())
+      await PUT(makeRequest({ displayName: '  Ada King  ' }), makeParams())
 
       expect(mockDb.person.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ displayName: 'Oshan Paki' }) })
+        expect.objectContaining({ data: expect.objectContaining({ displayName: 'Ada King' }) })
       )
       expect(mockDb.projectMember.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { displayName: 'Oshan Paki' } })
+        expect.objectContaining({ data: { displayName: 'Ada King' } })
       )
     })
   })
@@ -259,13 +278,11 @@ describe('PUT /api/people/[personId]', () => {
     beforeEach(() => {
       mockHasRole.mockResolvedValue(true)
       mockDb.person.findUnique.mockResolvedValue(oldPerson)
-      wireTransaction()
-      mockDb.person.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...oldPerson, ...data })
-      )
     })
 
     it('clears the image when imageUrl is an empty string', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({ success: true, data: { imageUrl: '' } })
 
       const res = await PUT(makeRequest({ imageUrl: '' }), makeParams())
@@ -277,6 +294,8 @@ describe('PUT /api/people/[personId]', () => {
     })
 
     it('clears the image when imageUrl is null', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({ success: true, data: { imageUrl: null } })
 
       const res = await PUT(makeRequest({ imageUrl: null }), makeParams())
@@ -288,9 +307,11 @@ describe('PUT /api/people/[personId]', () => {
     })
 
     it('keeps the existing image when imageUrl is missing from the request', async () => {
-      mockSafeParse.mockReturnValue({ success: true, data: { displayName: 'Oshan Paki' } })
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
+      mockSafeParse.mockReturnValue({ success: true, data: { displayName: 'Ada Lovelace' } })
 
-      const res = await PUT(makeRequest({ displayName: 'Oshan Paki' }), makeParams())
+      const res = await PUT(makeRequest({ displayName: 'Ada Lovelace' }), makeParams())
 
       expect(res.status).toBe(200)
       expect(mockDb.person.update).toHaveBeenCalledWith(
@@ -301,6 +322,8 @@ describe('PUT /api/people/[personId]', () => {
     })
 
     it('trims a provided imageUrl', async () => {
+      wireTransaction()
+      wirePersonUpdate(oldPerson)
       mockSafeParse.mockReturnValue({
         success: true,
         data: { imageUrl: '  https://example.com/new.png  ' },
@@ -318,12 +341,12 @@ describe('PUT /api/people/[personId]', () => {
 
   it('returns 500 when the database throws', async () => {
     mockHasRole.mockResolvedValue(true)
-    mockSafeParse.mockReturnValue({ success: true, data: { displayName: 'Oshan Paki' } })
+    mockSafeParse.mockReturnValue({ success: true, data: { displayName: 'Ada King' } })
     mockDb.person.findUnique.mockResolvedValue(oldPerson)
     mockDb.$transaction.mockRejectedValue(new Error('db exploded'))
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const res = await PUT(makeRequest({ displayName: 'Oshan Paki' }), makeParams())
+    const res = await PUT(makeRequest({ displayName: 'Ada King' }), makeParams())
 
     expect(res.status).toBe(500)
     const json = await res.json()
