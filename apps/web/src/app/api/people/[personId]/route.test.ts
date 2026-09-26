@@ -44,8 +44,12 @@ function makeParams(personId = 'person-1') {
 }
 
 function makeRequest(body?: unknown) {
+  const payload = body ?? {}
   return {
-    json: vi.fn().mockResolvedValue(body ?? {}),
+    headers: new Headers({
+      'content-length': String(Buffer.byteLength(JSON.stringify(payload))),
+    }),
+    json: vi.fn().mockResolvedValue(payload),
   } as unknown as Request
 }
 
