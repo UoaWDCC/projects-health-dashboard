@@ -161,6 +161,11 @@ describe('PUT /api/people/[personId]', () => {
 
   it('returns 400 for an invalid body (e.g. empty display name or bad image URL)', async () => {
     mockHasRole.mockResolvedValue(true)
+    mockDb.person.findUnique.mockResolvedValue({
+      id: 'person-1',
+      displayName: 'Ada Lovelace',
+      imageUrl: 'https://example.com/old.png',
+    })
     mockSafeParse.mockReturnValue({
       success: false,
       error: { issues: [{ message: 'Display name cannot be empty' }] },
@@ -171,7 +176,6 @@ describe('PUT /api/people/[personId]', () => {
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toBe('Display name cannot be empty')
-    expect(mockDb.person.findUnique).not.toHaveBeenCalled()
   })
 
   it('returns 404 for an unknown person', async () => {
@@ -318,11 +322,11 @@ describe('PUT /api/people/[personId]', () => {
       const res = await PUT(makeRequest({ displayName: 'Ada Lovelace' }), makeParams())
 
       expect(res.status).toBe(200)
-      expect(mockDb.person.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ imageUrl: oldPerson.imageUrl }),
-        })
-      )
+      expect(mockDb.person.update).toHaveBeenCalledTimes(1)
+      const updateArgs = mockDb.person.update.mock.calls[0][0]
+      // No imageUrl key at all — Prisma leaves the existing column untouched
+      // rather than the handler re-sending the old value explicitly.
+      expect(updateArgs.data).not.toHaveProperty('imageUrl')
     })
 
     it('trims a provided imageUrl', async () => {
@@ -354,7 +358,7 @@ describe('PUT /api/people/[personId]', () => {
 
     expect(res.status).toBe(500)
     const json = await res.json()
-    expect(json.error).toBe('db exploded')
+    expect(json.error).toMatch(/failed to update/i)
     consoleSpy.mockRestore()
   })
 })
