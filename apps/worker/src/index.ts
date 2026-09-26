@@ -17,8 +17,9 @@ import { getCollectionWindow } from './lib/date-utils'
 //   2. LLM analysis runs after both collection jobs complete:
 //      Reads CommitFact/PRFact from the database (GitHub) and receives Discord
 //      messages as an in-memory argument. Calls the LLM, writes sentimentScore,
-//      sentimentParagraph, and summaryText to WeeklySummary. Dependency enforced
-//      in code, not by wall-clock timing.
+//      sentimentParagraph, and summaryText to WeeklySummary, then combines every
+//      project's sentiment + summary into one cross-project paragraph on
+//      GlobalWeeklySummary. Dependency enforced in code, not by wall-clock timing.
 
 // Sentinels returned by the ingestion catch handlers.
 export const GITHUB_INGESTION_FAILED = 'github-ingestion-failed' as const
