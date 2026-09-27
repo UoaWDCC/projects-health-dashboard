@@ -112,11 +112,17 @@ async function createPersonWithIdentities(
   return newPerson.id
 }
 
+type MemberRoles = {
+  isDeveloper: boolean
+  isDesigner: boolean
+}
+
 async function linkPersonToProject(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   slug: string,
   personId: string,
-  displayName: string
+  displayName: string,
+  roles: MemberRoles
 ): Promise<AddProjectMemberResponse> {
   const project = await tx.project.findUnique({
     where: { slug },
@@ -138,14 +144,14 @@ async function linkPersonToProject(
     }
     const member = await tx.projectMember.update({
       where: { id: existingMember.id },
-      data: { isActive: true, displayName },
+      data: { isActive: true, displayName, ...roles },
       include: { person: true },
     })
     return { outcome: 'member_linked', member }
   }
 
   const member = await tx.projectMember.create({
-    data: { projectId: project.id, personId, displayName, isActive: true },
+    data: { projectId: project.id, personId, displayName, isActive: true, ...roles },
     include: { person: true },
   })
   return { outcome: 'member_linked', member }
@@ -187,6 +193,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       discordId: String(formData.get('discordId') ?? '').trim() || undefined,
       githubId: String(formData.get('githubId') ?? '').trim() || undefined,
       imageUrl: String(formData.get('imageUrl') ?? '').trim() || undefined,
+      isDeveloper: formData.get('isDeveloper') === 'true',
+      isDesigner: formData.get('isDesigner') === 'true',
     }
 
     const parsed = addMemberSchema.safeParse(rawData)
@@ -200,6 +208,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const discordId = parsed.data.discordId ?? ''
     const githubId = parsed.data.githubId ?? ''
     const imageUrlFromCsv = parsed.data.imageUrl ?? ''
+    const roles: MemberRoles = {
+      isDeveloper: parsed.data.isDeveloper ?? false,
+      isDesigner: parsed.data.isDesigner ?? false,
+    }
 
     if (targetPersonId) {
       const existingPerson = await db.person.findUnique({ where: { id: targetPersonId } })
@@ -266,7 +278,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         })
       }
 
-      return linkPersonToProject(tx, slug, targetPersonId, targetDisplayName)
+      return linkPersonToProject(tx, slug, targetPersonId, targetDisplayName, roles)
     })
 
     return Response.json(newMemberResult, {

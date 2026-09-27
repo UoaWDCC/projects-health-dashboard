@@ -32,13 +32,15 @@ export async function PATCH(
       return Response.json({ error: message }, { status: 400 })
     }
 
-    const { displayName, isActive } = parsed.data
+    const { displayName, isActive, isDeveloper, isDesigner } = parsed.data
 
     const updatedMembership = await db.projectMember.update({
       where: { id: membershipId },
       data: {
         ...(displayName !== undefined && { displayName: displayName || null }),
         ...(isActive !== undefined && { isActive }),
+        ...(isDeveloper !== undefined && { isDeveloper }),
+        ...(isDesigner !== undefined && { isDesigner }),
       },
     })
 

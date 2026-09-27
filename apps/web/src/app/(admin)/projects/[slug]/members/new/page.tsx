@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { addMemberSchema, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
 import ImageUploadField from '@/components/dashboard/ImageUploadField'
+import MemberRoleFields, { type MemberRoles } from '@/components/dashboard/MemberRoleFields'
 import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 type PersonIdentity = {
@@ -39,6 +40,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
   const [existingPeople, setExistingPeople] = useState<Person[]>([])
   const [selectedPersonId, setSelectedPersonId] = useState<string>('NEW')
+  const [roles, setRoles] = useState<MemberRoles>({ isDeveloper: false, isDesigner: false })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -79,6 +81,8 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
     if (!isNew) {
       formData.append('personId', selectedPersonId)
     }
+    formData.set('isDeveloper', String(roles.isDeveloper))
+    formData.set('isDesigner', String(roles.isDesigner))
 
     const response = await fetch(`/api/project/${slug}/members`, {
       method: 'POST',
@@ -291,6 +295,11 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                 </div>
               </div>
             )}
+
+            {/* Role in this project — applies to both new and existing people */}
+            <div className="mt-5">
+              <MemberRoleFields value={roles} onChange={setRoles} />
+            </div>
 
             {/* Status */}
             {error && (

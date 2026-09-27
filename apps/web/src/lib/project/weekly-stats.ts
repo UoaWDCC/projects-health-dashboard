@@ -88,6 +88,8 @@ export interface TeamMemberStats {
   name: string
   username: string | null
   imageUrl: string | null
+  isDeveloper: boolean
+  isDesigner: boolean
   linesCommitted: number
   commits: number
   pullRequests: number
@@ -105,6 +107,8 @@ export async function getProjectTeamMembers(slug: string): Promise<TeamMemberSta
     select: {
       id: true,
       displayName: true,
+      isDeveloper: true,
+      isDesigner: true,
       person: {
         select: {
           displayName: true,
@@ -149,6 +153,8 @@ export async function getProjectTeamMembers(slug: string): Promise<TeamMemberSta
         name: m.displayName ?? m.person.displayName,
         username: m.person.identities[0]?.username ?? null,
         imageUrl: m.person.imageUrl,
+        isDeveloper: m.isDeveloper,
+        isDesigner: m.isDesigner,
         linesCommitted: contribution?.linesAdded ?? 0,
         commits: contribution?.commits ?? 0,
         pullRequests: contribution?.prsMerged ?? 0,

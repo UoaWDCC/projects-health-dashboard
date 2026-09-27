@@ -149,12 +149,16 @@ model DiscordChannel {
 
 // Links a Person to a Project, representing their membership.
 // displayName overrides the person's global displayName within this project.
+// isDeveloper / isDesigner record the member's role on this project; either,
+// both, or neither may be set (neither means no role has been assigned).
 model ProjectMember {
   id            String                     @id @default(cuid())
   projectId     String
   personId      String
   displayName   String?
   isActive      Boolean                    @default(true)
+  isDeveloper   Boolean                    @default(false)
+  isDesigner    Boolean                    @default(false)
   joinedAt      DateTime                   @default(now())
   project       Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   person        Person                     @relation(fields: [personId], references: [id], onDelete: Cascade)
