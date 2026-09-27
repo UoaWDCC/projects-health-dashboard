@@ -3,7 +3,9 @@
  * Reads CommitFact messages from the database (written by runGitHubIngestion) and
  * receives Discord messages in-memory (never persisted, written by runDiscordIngestion).
  * For each active project, calls the LLM and upserts sentimentScore, sentimentParagraph,
- * and summaryText onto WeeklySummary — keyed on [projectId, weekStart]
+ * and summaryText onto WeeklySummary — keyed on [projectId, weekStart].
+ * Then combines every active project's sentiment score + summary into a single cross-project
+ * paragraph and upserts it onto GlobalWeeklySummary — keyed on weekStart.
  * Must run after runGitHubIngestion() and runDiscordIngestion() complete.
  */
 
@@ -17,6 +19,11 @@ import {
   buildProjectSummaryMessages,
   type ProjectSummaryResult,
 } from '../lib/weekly-summary-prompt'
+import {
+  buildGlobalSummaryMessages,
+  type GlobalSummaryProjectInput,
+  type GlobalSummaryResult,
+} from '../lib/global-summary-prompt'
 import type { ProjectData } from './discord'
 
 const MVP_FORMULA_KEY = 'mvpFormula'
@@ -27,6 +34,9 @@ const LOW_ACTIVITY_SUMMARY =
 // will not attempt to compute a sentiment score.
 export const LOW_ACTIVITY_THRESHOLD = 10
 export const PROMPT_VERSION = 'weekly-project-summary-v1'
+export const GLOBAL_PROMPT_VERSION = 'weekly-global-summary-v1'
+export const NO_DATA_GLOBAL_SUMMARY =
+  'No active project had enough commit or Discord activity this week to generate a meaningful cross-project summary.'
 
 export function isLowActivity(commitMessageCount: number, discordMessageCount: number): boolean {
   return commitMessageCount + discordMessageCount < LOW_ACTIVITY_THRESHOLD
@@ -175,5 +185,106 @@ export async function runLlmAnalysis(
     } catch (err) {
       logger.error(`Project ${project.name}: LLM analysis failed: ${err}`)
     }
+  }
+
+  await runGlobalSummary(weekStart, weekEnd, projects, aiClient)
+}
+
+// Reads back this week's persisted per-project summaries (rather than the in-loop results) so
+// projects whose LLM call failed — or that never got a row — are reported as insufficient data.
+export async function getGlobalSummaryInputs(
+  projects: Array<{ id: string; name: string }>,
+  weekStart: Date
+): Promise<GlobalSummaryProjectInput[]> {
+  const summaries = await db.weeklySummary.findMany({
+    where: { weekStart, projectId: { in: projects.map((p) => p.id) } },
+    select: { projectId: true, summaryText: true, sentimentScore: true },
+  })
+  const byProject = new Map(summaries.map((s) => [s.projectId, s]))
+
+  return projects.map((project) => {
+    const summary = byProject.get(project.id)
+    const summaryText =
+      summary && summary.summaryText.trim() && summary.summaryText !== LOW_ACTIVITY_SUMMARY
+        ? summary.summaryText
+        : null
+    return {
+      projectName: project.name,
+      sentimentScore: summary?.sentimentScore ?? null,
+      summaryText,
+    }
+  })
+}
+
+async function upsertGlobalSummary(
+  weekStart: Date,
+  fields: {
+    summaryText: string
+    llmModel: string | null
+    llmPromptVersion: string | null
+    llmInputHash: string | null
+  }
+): Promise<void> {
+  await db.globalWeeklySummary.upsert({
+    where: { weekStart },
+    create: { weekStart, notableChanges: '', ...fields },
+    update: { ...fields, generatedAt: new Date() },
+  })
+}
+
+export async function runGlobalSummary(
+  weekStart: Date,
+  weekEnd: Date,
+  projects: Array<{ id: string; name: string }>,
+  aiClient: ReturnType<typeof createAiClient>
+): Promise<void> {
+  const inputs = await getGlobalSummaryInputs(projects, weekStart)
+
+  if (inputs.every((p) => p.summaryText === null && p.sentimentScore === null)) {
+    logger.info('Global summary: no project has usable data this week, skipping LLM call')
+    await upsertGlobalSummary(weekStart, {
+      summaryText: NO_DATA_GLOBAL_SUMMARY,
+      llmModel: null,
+      llmPromptVersion: null,
+      llmInputHash: null,
+    })
+    return
+  }
+
+  const messages = buildGlobalSummaryMessages({ weekStart, weekEnd, projects: inputs })
+  const inputHash = hashInput(messages)
+
+  // Rerunning a week with unchanged inputs keeps the existing paragraph instead of regenerating it,
+  // so reruns stay consistent. A changed prompt or input data invalidates the hash.
+  const existing = await db.globalWeeklySummary.findUnique({
+    where: { weekStart },
+    select: { llmInputHash: true },
+  })
+  if (existing?.llmInputHash === inputHash) {
+    logger.info('Global summary: inputs unchanged since last run, keeping existing summary')
+    return
+  }
+
+  try {
+    const { data, provenance } = await aiClient.request<GlobalSummaryResult>({
+      messages,
+      promptVersion: GLOBAL_PROMPT_VERSION,
+      temperature: 0,
+    })
+
+    if (typeof data.summaryText !== 'string' || !data.summaryText.trim()) {
+      throw new Error('LLM response did not include a summaryText')
+    }
+
+    await upsertGlobalSummary(weekStart, {
+      summaryText: data.summaryText.trim(),
+      llmModel: provenance.model,
+      llmPromptVersion: provenance.promptVersion,
+      llmInputHash: inputHash,
+    })
+
+    logger.info(`Global summary generated across ${inputs.length} projects`)
+  } catch (err) {
+    logger.error(`Global summary generation failed: ${err}`)
   }
 }
