@@ -144,7 +144,8 @@ async function linkPersonToProject(
     }
     const member = await tx.projectMember.update({
       where: { id: existingMember.id },
-      data: { isActive: true, displayName, ...roles },
+      // Keep previously saved roles on reactivation; they can be changed via the edit page
+      data: { isActive: true, displayName },
       include: { person: true },
     })
     return { outcome: 'member_linked', member }

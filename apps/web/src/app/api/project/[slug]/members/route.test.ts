@@ -228,7 +228,7 @@ describe('project members API route', () => {
     expect(inactive.status).toBe(201)
     expect(mocks.db.projectMember.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { isActive: true, displayName: 'Ada', isDeveloper: false, isDesigner: false },
+        data: { isActive: true, displayName: 'Ada' },
       })
     )
 
