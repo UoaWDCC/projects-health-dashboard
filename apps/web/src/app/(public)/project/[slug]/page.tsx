@@ -29,9 +29,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     notFound()
   }
 
-  // Only execs can drill into a member's contribution breakdown.
-  const isExec = roles.includes(Role.EXEC)
   const isAdmin = roles.includes(Role.ADMIN)
+  const isExec = roles.includes(Role.EXEC) || isAdmin
 
   const mvpName = mvp?.projectMember.displayName ?? mvp?.projectMember.person.displayName
 
