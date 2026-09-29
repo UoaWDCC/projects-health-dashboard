@@ -48,6 +48,24 @@ const config: Config = {
           },
           oshan: '#1F2031', // black
         },
+        // Sentiment score bands — see sentimentBand() in lib/project/summary.ts
+        sentiment: {
+          'on-track': {
+            ground: '#E2F5EE',
+            bar: '#0F9D6E',
+            text: '#0A6B4B',
+          },
+          watch: {
+            ground: '#FCEFDC',
+            bar: '#F28C00',
+            text: '#8A4B00',
+          },
+          'off-track': {
+            ground: '#FCE1F0',
+            bar: '#E5188E',
+            text: '#A0125F',
+          },
+        },
         leaderboard: {
           loc: {
             fill: '#E333A3',
