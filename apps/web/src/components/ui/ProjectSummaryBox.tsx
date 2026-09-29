@@ -47,12 +47,12 @@ function SentimentScoreBox({ score }: { score: number }) {
         role="meter"
         aria-label="Sentiment score"
         aria-valuenow={score}
-        aria-valuemin={0}
+        aria-valuemin={-1}
         aria-valuemax={1}
       >
         <div
           className={cn('h-full rounded-full', band.bar)}
-          style={{ width: `${clamp01(score) * 100}%` }}
+          style={{ width: `${clamp01((score + 1) / 2) * 100}%` }}
         />
       </div>
     </div>
@@ -60,7 +60,7 @@ function SentimentScoreBox({ score }: { score: number }) {
 }
 
 /**
- * Exec-only: LLM-written weekly summary for a project, with its sentiment score.
+ * Admin & Exec only: LLM-written weekly summary for a project, with its sentiment score.
  */
 export default function ProjectSummaryBox({ summaryText, sentimentScore }: ProjectSummaryProps) {
   return (

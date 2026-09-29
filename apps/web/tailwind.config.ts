@@ -48,7 +48,7 @@ const config: Config = {
           },
           oshan: '#1F2031', // black
         },
-        // Sentiment score bands — see sentimentBand() in lib/project/summary.ts
+        // Sentiment score bands
         sentiment: {
           'on-track': {
             ground: '#E2F5EE',

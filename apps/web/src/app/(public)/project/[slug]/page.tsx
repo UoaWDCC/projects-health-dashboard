@@ -34,7 +34,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   const mvpName = mvp?.projectMember.displayName ?? mvp?.projectMember.person.displayName
 
-  const needsHeaderArtClearance = !isAdmin && !(mvp && mvpName) && members.length === 0
+  const needsHeaderArtClearance =
+    !isAdmin && (isExec || (!(mvp && mvpName) && members.length === 0))
 
   return (
     <div className="relative -mt-16">
@@ -57,7 +58,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
       <div
         className={cn(
-          'px-5 sm:px-10 lg:px-20 pt-8 sm:pt-12 lg:pt-28 pb-[120px] lg:pb-20 w-full flex flex-col items-center gap-8 sm:gap-12 lg:gap-20',
+          'px-5 sm:px-10 lg:px-20 pt-8 sm:pt-12 lg:pt-20 pb-[120px] lg:pb-20 w-full flex flex-col items-center gap-8 sm:gap-12 lg:gap-20',
           needsHeaderArtClearance && 'lg:pt-32'
         )}
       >
