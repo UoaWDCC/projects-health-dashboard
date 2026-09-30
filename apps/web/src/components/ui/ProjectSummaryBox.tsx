@@ -39,7 +39,7 @@ function SentimentScoreBox({ score }: { score: number }) {
       </p>
 
       <p className={cn('font-extrabold text-5xl lg:text-6xl mt-3 lg:mt-4', band.text)}>
-        {score.toFixed(1)}
+        {score.toFixed(2)}
       </p>
 
       <div
