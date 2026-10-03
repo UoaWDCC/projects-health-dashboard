@@ -47,7 +47,7 @@ export async function getProjectWeeklyMvp(slug: string) {
       projectMember: {
         select: {
           displayName: true,
-          person: { select: { displayName: true, imageUrl: true } },
+          person: { select: { id: true, displayName: true, imageUrl: true } },
         },
       },
     },
@@ -80,7 +80,19 @@ export async function getProjectWeeklyMvp(slug: string) {
     return { ...contribution, displayName, score }
   })
 
-  return pickMVP(memberScores) as (typeof memberScores)[number] | null
+  const mvp = pickMVP(memberScores) as (typeof memberScores)[number] | null
+  if (!mvp) return null
+  const mvpPersonId = mvp?.projectMember.person.id
+  const githubIdentity = await db.personIdentity.findFirst({
+    where: {
+      personId: mvpPersonId,
+      provider: 'GITHUB',
+    },
+    select: {
+      username: true,
+    },
+  })
+  return { ...mvp, githubUsername: githubIdentity?.username ?? null }
 }
 
 export interface TeamMemberStats {
