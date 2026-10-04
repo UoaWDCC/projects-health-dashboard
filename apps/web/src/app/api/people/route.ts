@@ -10,6 +10,14 @@ export async function GET() {
     const people = await db.person.findMany({
       include: {
         identities: true,
+        memberships: {
+          select: {
+            isActive: true,
+            isDeveloper: true,
+            isDesigner: true,
+            project: { select: { slug: true } },
+          },
+        },
       },
       orderBy: {
         displayName: 'asc',

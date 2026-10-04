@@ -27,6 +27,13 @@ const STATS = [
   },
 ] as const
 
+function roleLabel(member: TeamMemberStats): string | null {
+  if (member.isDeveloper && member.isDesigner) return 'Dev & Design'
+  if (member.isDeveloper) return 'Developer'
+  if (member.isDesigner) return 'Designer'
+  return null
+}
+
 /**
  * `href` makes the card a link to the member's contribution breakdown. Only execs
  * get one — for everyone else the card stays a plain, non-interactive tile.
@@ -40,6 +47,8 @@ export default function MemberCard({
   index: number
   href?: string
 }) {
+  const role = roleLabel(member)
+
   const card = (
     <div className="h-full rounded-2xl lg:rounded-3xl p-px bg-[linear-gradient(160deg,#E333A366_0%,#077CF14D_50%,#FFB05F80_100%)]">
       <div className="h-full rounded-[15px] lg:rounded-[23px] bg-white overflow-hidden flex flex-col">
@@ -60,6 +69,11 @@ export default function MemberCard({
           <p className="mt-0.5 font-mono text-xs lg:text-sm text-wdcc-grey-light text-center lg:text-left truncate">
             {member.username ? `@${member.username}` : ' '}
           </p>
+          {role && (
+            <span className="mt-2 self-center lg:self-start rounded-full bg-wdcc-blue/10 px-2.5 py-0.5 font-mono text-[10px] lg:text-xs uppercase tracking-widest font-semibold text-wdcc-blue whitespace-nowrap">
+              {role}
+            </span>
+          )}
 
           <div className="mt-3 lg:mt-4 divide-y divide-[#ECEEF6]">
             {STATS.map((stat) => (

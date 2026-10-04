@@ -8,6 +8,7 @@ import { IdentityProvider } from '@repo/db'
 import GradientDivider from '@/components/dashboard/GradientDivider'
 import AdminCard from '@/components/dashboard/AdminCard'
 import ImageUploadField from '@/components/dashboard/ImageUploadField'
+import MemberRoleFields, { type MemberRoles } from '@/components/dashboard/MemberRoleFields'
 import { inputClass, labelClass, PROVIDER_COLORS } from '@/lib/admin/layout'
 import { MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import ErrorMessage from '@/components/utils/ErrorMessage'
@@ -32,6 +33,8 @@ type ProjectMember = {
   personId: string
   displayName: string | null
   isActive: boolean
+  isDeveloper: boolean
+  isDesigner: boolean
   joinedAt: string
   project: Project
 }
@@ -75,6 +78,10 @@ export default function EditMemberPage({
   // ── Membership Settings ──
   const [membershipDisplayName, setMembershipDisplayName] = useState('')
   const [membershipIsActive, setMembershipIsActive] = useState(true)
+  const [membershipRoles, setMembershipRoles] = useState<MemberRoles>({
+    isDeveloper: false,
+    isDesigner: false,
+  })
   const [membershipError, setMembershipError] = useState<string | null>(null)
   const [membershipSuccess, setMembershipSuccess] = useState(false)
   const [confirmUnlink, setConfirmUnlink] = useState(false)
@@ -102,6 +109,7 @@ export default function EditMemberPage({
         if (m) {
           setMembershipDisplayName(m.displayName ?? '')
           setMembershipIsActive(m.isActive)
+          setMembershipRoles({ isDeveloper: m.isDeveloper, isDesigner: m.isDesigner })
         }
       } else {
         const data = await personRes.json().catch(() => ({}))
@@ -203,6 +211,7 @@ export default function EditMemberPage({
       body: JSON.stringify({
         displayName: membershipDisplayName.trim() || null,
         isActive: membershipIsActive,
+        ...membershipRoles,
       }),
     })
     if (res.ok) {
@@ -627,6 +636,7 @@ export default function EditMemberPage({
                 Leave blank to inherit the global display name.
               </p>
             </div>
+            <MemberRoleFields value={membershipRoles} onChange={setMembershipRoles} />
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"

@@ -227,7 +227,9 @@ describe('project members API route', () => {
     const inactive = await POST(formRequest({ personId: 'person-1' }), params)
     expect(inactive.status).toBe(201)
     expect(mocks.db.projectMember.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { isActive: true, displayName: 'Ada' } })
+      expect.objectContaining({
+        data: { isActive: true, displayName: 'Ada' },
+      })
     )
 
     mocks.db.projectMember.findFirst.mockResolvedValueOnce(null)

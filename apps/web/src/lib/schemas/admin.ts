@@ -45,6 +45,8 @@ export const addMemberSchema = z
     discordId: z.string().optional(),
     githubId: z.string().optional(),
     imageUrl: optionalUrl,
+    isDeveloper: z.boolean().optional(),
+    isDesigner: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.personId && !data.displayName?.trim()) {
@@ -59,6 +61,8 @@ export const addMemberSchema = z
 export const editMembershipSchema = z.object({
   displayName: z.string().trim().nullable().optional(),
   isActive: z.boolean().optional(),
+  isDeveloper: z.boolean().optional(),
+  isDesigner: z.boolean().optional(),
 })
 
 // --- Person ---

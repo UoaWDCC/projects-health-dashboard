@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { addMemberSchema, MAX_IMAGE_BYTES } from '@/lib/schemas/admin'
 import FieldError from '@/components/utils/FieldError'
 import ImageUploadField from '@/components/dashboard/ImageUploadField'
+import MemberRoleFields, { type MemberRoles } from '@/components/dashboard/MemberRoleFields'
 import type { AddProjectMemberResponse } from '@/lib/project-members/types'
 
 type PersonIdentity = {
@@ -27,10 +28,18 @@ type PersonIdentity = {
   username: string | null
 }
 
+type PersonMembership = {
+  isActive: boolean
+  isDeveloper: boolean
+  isDesigner: boolean
+  project: { slug: string }
+}
+
 type Person = {
   id: string
   displayName: string
   identities: PersonIdentity[]
+  memberships: PersonMembership[]
 }
 
 export default function CreateMemberPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -39,6 +48,7 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
 
   const [existingPeople, setExistingPeople] = useState<Person[]>([])
   const [selectedPersonId, setSelectedPersonId] = useState<string>('NEW')
+  const [roles, setRoles] = useState<MemberRoles>({ isDeveloper: false, isDesigner: false })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -49,6 +59,11 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
       .then(setExistingPeople)
       .catch((e) => console.error('Failed to fetch people', e))
   }, [])
+
+  const selectedPerson = existingPeople.find((p) => p.id === selectedPersonId)
+  const inactiveMembership = selectedPerson?.memberships.find(
+    (m) => m.project.slug === slug && !m.isActive
+  )
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -79,6 +94,11 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
     if (!isNew) {
       formData.append('personId', selectedPersonId)
     }
+    // Reactivating keeps the member's saved roles, so only send roles for new memberships
+    if (!inactiveMembership) {
+      formData.set('isDeveloper', String(roles.isDeveloper))
+      formData.set('isDesigner', String(roles.isDesigner))
+    }
 
     const response = await fetch(`/api/project/${slug}/members`, {
       method: 'POST',
@@ -108,7 +128,6 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
   }
 
   const isExistingMember = selectedPersonId !== 'NEW'
-  const selectedPerson = existingPeople.find((p) => p.id === selectedPersonId)
 
   return (
     <>
@@ -291,6 +310,19 @@ export default function CreateMemberPage({ params }: { params: Promise<{ slug: s
                 </div>
               </div>
             )}
+
+            {/* Role in this project — read-only when reactivating, since saved roles are kept */}
+            <div className="mt-5">
+              {inactiveMembership ? (
+                <MemberRoleFields
+                  value={inactiveMembership}
+                  onChange={setRoles}
+                  disabledHint="This person was previously a member, so their saved roles will be kept. Change roles from the edit member page."
+                />
+              ) : (
+                <MemberRoleFields value={roles} onChange={setRoles} />
+              )}
+            </div>
 
             {/* Status */}
             {error && (
