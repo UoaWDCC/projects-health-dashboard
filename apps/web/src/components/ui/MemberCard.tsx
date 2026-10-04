@@ -56,7 +56,10 @@ export default function MemberCard({
         <div className="flex justify-center items-center pt-5 lg:pt-0 lg:h-[180px] xl:h-[210px] lg:bg-[linear-gradient(180deg,#F2F5FC_0%,#DCE3F2_100%)]">
           <MemberAvatar
             name={member.name}
-            imageUrl={member.imageUrl}
+            imageUrl={
+              member.imageUrl ??
+              (member.username ? `https://github.com/${member.username}.png` : null)
+            }
             color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
             className="w-14 h-14 lg:w-24 lg:h-24 xl:w-28 xl:h-28"
           />

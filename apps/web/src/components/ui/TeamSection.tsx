@@ -51,12 +51,14 @@ export default function TeamSection({
 
       <div className="mt-8 flex gap-4">
         {visibleMembers.map((member, index) => {
+          const githubImgUrl =
+            member.githubUsername && `https://github.com/${member.githubUsername}.png`
           const content = (
             <>
               <div className="flex h-[140px] items-end justify-center bg-[#E9EBF4] xl:h-[170px]">
                 <MemberAvatar
                   name={member.name}
-                  imageUrl={member.imageUrl}
+                  imageUrl={member.imageUrl ?? githubImgUrl}
                   color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
                   className="w-36 h-36"
                 />

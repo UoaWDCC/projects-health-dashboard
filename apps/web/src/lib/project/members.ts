@@ -7,6 +7,7 @@ export interface ProjectMemberSummary {
   id: string
   name: string
   imageUrl: string | null
+  githubUsername: string | null
 }
 
 export async function getProjectMembers(slug: string): Promise<ProjectMemberSummary[]> {
@@ -21,8 +22,13 @@ export async function getProjectMembers(slug: string): Promise<ProjectMemberSumm
       displayName: true,
       person: {
         select: {
+          id: true,
           displayName: true,
           imageUrl: true,
+          identities: {
+            where: { provider: 'GITHUB' },
+            select: { username: true },
+          },
         },
       },
     },
@@ -32,5 +38,6 @@ export async function getProjectMembers(slug: string): Promise<ProjectMemberSumm
     id: member.id,
     name: member.displayName ?? member.person.displayName,
     imageUrl: member.person.imageUrl,
+    githubUsername: member.person.identities[0]?.username ?? null,
   }))
 }

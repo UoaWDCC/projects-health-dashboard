@@ -75,6 +75,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
             <WeeklyMvp
               name={mvpName}
+              githubUsername={mvp.githubUsername ?? undefined}
               avatarUrl={mvp.projectMember.person.imageUrl ?? undefined}
               linesCommitted={mvp.linesAdded}
             />

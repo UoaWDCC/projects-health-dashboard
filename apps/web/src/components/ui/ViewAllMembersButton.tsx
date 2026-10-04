@@ -31,7 +31,10 @@ export default function ViewAllMembersButton({
             <MemberAvatar
               key={member.id}
               name={member.name}
-              imageUrl={member.imageUrl}
+              imageUrl={
+                member.imageUrl ??
+                (member.githubUsername ? `https://github.com/${member.githubUsername}.png` : null)
+              }
               color={AVATAR_COLORS[index % AVATAR_COLORS.length]}
               fallback="dot"
               className="w-6 h-6 rounded-full border-2 border-wdcc-oshan"

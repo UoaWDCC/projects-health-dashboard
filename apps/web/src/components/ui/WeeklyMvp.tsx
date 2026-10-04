@@ -5,15 +5,23 @@ import Image from 'next/image'
 
 interface WeeklyMvpProps {
   name: string
+  githubUsername?: string
   avatarUrl?: string
   linesCommitted: number
 }
 
-export default function WeeklyMvp({ name, avatarUrl, linesCommitted }: WeeklyMvpProps) {
+export default function WeeklyMvp({
+  name,
+  githubUsername,
+  avatarUrl,
+  linesCommitted,
+}: WeeklyMvpProps) {
   const [imgError, setImgError] = useState(false)
 
+  const githubImgUrl = githubUsername ? `https://github.com/${githubUsername}.png` : undefined
+
   // Fall back to a local default avatar — no third-party requests, no privacy concerns
-  const imgSrc = avatarUrl && !imgError ? avatarUrl : '/default-avatar.svg'
+  const imgSrc = avatarUrl && !imgError ? avatarUrl : (githubImgUrl ?? '/default-avatar.svg')
 
   return (
     <div className="w-full flex flex-row items-center bg-[linear-gradient(90deg,#077CF133_24%,#E333A333_51%,#FFB05F33_83%,#FFD4A733_100%)] rounded-3xl p-4 lg:p-0 lg:h-[288px]">
