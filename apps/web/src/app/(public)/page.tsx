@@ -8,6 +8,8 @@ import { hasRole } from '@/lib/auth'
 import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 import { getLatestLiveCommits } from '@/actions/live-commits'
 import NewProjectButton from '@/components/ui/NewProjectButton'
+import { getGlobalWeeklySummary } from '@/lib/project/summary'
+import GlobalWeeklySummary from '@/components/ui/GlobalWeeklySummary'
 
 /**
  * Public dashboard — visible to anyone without authentication.
@@ -22,7 +24,10 @@ const DESKTOP_GRID_MAX_WIDTH = 'max-w-[1292px]'
 
 export default async function PublicDashboardPage() {
   const projects = await getProjectCardData()
-  const isAdmin = await hasRole('ADMIN')
+  const [isAdmin, isExec] = await Promise.all([hasRole('ADMIN'), hasRole('EXEC')])
+  const canViewGlobalSummary = isAdmin || isExec
+  const globalSummary = canViewGlobalSummary ? await getGlobalWeeklySummary() : null
+
   const projectGridItems = isAdmin ? [...projects, null] : projects
   const teamCount = projects.length
   const latestCommits = await getLatestLiveCommits()
@@ -55,6 +60,13 @@ export default async function PublicDashboardPage() {
             className="flex flex-col items-center gap-y-32 w-full"
             style={{ paddingLeft: DESKTOP_SIDE_PADDING, paddingRight: DESKTOP_SIDE_PADDING }}
           >
+            {/* GLOBAL WEEKLY SUMMARY (admins and execs only) */}
+            {canViewGlobalSummary && (
+              <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
+                <GlobalWeeklySummary summary={globalSummary} />
+              </div>
+            )}
+
             {/* ACTIVE PROJECTS */}
             <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
               <div className="w-full flex flex-row items-baseline gap-6">
