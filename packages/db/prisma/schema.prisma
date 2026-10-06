@@ -160,8 +160,6 @@ model ProjectMember {
   isDeveloper   Boolean                    @default(false)
   isDesigner    Boolean                    @default(false)
   joinedAt      DateTime                   @default(now())
-  isDesigner    Boolean                    @default(false)
-  isDeveloper   Boolean                    @default(false)
   project       Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   person        Person                     @relation(fields: [personId], references: [id], onDelete: Cascade)
   contributions   MemberWeeklyContribution[]
