@@ -4,7 +4,7 @@ import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
 import RevealOnScroll from '@/components/ui/RevealOnScroll'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
-import { hasRole } from '@/lib/auth'
+import { getUserRoles } from '@/lib/auth'
 import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 import { getLatestLiveCommits } from '@/actions/live-commits'
 import NewProjectButton from '@/components/ui/NewProjectButton'
@@ -23,14 +23,17 @@ const DESKTOP_SIDE_PADDING = 'max(0px, calc(136px - 5vw))'
 const DESKTOP_GRID_MAX_WIDTH = 'max-w-[1292px]'
 
 export default async function PublicDashboardPage() {
-  const projects = await getProjectCardData()
-  const [isAdmin, isExec] = await Promise.all([hasRole('ADMIN'), hasRole('EXEC')])
-  const canViewGlobalSummary = isAdmin || isExec
-  const globalSummary = canViewGlobalSummary ? await getGlobalWeeklySummary() : null
+  const roles = await getUserRoles()
+  const isAdmin = roles.includes('ADMIN')
+  const canViewGlobalSummary = isAdmin || roles.includes('EXEC')
+  const [projects, latestCommits, globalSummary] = await Promise.all([
+    getProjectCardData(),
+    getLatestLiveCommits(),
+    canViewGlobalSummary ? getGlobalWeeklySummary() : null,
+  ])
 
   const projectGridItems = isAdmin ? [...projects, null] : projects
   const teamCount = projects.length
-  const latestCommits = await getLatestLiveCommits()
   const lastCommitAt = latestCommits[0]?.committedAt ?? null
 
   return (
