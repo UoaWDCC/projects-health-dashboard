@@ -11,15 +11,7 @@ import NewProjectButton from '@/components/ui/NewProjectButton'
 import { getGlobalWeeklySummary } from '@/lib/project/summary'
 import GlobalWeeklySummary from '@/components/ui/GlobalWeeklySummary'
 
-/**
- * Public dashboard — visible to anyone without authentication.
- * Shows selected metrics, leaderboards, MVP highlights, and the live commit feed.
- * Navigation buttons to exec and admin dashboards are conditionally rendered based on user role.
- */
-
 const DESKTOP_SIDE_PADDING = 'max(0px, calc(136px - 5vw))'
-
-// 420px card width * 3 + 16px gap-4 * 2 — keep in sync with ProjectCard.tsx's max-w-[420px].
 const DESKTOP_GRID_MAX_WIDTH = 'max-w-[1292px]'
 
 export default async function PublicDashboardPage() {
@@ -52,24 +44,34 @@ export default async function PublicDashboardPage() {
           />
         </div>
 
+        {/* GLOBAL WEEKLY SUMMARY (admins and execs only) — all breakpoints */}
+        {canViewGlobalSummary && (
+          <div
+            className="w-full px-5 pt-10 lg:pt-0 lg:px-[var(--desktop-side-padding)]"
+            style={{ '--desktop-side-padding': DESKTOP_SIDE_PADDING } as React.CSSProperties}
+          >
+            <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
+              <GlobalWeeklySummary summary={globalSummary} />
+            </div>
+          </div>
+        )}
+
         {/* PAGE CONTENT MOBILE */}
-        <div className="lg:hidden flex flex-col items-center gap-y-5 px-5 pt-10 mb-28">
+        <div
+          className={`lg:hidden flex flex-col items-center gap-y-5 px-5 mb-28 ${
+            canViewGlobalSummary ? 'pt-5' : 'pt-10'
+          }`}
+        >
           <ProjectCardGrid projects={projectGridItems} teamCount={teamCount} />
           <LiveCommitFeed />
         </div>
+
         {/* PAGE CONTENT DESKTOP */}
         <RevealOnScroll className="hidden lg:block mb-16">
           <div
             className="flex flex-col items-center gap-y-32 w-full"
             style={{ paddingLeft: DESKTOP_SIDE_PADDING, paddingRight: DESKTOP_SIDE_PADDING }}
           >
-            {/* GLOBAL WEEKLY SUMMARY (admins and execs only) */}
-            {canViewGlobalSummary && (
-              <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
-                <GlobalWeeklySummary summary={globalSummary} />
-              </div>
-            )}
-
             {/* ACTIVE PROJECTS */}
             <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
               <div className="w-full flex flex-row items-baseline gap-6">
@@ -82,9 +84,9 @@ export default async function PublicDashboardPage() {
                 {isAdmin && <NewProjectButton className="ml-auto" />}
               </div>
 
-              {/* PROJECTS GRID */}
               <DesktopProjectGrid projects={projectGridItems} />
             </div>
+
             {/* LIVE COMMIT FEED */}
             <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
               <LiveCommitFeed />
