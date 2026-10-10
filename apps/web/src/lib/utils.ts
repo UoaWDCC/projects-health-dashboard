@@ -36,3 +36,25 @@ export function formatRelativeTime(timestamp: Date): string {
 
   return `${days}d ago`
 }
+
+const NZ_TZ = 'Pacific/Auckland'
+
+export function formatUpdated(date: Date): string {
+  const day = new Intl.DateTimeFormat('en-NZ', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: NZ_TZ,
+  }).format(date)
+
+  const time = new Intl.DateTimeFormat('en-NZ', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: NZ_TZ,
+  })
+    .format(date)
+    .replace(/\s/g, '')
+    .toLowerCase()
+
+  return `Updated ${day} ${time}`
+}

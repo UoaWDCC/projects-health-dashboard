@@ -51,3 +51,21 @@ export async function getProjectWeeklySummary(slug: string): Promise<ProjectWeek
     sentimentScore: summary.sentimentScore,
   }
 }
+
+export interface GlobalWeeklySummaryData {
+  summaryText: string
+  generatedAt: Date
+}
+
+/**
+ * The cross-project LLM summary for the most recently completed week.
+ * Returns null when none has been generated for that week.
+ */
+export async function getGlobalWeeklySummary(): Promise<GlobalWeeklySummaryData | null> {
+  const summary = await db.globalWeeklySummary.findUnique({
+    where: { weekStart: getCurrentSummaryWeekStart() },
+    select: { summaryText: true, generatedAt: true },
+  })
+
+  return summary ?? null
+}

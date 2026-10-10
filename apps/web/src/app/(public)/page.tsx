@@ -4,28 +4,28 @@ import LiveCommitFeed from '@/components/ui/LiveCommitFeed'
 import RevealOnScroll from '@/components/ui/RevealOnScroll'
 import { getProjectCardData } from '@/lib/project/projects'
 import HomeHeader from '@/components/headers/HomeHeader'
-import { hasRole } from '@/lib/auth'
+import { getUserRoles } from '@/lib/auth'
 import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 import { getLatestLiveCommits } from '@/actions/live-commits'
 import NewProjectButton from '@/components/ui/NewProjectButton'
-
-/**
- * Public dashboard — visible to anyone without authentication.
- * Shows selected metrics, leaderboards, MVP highlights, and the live commit feed.
- * Navigation buttons to exec and admin dashboards are conditionally rendered based on user role.
- */
+import { getGlobalWeeklySummary } from '@/lib/project/summary'
+import GlobalWeeklySummary from '@/components/ui/GlobalWeeklySummary'
 
 const DESKTOP_SIDE_PADDING = 'max(0px, calc(136px - 5vw))'
-
-// 420px card width * 3 + 16px gap-4 * 2 — keep in sync with ProjectCard.tsx's max-w-[420px].
 const DESKTOP_GRID_MAX_WIDTH = 'max-w-[1292px]'
 
 export default async function PublicDashboardPage() {
-  const projects = await getProjectCardData()
-  const isAdmin = await hasRole('ADMIN')
+  const roles = await getUserRoles()
+  const isAdmin = roles.includes('ADMIN')
+  const canViewGlobalSummary = isAdmin || roles.includes('EXEC')
+  const [projects, latestCommits, globalSummary] = await Promise.all([
+    getProjectCardData(),
+    getLatestLiveCommits(),
+    canViewGlobalSummary ? getGlobalWeeklySummary() : null,
+  ])
+
   const projectGridItems = isAdmin ? [...projects, null] : projects
   const teamCount = projects.length
-  const latestCommits = await getLatestLiveCommits()
   const lastCommitAt = latestCommits[0]?.committedAt ?? null
 
   return (
@@ -44,11 +44,28 @@ export default async function PublicDashboardPage() {
           />
         </div>
 
+        {/* GLOBAL WEEKLY SUMMARY (admins and execs only) — all breakpoints */}
+        {canViewGlobalSummary && (
+          <div
+            className="w-full px-5 pt-10 lg:pt-0 lg:px-[var(--desktop-side-padding)]"
+            style={{ '--desktop-side-padding': DESKTOP_SIDE_PADDING } as React.CSSProperties}
+          >
+            <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
+              <GlobalWeeklySummary summary={globalSummary} />
+            </div>
+          </div>
+        )}
+
         {/* PAGE CONTENT MOBILE */}
-        <div className="lg:hidden flex flex-col items-center gap-y-5 px-5 pt-10 mb-28">
+        <div
+          className={`lg:hidden flex flex-col items-center gap-y-5 px-5 mb-28 ${
+            canViewGlobalSummary ? 'pt-5' : 'pt-10'
+          }`}
+        >
           <ProjectCardGrid projects={projectGridItems} teamCount={teamCount} />
           <LiveCommitFeed />
         </div>
+
         {/* PAGE CONTENT DESKTOP */}
         <RevealOnScroll className="hidden lg:block mb-16">
           <div
@@ -67,9 +84,9 @@ export default async function PublicDashboardPage() {
                 {isAdmin && <NewProjectButton className="ml-auto" />}
               </div>
 
-              {/* PROJECTS GRID */}
               <DesktopProjectGrid projects={projectGridItems} />
             </div>
+
             {/* LIVE COMMIT FEED */}
             <div className={`w-full mx-auto ${DESKTOP_GRID_MAX_WIDTH}`}>
               <LiveCommitFeed />
