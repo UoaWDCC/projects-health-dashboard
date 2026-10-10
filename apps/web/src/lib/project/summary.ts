@@ -20,27 +20,16 @@ export interface ProjectWeeklySummary {
 }
 
 /**
- * Returns Monday 00:00 UTC of the most recently completed week.
- */
-export function getCurrentSummaryWeekStart(now: Date = new Date()): Date {
-  const weekStart = new Date(now)
-  const day = weekStart.getUTCDay()
-  weekStart.setUTCDate(weekStart.getUTCDate() - day + (day === 0 ? -6 : 1))
-  weekStart.setUTCHours(0, 0, 0, 0)
-  weekStart.setUTCDate(weekStart.getUTCDate() - 7)
-  return weekStart
-}
-
-/**
- * The LLM-written summary and sentiment score for a project's current week.
- * Returns null when no summary has been generated for that week.
+ * The LLM-written summary and sentiment score from the latest week that has a summary
+ * for this project. Like the Weekly MVP section, this uses whatever week the worker
+ * last stored rather than computing the week here, so it still shows the most recent
+ * summary when the worker is late or fails.
+ * Returns null when no summary has been generated for the project yet.
  */
 export async function getProjectWeeklySummary(slug: string): Promise<ProjectWeeklySummary | null> {
   const summary = await db.weeklySummary.findFirst({
-    where: {
-      project: { slug },
-      weekStart: getCurrentSummaryWeekStart(),
-    },
+    where: { project: { slug } },
+    orderBy: { weekStart: 'desc' },
     select: { summaryText: true, sentimentScore: true },
   })
 
@@ -58,12 +47,12 @@ export interface GlobalWeeklySummaryData {
 }
 
 /**
- * The cross-project LLM summary for the most recently completed week.
- * Returns null when none has been generated for that week.
+ * The cross-project LLM summary from the latest week that has one.
+ * Returns null when no global summary has been generated yet.
  */
 export async function getGlobalWeeklySummary(): Promise<GlobalWeeklySummaryData | null> {
-  const summary = await db.globalWeeklySummary.findUnique({
-    where: { weekStart: getCurrentSummaryWeekStart() },
+  const summary = await db.globalWeeklySummary.findFirst({
+    orderBy: { weekStart: 'desc' },
     select: { summaryText: true, generatedAt: true },
   })
 
