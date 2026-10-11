@@ -231,7 +231,7 @@ export default function EditMemberPage({
       method: 'DELETE',
     })
     if (res.ok) {
-      router.push(`/projects/${slug}`)
+      router.push(`/project/${slug}/members`)
     } else {
       const data = await res.json().catch(() => ({}))
       setUnlinkError(data?.error ?? 'Failed to unlink member.')
@@ -288,10 +288,10 @@ export default function EditMemberPage({
 
       <div className="mt-44 px-5 sm:px-10 lg:px-20 pb-20 flex flex-col gap-6">
         <Link
-          href={`/projects/${slug}`}
-          className="inline-flex items-center gap-1.5 font-mono text-xs text-wdcc-grey-light hover:text-wdcc-blue transition-colors"
+          href={`/project/${slug}/members/${memberId}`}
+          className="self-start font-mono text-sm text-wdcc-blue hover:underline"
         >
-          ← {slug}
+          ← Back to member
         </Link>
 
         {/* ── Basic Details ── */}
@@ -662,7 +662,7 @@ export default function EditMemberPage({
 
             <div className="flex justify-end gap-3 pt-4 border-t border-wdcc-grey-light/20">
               <Link
-                href={`/projects/${slug}`}
+                href={`/project/${slug}/members/${memberId}`}
                 className="font-mono text-sm text-wdcc-grey-light border-[1.5px] border-wdcc-grey-light/30 hover:border-wdcc-grey-light rounded-xl px-5 py-2.5 transition-all"
               >
                 Cancel

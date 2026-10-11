@@ -116,7 +116,7 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
     }
 
     setSuccess(true)
-    setTimeout(() => router.replace('/projects/' + project.slug), 1200)
+    setTimeout(() => router.replace('/project/' + project.slug), 1200)
   }
 
   return (
@@ -149,10 +149,10 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
       <div className="mt-44 px-5 sm:px-10 lg:px-20 pb-20">
         {/* Back link */}
         <Link
-          href={`/projects/${project.slug}`}
-          className="inline-flex items-center gap-1.5 font-mono text-xs text-wdcc-grey-light hover:text-wdcc-blue transition-colors mb-6"
+          href={`/project/${project.slug}`}
+          className="mb-6 inline-block font-mono text-sm text-wdcc-blue hover:underline"
         >
-          ← back to project
+          ← Back to project
         </Link>
 
         <form onSubmit={handleSubmit}>
@@ -341,7 +341,7 @@ export default function EditProjectForm({ project }: { project: ProjectWithRelat
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-wdcc-grey-light/20">
               <Link
-                href={`/projects/${project.slug}`}
+                href={`/project/${project.slug}`}
                 className="font-mono text-sm text-wdcc-grey-light border-[1.5px] border-wdcc-grey-light/30 hover:border-wdcc-grey-light rounded-xl px-5 py-2.5 transition-all"
               >
                 Cancel
