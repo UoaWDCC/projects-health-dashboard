@@ -185,6 +185,7 @@ vi.mock('@repo/db', () => ({
     },
     memberWeeklyContribution: {
       findMany: vi.fn(),
+      groupBy: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),

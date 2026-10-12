@@ -67,7 +67,7 @@ export default async function TeamMembersPage({ params }: { params: Promise<{ sl
 
             <p className="mt-3 lg:mt-5 font-mono text-sm lg:text-lg text-wdcc-grey">
               {project.name} · {members.length} contributor{members.length !== 1 ? 's' : ''} ·
-              ranked by lines committed
+              ranked by all-time lines committed
             </p>
           </div>
 
