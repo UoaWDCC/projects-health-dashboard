@@ -9,6 +9,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
+import { ArrowDown, ArrowUp } from 'lucide-react'
+import { getWeekOnWeekChange, type WeekOnWeekChange } from '@/lib/project/week-on-week'
 
 interface LineGraphProps {
   title: string
@@ -93,7 +95,33 @@ function ActivePointTooltip({
   )
 }
 
+const CHANGE_STYLES: Record<WeekOnWeekChange['direction'], string> = {
+  up: 'text-green-700',
+  down: 'text-red-600',
+  flat: 'text-wdcc-grey',
+}
+
+function WeekOnWeekIndicator({ change }: { change: WeekOnWeekChange }) {
+  const label =
+    change.direction === 'flat'
+      ? 'No change from last week'
+      : `${change.direction === 'up' ? 'Up' : 'Down'} ${change.percent}% from last week`
+
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className={`flex shrink-0 items-center gap-0.5 font-mono text-sm font-bold ${CHANGE_STYLES[change.direction]}`}
+    >
+      {change.direction === 'up' && <ArrowUp className="h-4 w-4" strokeWidth={3} />}
+      {change.direction === 'down' && <ArrowDown className="h-4 w-4" strokeWidth={3} />}
+      {change.percent}%
+    </span>
+  )
+}
+
 export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) {
+  const change = getWeekOnWeekChange(dates, dataPoints)
   const data = dates.map((date, i) => ({
     date: formatDate(date),
     value: dataPoints[i] ?? 0,
@@ -102,8 +130,9 @@ export default function LineGraph({ title, dates, dataPoints }: LineGraphProps) 
   return (
     <div className="w-full rounded-2xl overflow-hidden bg-[#E8E8E8]">
       {/* Title bar */}
-      <div className="px-5 py-4">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
         <h3 className="font-mono text-xl font-bold text-wdcc-oshan">{title}</h3>
+        {change && <WeekOnWeekIndicator change={change} />}
       </div>
 
       {/* Chart area — fixed height, data points spread evenly across full width */}
