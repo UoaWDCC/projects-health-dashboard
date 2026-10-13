@@ -9,6 +9,7 @@ import LiveCommitMarquee from '@/components/ui/LiveCommitFeedMarquee'
 import { getLatestLiveCommits } from '@/actions/live-commits'
 import NewProjectButton from '@/components/ui/NewProjectButton'
 import { getGlobalWeeklySummary } from '@/lib/project/summary'
+import { getLatestWeekStart } from '@/lib/project/latest-week'
 import GlobalWeeklySummary from '@/components/ui/GlobalWeeklySummary'
 
 const DESKTOP_SIDE_PADDING = 'max(0px, calc(136px - 5vw))'
@@ -21,7 +22,11 @@ export default async function PublicDashboardPage() {
   const [projects, latestCommits, globalSummary] = await Promise.all([
     getProjectCardData(),
     getLatestLiveCommits(),
-    canViewGlobalSummary ? getGlobalWeeklySummary() : null,
+    canViewGlobalSummary
+      ? getLatestWeekStart().then((weekStart) =>
+          weekStart ? getGlobalWeeklySummary(weekStart) : null
+        )
+      : null,
   ])
 
   const projectGridItems = isAdmin ? [...projects, null] : projects

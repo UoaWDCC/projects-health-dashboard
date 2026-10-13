@@ -20,27 +20,16 @@ export interface ProjectWeeklySummary {
 }
 
 /**
- * Returns Monday 00:00 UTC of the most recently completed week.
+ * The LLM-written summary and sentiment score for a project in the given week.
+ * Returns null when no summary was generated for that week (e.g. the LLM job failed),
+ * rather than falling back to an older week that could be mistaken for the current one.
  */
-export function getCurrentSummaryWeekStart(now: Date = new Date()): Date {
-  const weekStart = new Date(now)
-  const day = weekStart.getUTCDay()
-  weekStart.setUTCDate(weekStart.getUTCDate() - day + (day === 0 ? -6 : 1))
-  weekStart.setUTCHours(0, 0, 0, 0)
-  weekStart.setUTCDate(weekStart.getUTCDate() - 7)
-  return weekStart
-}
-
-/**
- * The LLM-written summary and sentiment score for a project's current week.
- * Returns null when no summary has been generated for that week.
- */
-export async function getProjectWeeklySummary(slug: string): Promise<ProjectWeeklySummary | null> {
+export async function getProjectWeeklySummary(
+  slug: string,
+  weekStart: Date
+): Promise<ProjectWeeklySummary | null> {
   const summary = await db.weeklySummary.findFirst({
-    where: {
-      project: { slug },
-      weekStart: getCurrentSummaryWeekStart(),
-    },
+    where: { project: { slug }, weekStart },
     select: { summaryText: true, sentimentScore: true },
   })
 
@@ -58,12 +47,14 @@ export interface GlobalWeeklySummaryData {
 }
 
 /**
- * The cross-project LLM summary for the most recently completed week.
- * Returns null when none has been generated for that week.
+ * The cross-project LLM summary for the given week.
+ * Returns null when none was generated for that week, rather than showing an older one.
  */
-export async function getGlobalWeeklySummary(): Promise<GlobalWeeklySummaryData | null> {
+export async function getGlobalWeeklySummary(
+  weekStart: Date
+): Promise<GlobalWeeklySummaryData | null> {
   const summary = await db.globalWeeklySummary.findUnique({
-    where: { weekStart: getCurrentSummaryWeekStart() },
+    where: { weekStart },
     select: { summaryText: true, generatedAt: true },
   })
 

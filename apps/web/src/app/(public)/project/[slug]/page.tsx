@@ -9,6 +9,7 @@ import { getProjectHeaderData } from '@/lib/project/projects'
 import { getProjectMembers } from '@/lib/project/members'
 import { getProjectWeeklyMvp } from '@/lib/project/weekly-stats'
 import { getProjectWeeklySummary } from '@/lib/project/summary'
+import { getLatestWeekStart } from '@/lib/project/latest-week'
 import { updateRepository, updateChannel, deleteProject } from '@/actions/project-page'
 import { notFound } from 'next/navigation'
 import GraphViewToggle from '@/components/charts/GraphViewToggle'
@@ -17,12 +18,14 @@ import { Role } from '@repo/db'
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const slug = (await params).slug
+  // One shared week so the Weekly MVP and the summary always describe the same week
+  const weekStart = await getLatestWeekStart().catch(() => null)
   const [project, mvp, members, roles, summary] = await Promise.all([
     getProjectHeaderData(slug),
-    getProjectWeeklyMvp(slug).catch(() => null),
+    weekStart ? getProjectWeeklyMvp(slug, weekStart).catch(() => null) : null,
     getProjectMembers(slug).catch(() => []),
     getUserRoles(),
-    getProjectWeeklySummary(slug).catch(() => null),
+    weekStart ? getProjectWeeklySummary(slug, weekStart).catch(() => null) : null,
   ])
 
   if (!project) {
