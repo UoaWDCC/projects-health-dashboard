@@ -20,16 +20,16 @@ export interface ProjectWeeklySummary {
 }
 
 /**
- * The LLM-written summary and sentiment score from the latest week that has a summary
- * for this project. Like the Weekly MVP section, this uses whatever week the worker
- * last stored rather than computing the week here, so it still shows the most recent
- * summary when the worker is late or fails.
- * Returns null when no summary has been generated for the project yet.
+ * The LLM-written summary and sentiment score for a project in the given week.
+ * Returns null when no summary was generated for that week (e.g. the LLM job failed),
+ * rather than falling back to an older week that could be mistaken for the current one.
  */
-export async function getProjectWeeklySummary(slug: string): Promise<ProjectWeeklySummary | null> {
+export async function getProjectWeeklySummary(
+  slug: string,
+  weekStart: Date
+): Promise<ProjectWeeklySummary | null> {
   const summary = await db.weeklySummary.findFirst({
-    where: { project: { slug } },
-    orderBy: { weekStart: 'desc' },
+    where: { project: { slug }, weekStart },
     select: { summaryText: true, sentimentScore: true },
   })
 
@@ -47,12 +47,14 @@ export interface GlobalWeeklySummaryData {
 }
 
 /**
- * The cross-project LLM summary from the latest week that has one.
- * Returns null when no global summary has been generated yet.
+ * The cross-project LLM summary for the given week.
+ * Returns null when none was generated for that week, rather than showing an older one.
  */
-export async function getGlobalWeeklySummary(): Promise<GlobalWeeklySummaryData | null> {
-  const summary = await db.globalWeeklySummary.findFirst({
-    orderBy: { weekStart: 'desc' },
+export async function getGlobalWeeklySummary(
+  weekStart: Date
+): Promise<GlobalWeeklySummaryData | null> {
+  const summary = await db.globalWeeklySummary.findUnique({
+    where: { weekStart },
     select: { summaryText: true, generatedAt: true },
   })
 

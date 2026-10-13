@@ -15,13 +15,11 @@ const toScope = (contribution: {
   commits: contribution.commits,
 })
 
-export async function getProjectWeeklyMvp(slug: string) {
-  const latest = await db.memberWeeklyContribution.findFirst({
-    orderBy: { weekStart: 'desc' },
-    select: { weekStart: true },
-  })
-  if (!latest) return null
-
+/**
+ * The project's top contributor for the given week, scored with the configured MVP formula.
+ * Returns null when there is no formula or no contributions for that week.
+ */
+export async function getProjectWeeklyMvp(slug: string, weekStart: Date) {
   const formula = await db.config.findFirst({
     where: { key: 'mvpFormula' },
     select: { value: true },
@@ -35,7 +33,7 @@ export async function getProjectWeeklyMvp(slug: string) {
 
   const contributions = await db.memberWeeklyContribution.findMany({
     where: {
-      weekStart: latest.weekStart,
+      weekStart,
       projectMember: { project: { slug } },
     },
     select: {
